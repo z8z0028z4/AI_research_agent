@@ -1,0 +1,10 @@
+openai>=1.0.0
+langchain>=0.1.0
+langchain-community>=0.0.20
+python-dotenv
+chromadb
+PyMuPDF
+python-docx
+pandas
+scikit-learn
+matplotlib
