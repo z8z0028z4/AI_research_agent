@@ -1,0 +1,13 @@
+.env
+venv/
+.vscode/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# 系統與 IDE 雜項
+.DS_Store
+*.log
+*.tmp
