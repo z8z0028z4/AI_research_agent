@@ -1,0 +1,5 @@
+3-Amino-1,2,4-triazole, NC1=NC=NN1
+4-Amino-1,2,4-triazole, N1=CN=CN1N
+2-Aminothiazole, NC1=NC=CS1
+3-Aminopyrazole, NC1=CC=NN1
+5-Amino-1H-tetrazole, NC1=NNN=N1
