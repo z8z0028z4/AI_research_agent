@@ -12,4 +12,4 @@ __pycache__/
 .DS_Store
 *.log
 *.tmp
-run_itri.bat
+run_itri.bat".venv/" 
