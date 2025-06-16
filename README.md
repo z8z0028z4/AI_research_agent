@@ -1,74 +1,81 @@
 # 🧪 AI Research Assistant
 
-
-這是一套模組化的 AI 研究助理系統，具備以下核心功能：
-
-## ✅ 更新內容
-
-1. **知識庫助理**：透過向量資料庫（Chroma）讀取 PDF / Word 文獻與實驗紀錄，並用 GPT 模型回答使用者問題
-2. **文獻搜尋**：整合 Perplexity API 即時搜尋有來源的學術資料
-3. **互動介面**：使用 Streamlit 建立簡潔易用的網頁介面
-4. **CLI 模式**：支援純文字終端互動查詢
+A modular AI assistant system designed for research workflows, particularly in materials science and chemistry. This tool supports document ingestion, vector embedding, and GPT-based QA with source tracking.
 
 ---
 
-## 📂 專案結構
+## ✅ Features
+
+1. **Knowledge Assistant**: Leverages Chroma vector database to embed and retrieve content from PDF/Word documents and experimental records. GPT answers user questions with citation traceability.
+2. **Academic Search**: Integrates Perplexity API for real-time academic source retrieval with references.
+3. **Interactive GUI**: Built with Streamlit for a clean and simple web interface.
+4. **CLI Mode**: Supports command-line interaction for minimal setups.
+5. **Document Tracing**: Embedded chunks now include metadata such as filename, tracing number, page number, and paragraph snippet.
+6. **Reference Injection**: GPT responses include numbered references `[1]`, linking to document, page, and chunk beginning text for traceability.
+7. **Semantic Embedding**: Embedding pipeline supports switching to academic-specific models such as `Instructor-XL`, `Specter2`, or `SciNCL`.
+
+---
+
+## 📂 Project Structure
 
 ```
 AI-research-agent/
-├──research_agent/
+├── research_agent/
 │   ├── app/
-│   │   ├── main.py                  # 主入口，啟動 GUI 或 CLI
-│   │   ├── config.py                # API 金鑰與路徑設定
-│   │   ├── research_gui.py          # Streamlit 視覺介面
-│   │   ├── knowledge_agent.py       # 向量查詢與回應邏輯
-│   │   └── perplexity_search_fallback.py  # Perplexity API 呼叫模組
+│   │   ├── main.py                       # Entry point (GUI/CLI)
+│   │   ├── config.py                     # API keys and directory config
+│   │   ├── research_gui.py               # Streamlit GUI workflow
+│   │   ├── knowledge_agent.py            # Vector-based QA logic
+│   │   ├── summarize_and_embed.py        # PDF/docx embedding + tracing
+│   │   ├── semantic_lookup.py            # DOI & title metadata query
+│   │   ├── perplexity_search_fallback.py # API-based fallback document search
+│   │   ├── browser.py                    # Streamlit file selector
+│   │   ├── document_renamer.py           # Auto file renaming + tracing number
+│   │   ├── file_upload.py                # Unified upload + metadata ingestion
+│   │   ├── metadata_extractor.py         # Extract DOI/title/type from text
+│   │   ├── metadata_registry.py          # Registry appending (XLSX)
 │   ├── requirements.txt
 │   ├── run.bat
 │   ├── README.md
 │   ├── logo.txt
 │   └── .env.example
 └── experiment_data/
-    ├── papers/
-    ├── vector_index/       # 向量資料庫
-    └── experiment/         # 實驗 CSV 紀錄
- 
- 
+    ├── papers/                     # Named + moved PDF archive
+    ├── vector_index/               # Chroma vector DB
+    └── experiment/                 # CSV logs of experiments
 ```
 
 ---
 
-## 🛠️ 安裝方式
+## 🛠️ Installation
 
 ```bash
 git clone https://github.com/yourname/research_agent.git
 cd research_agent
 python -m venv venv
-venv\Scripts\activate     # 或 source venv/bin/activate (macOS/Linux)
+venv\Scripts\activate      # or source venv/bin/activate (macOS/Linux)
 pip install -r requirements.txt
-copy .env.example .env      # 或手動填入 API 金鑰
-python app/main.py          # 預設啟動 GUI 模式
+cp .env.example .env       # or fill in keys manually
+python app/main.py         # GUI mode by default
 ```
 
 ---
 
-## 🧪 使用模式
+## 🚀 Modes of Use
 
-### 📘 GUI 模式（預設）
+### 📘 GUI Mode (default)
 ```bash
 python app/main.py
 ```
 
-### 🧠 CLI 模式
+### 🧠 CLI Mode
 ```bash
 python app/main.py --mode cli
 ```
 
 ---
 
-## 🔑 環境變數設定（.env）
-
-請建立 `.env` 檔案並填入以下內容：
+## 🔑 Environment Variables (`.env`)
 
 ```
 OPENAI_API_KEY=your-openai-key
@@ -77,13 +84,36 @@ PERPLEXITY_API_KEY=your-perplexity-key
 
 ---
 
-## 💡 注意事項
+## 📌 Notes
 
-- 向量資料庫與實驗記錄路徑由 `config.py` 相對定位，不需手動調整
-- Perplexity API 須為 Pro 用戶才能取得 Key：https://www.perplexity.ai/pro
+- All path configurations (papers, vectors) are relative, managed via `config.py`
+- Perplexity API requires a Pro account: https://www.perplexity.ai/pro
+- Vector chunks include: `filename`, `page_number`, `chunk_index`, `tracing_number`, and snippet of the paragraph for fast lookup.
 
-## 🔧 預計新增功能
+---
 
-- 增加browser window以選擇文獻/實驗資料，將資料存入papers/ 並進行embedding, 存入向量資料庫
-- 增加並測試第二種論文搜尋功能 Semantic Scholar，嘗試直接擷取文獻的功能
-- 將perplexity搜尋功能用以進行自然語言的理解，轉換成關鍵字後，以semantic scholar進行搜尋
+## 🧪 Recommended Embedding Models for Chemistry & Materials
+
+| Model | Strength | HF Path |
+|-------|----------|---------|
+| `hkunlp/instructor-xl` | Instruction-guided, versatile | ✅ Recommended |
+| `allenai/specter2` | Fine-tuned on scientific citations | Suitable |
+| `microsoft/SciNCL-Base` | Embedding with contrastive learning | Optional |
+| `bge-m3`, `bge-large-en` | Multi-task (retrieval, QA, summarization) | Optional |
+
+> Replace default OpenAI embeddings in `summarize_and_embed.py` if needed.
+
+---
+
+## 🧭 Roadmap
+
+- [x] File selection browser with automatic renaming and metadata tracking
+- [x] Automatic vector embedding with citation trace
+- [ ] link to large open acess paper database for gathering more useful information 
+- [ ] Switch to academic-tuned embedding models
+- [ ] interaction between agent and perplexity, searching website when database is not enough
+- [ ] Add Notion/Google Drive sync and file watching
+
+---
+
+Maintained by: **this is a self project used in research of ITRI, Taiwan**

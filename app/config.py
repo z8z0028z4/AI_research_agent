@@ -13,4 +13,6 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 # 資料目錄（知識庫與實驗）
 VECTOR_INDEX_DIR = os.path.join(BASE_DIR, "experiment_data", "vector_index")
-EXPERIMENT_CSV_DIR = os.path.join(BASE_DIR, "experiment_data", "itri_experiment")
+EXPERIMENT_CSV_DIR = os.path.join(BASE_DIR, "experiment_data", "experiment")
+PAPER_DIR = os.path.join(BASE_DIR, "experiment_data", "papers")
+REGISTRY_PATH = os.path.join(BASE_DIR, "experiment_data", "metadata_registry.xlsx")

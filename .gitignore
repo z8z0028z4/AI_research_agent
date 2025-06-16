@@ -1,6 +1,7 @@
 .env
 venv/
 .vscode/
+venv_itri/
 
 # Python cache
 __pycache__/
@@ -11,3 +12,4 @@ __pycache__/
 .DS_Store
 *.log
 *.tmp
+run_itri.bat
