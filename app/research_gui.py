@@ -12,6 +12,7 @@ from browser import select_files  # ← 加在 import 區域
 from file_upload import process_uploaded_files
 import tempfile
 from summarize_and_embed import embed_documents_from_metadata
+print("✅ 使用 summarize_and_embed 的 Instructor-XL 新版本")
 
 def format_references_block(text):
     refs = []
@@ -98,6 +99,7 @@ with tab3:
 
                 # 開始處理資料
                 metadata_list = process_uploaded_files(new_file_paths, status_callback=update_status)
+                print("🧾 本次處理檔案：", new_file_paths)
                 embed_documents_from_metadata(metadata_list)
 
             if messages:

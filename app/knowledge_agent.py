@@ -22,8 +22,7 @@ def load_experiment_log():
     return pd.DataFrame()
 
 def agent_answer(question, experiment_df):
-    embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
-    db = Chroma(persist_directory=VECTOR_INDEX_DIR, embedding_function=embeddings)
+    db = Chroma(persist_directory=VECTOR_INDEX_DIR)  
     retriever = db.as_retriever(search_kwargs={"k": 5})
     context_docs = retriever.get_relevant_documents(question)
 

@@ -3,6 +3,8 @@ venv/
 
 venv_itri/
 .venv/
+venv_home/
+
 
 # Python cache
 __pycache__/
