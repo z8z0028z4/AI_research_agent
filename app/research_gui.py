@@ -12,7 +12,6 @@ from browser import select_files  # ← 加在 import 區域
 from file_upload import process_uploaded_files
 import tempfile
 from summarize_and_embed import embed_documents_from_metadata
-print("✅ 使用 summarize_and_embed 的 Instructor-XL 新版本")
 
 def format_references_block(text):
     refs = []
@@ -40,12 +39,25 @@ tab1, tab2, tab3 = st.tabs(["📘 知識庫助理", "🔍 搜尋外部文獻", "
 with tab1:
     st.subheader("📘 功能 1：利用知識庫回答問題")
     q1 = st.text_area("請輸入研究問題：", height=100, key="search1")
+
     if st.button("由知識庫回答", key="knowledgebtn"):
         with st.spinner("查詢知識庫中..."):
             df = load_experiment_log()
             result = agent_answer(q1, df)
+
+            # 顯示回答區
             st.markdown("### 🤖 回答")
-            st.write(result)
+            st.markdown(result["answer"])
+
+            # 顯示引用區
+            st.markdown("### 📚 引用資料")
+            for i, citation in enumerate(result["citations"], start=1):
+                title = citation.get("title", "未知")
+                page = citation.get("page", "?")
+                snippet = citation.get("snippet", "...")
+
+                st.markdown(f"**[{i}]** `{title}` | 頁碼：{page} | 段落開頭：\"{snippet}\"")
+
 
 with tab2:
     st.subheader("🔍 功能 2：使用 Perplexity 搜尋文獻")
