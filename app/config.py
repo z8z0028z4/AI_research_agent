@@ -16,3 +16,4 @@ VECTOR_INDEX_DIR = os.path.join(BASE_DIR, "experiment_data", "vector_index")
 EXPERIMENT_CSV_DIR = os.path.join(BASE_DIR, "experiment_data", "experiment")
 PAPER_DIR = os.path.join(BASE_DIR, "experiment_data", "papers")
 REGISTRY_PATH = os.path.join(BASE_DIR, "experiment_data", "metadata_registry.xlsx")
+EMBEDDING_MODEL_NAME = "nomic-ai/nomic-embed-text-v1.5"

@@ -1,8 +1,5 @@
 import streamlit as st
 from perplexity_search_fallback import ask_perplexity
-from langchain.vectorstores import Chroma
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.chat_models import ChatOpenAI
 import os
 import pandas as pd
 import re
@@ -11,7 +8,8 @@ from config import OPENAI_API_KEY
 from browser import select_files  # ← 加在 import 區域
 from file_upload import process_uploaded_files
 import tempfile
-from summarize_and_embed import embed_documents_from_metadata
+from file_upload import process_uploaded_files
+from chunk_embedding import embed_documents_from_metadata
 
 def format_references_block(text):
     refs = []
