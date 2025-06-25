@@ -2,7 +2,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 from langchain.chat_models import ChatOpenAI
-from config import VECTOR_INDEX_DIR, EMBEDDING_MODEL_NAME
+from config import VECTOR_INDEX_DIR, EMBEDDING_MODEL_NAME, LLM_MODEL_NAME
 import pandas as pd
 from typing import List, Tuple, Dict
 import re
@@ -86,5 +86,5 @@ def build_prompt(chunks: List[Document], df: pd.DataFrame, question: str) -> Tup
 
 
 def call_llm(prompt: str) -> str:
-    llm = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0)
+    llm = ChatOpenAI(model_name=LLM_MODEL_NAME, temperature=0)
     return llm.predict(prompt)

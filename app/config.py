@@ -17,3 +17,4 @@ EXPERIMENT_CSV_DIR = os.path.join(BASE_DIR, "experiment_data", "experiment")
 PAPER_DIR = os.path.join(BASE_DIR, "experiment_data", "papers")
 REGISTRY_PATH = os.path.join(BASE_DIR, "experiment_data", "metadata_registry.xlsx")
 EMBEDDING_MODEL_NAME = "nomic-ai/nomic-embed-text-v1.5"
+LLM_MODEL_NAME = "gpt-4-1106-preview"

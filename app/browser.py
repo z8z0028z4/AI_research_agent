@@ -4,20 +4,6 @@ import os
 import pandas as pd
 from config import PAPER_DIR, EXPERIMENT_CSV_DIR
 
-# def save_uploaded_file(uploaded_file, save_dir=None):
-#     os.makedirs(save_dir, exist_ok=True)
-#     save_path = os.path.join(save_dir, uploaded_file.name)
-
-#     # 若檔案已存在且內容相同則略過
-#     if os.path.exists(save_path):
-#         with open(save_path, "rb") as existing:
-#             if existing.read() == uploaded_file.getvalue():
-#                 print(f"⚠️ 檔案已存在且內容一致，略過儲存：{uploaded_file.name}")
-#                 return None  # 不儲存重複
-
-#     with open(save_path, "wb") as f:
-#         f.write(uploaded_file.getbuffer())
-#     return uploaded_file.name, uploaded_file
 
 def save_excel_as_csvs(uploaded_file, save_dir):
     os.makedirs(save_dir, exist_ok=True)
@@ -42,7 +28,26 @@ def select_files():
 
     elif file_type == "🧪 實驗數據":
         data_files = st.file_uploader("請選擇 CSV 或 Excel 檔（可多選）：", type=["csv", "xlsx"], accept_multiple_files=True)
+        saved_paths = []
+
         if data_files:
+            os.makedirs(EXPERIMENT_CSV_DIR, exist_ok=True)
+
+            for f in data_files:
+                if f.name.endswith(".csv"):
+                    save_path = os.path.join(EXPERIMENT_CSV_DIR, f.name)
+                    with open(save_path, "wb") as out:
+                        out.write(f.getbuffer())
+                    saved_paths.append(save_path)
+
+                elif f.name.endswith(".xlsx"):
+                    # ⬇️ 使用你寫好的這個函式
+                    paths = save_excel_as_csvs(f, EXPERIMENT_CSV_DIR)
+                    saved_paths.extend(paths)
+
+            if saved_paths:
+                st.success(f"✅ 已儲存 {len(saved_paths)} 筆檔案到 {EXPERIMENT_CSV_DIR}")
+
             return {"type": "experiment", "files": data_files}
 
     return None
