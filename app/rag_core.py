@@ -88,3 +88,47 @@ def build_prompt(chunks: List[Document], df: pd.DataFrame, question: str) -> Tup
 def call_llm(prompt: str) -> str:
     llm = ChatOpenAI(model_name=LLM_MODEL_NAME, temperature=0)
     return llm.predict(prompt)
+
+def build_inference_prompt(chunks: List[Document], df: pd.DataFrame, question: str) -> Tuple[str, List[Dict]]:
+    context_text = ""
+    citations = []
+    for i, doc in enumerate(chunks):
+        meta = doc.metadata
+        title = meta.get("title", "Untitled")
+        filename = meta.get("filename") or meta.get("source", "Unknown")
+        page = meta.get("page_number") or meta.get("page", "?")
+        snippet = doc.page_content[:80].replace("\n", " ")
+        label = f"[{i+1}]"
+
+        citations.append({
+            "label": label,
+            "title": title,
+            "source": filename,
+            "page": page,
+            "snippet": snippet
+        })
+
+        context_text += f"{label} {title} | Page {page}\n{doc.page_content}\n\n"
+
+    past_exp = df.to_string(index=False) if not df.empty else "無紀錄"
+
+    system_prompt = f"""
+你是一位材料合成顧問，善於針對尚未有明確文獻的情境，根據相似條件推論出創新建議。
+
+請根據以下文獻與實驗資料，進行延伸思考：
+- 你可以提出新的組合、溫度、時間或路徑。
+- 即使沒有直接證據，只要推理合理也可以建議。
+- 只要合理，允許提出創新構想，即使文獻中尚未記載
+- 推論、延伸思考的同時，請儘可能提到「這樣的想法源於哪種文獻線索」來輔助解釋，請在回答中使用 [1], [2] 等標註段落出處，不要在結尾重複列出來源。
+
+
+--- 文獻摘要 ---
+{context_text}
+
+--- 實驗紀錄 ---
+{past_exp}
+
+--- 問題 ---
+{question}
+"""
+    return system_prompt.strip(), citations
