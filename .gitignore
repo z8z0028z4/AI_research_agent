@@ -8,8 +8,10 @@ venv_home/
 
 # Python cache
 __pycache__/
+.pytest_cache/
 *.py[cod]
 *.pyo
+.git
 
 # 系統與 IDE 雜項
 .DS_Store

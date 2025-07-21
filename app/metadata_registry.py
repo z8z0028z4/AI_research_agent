@@ -32,6 +32,10 @@ def append_metadata_to_registry(metadata: dict):
     except Exception as e:
         print(f"❌ 寫入 Excel 時失敗：{e}")
 
+
+
+
+
 if __name__ == "__main__":
     # 範例測試
     sample_metadata = {

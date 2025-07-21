@@ -4,7 +4,6 @@ from metadata_extractor import extract_metadata
 from semantic_lookup import lookup_semantic_scholar_metadata
 from document_renamer import rename_and_copy_file
 from metadata_registry import append_metadata_to_registry
-from chunk_embedding import embed_documents_from_metadata
 
 def process_uploaded_files(file_paths: list, status_callback=None):
     valid_exts = [".pdf", ".docx"]
@@ -50,6 +49,7 @@ def process_uploaded_files(file_paths: list, status_callback=None):
         results.append(metadata)
 
     return results
+
 
 
 if __name__ == "__main__":
