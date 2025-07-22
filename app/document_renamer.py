@@ -3,12 +3,9 @@ import os
 import re
 import shutil
 from config import PAPER_DIR
-from html import unescape
 
 def sanitize_filename(name, max_length=100):
-    name = unescape(name)  # 轉換 HTML 實體，例如 &lt; → <
-    name = re.sub(r'<[^>]+>', '', name)  # 移除 HTML 標籤
-    name = re.sub(r'[^a-zA-Z0-9\-_ ]', '', name)  # 移除非法字元
+    name = re.sub(r'[^a-zA-Z0-9\-_ ]', '', name)
     name = name.strip().replace(' ', '_')
     return name[:max_length]
 

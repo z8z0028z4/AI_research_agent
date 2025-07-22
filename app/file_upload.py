@@ -50,8 +50,6 @@ def process_uploaded_files(file_paths: list, status_callback=None):
 
     return results
 
-
-
 if __name__ == "__main__":
     fake_test_file = "test_data/fake_paper.docx"
     try:

@@ -1,6 +1,5 @@
 import argparse
 import os
-import torch._classes
 
 def run_gui():
     os.system("streamlit run research_gui.py")
@@ -19,10 +18,6 @@ def run_cli():
         print("—" * 40)
 
 if __name__ == "__main__":
-
-
-    torch._classes.__path__ = []  # 避免 Streamlit watcher 掃到
-    
     parser = argparse.ArgumentParser(description="AI 研究助理啟動器")
     parser.add_argument("--mode", choices=["gui", "cli"], default="gui", help="選擇執行模式")
     args = parser.parse_args()
