@@ -80,7 +80,7 @@ with tab2:
     q2 = st.text_area("請輸入查詢問題（將自動萃取關鍵字）：", height=100, key="search_pdf")
     if st.button("執行查詢與下載", key="downloadbtn"):
         with st.spinner("🔍 查詢並下載中..."):
-            pdfs = search_and_download_only(q2, top_k=5, storage_dir="data/paper")
+            pdfs = search_and_download_only(q2, top_k=5, storage_dir="data/chemrxiv")
             if pdfs:
                 st.success(f"✅ 共下載 {len(pdfs)} 篇 PDF")
                 for path in pdfs:

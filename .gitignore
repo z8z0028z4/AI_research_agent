@@ -4,6 +4,8 @@ venv/
 venv_itri/
 .venv/
 venv_home/
+venv_test
+venv_test1
 
 
 # Python cache
