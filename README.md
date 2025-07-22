@@ -1,4 +1,4 @@
-# 🧪 AI Research Assistant
+# 🧪 AI Research Assistant v2.0
 
 A modular AI assistant system designed for research workflows, particularly in materials science and chemistry. This tool supports document ingestion, vector embedding, and GPT-based QA with source tracking.
 
