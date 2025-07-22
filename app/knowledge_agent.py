@@ -1,76 +1,100 @@
-
-import os
 import pandas as pd
-from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import OpenAIEmbeddings
-from langchain.chat_models import ChatOpenAI
-from config import OPENAI_API_KEY, VECTOR_INDEX_DIR, EXPERIMENT_CSV_DIR
+from rag_core import load_paper_vectorstore, load_experiment_vectorstore, preview_chunks, retrieve_chunks_multi_query, build_prompt, call_llm, build_inference_prompt, build_dual_inference_prompt, expand_query
+from config import EXPERIMENT_DIR
+import os
 
-def load_experiment_log():
-    if not os.path.exists(EXPERIMENT_CSV_DIR):
+
+def agent_answer(question: str, df: pd.DataFrame, inference=False, use_experiment=False):
+    
+    if use_experiment:
+        print("🧪 啟用模式：納入實驗資料 + 推論")
+        # 🧠 Dual retriever 啟用
+        paper_vectorstore = load_paper_vectorstore()  # 文獻向量庫
+        experiment_vectorstore = load_experiment_vectorstore()  # 實驗向量庫
+        print("📦 Paper 向量庫：", paper_vectorstore._collection.count())
+        print("📦 Experiment 向量庫：", experiment_vectorstore._collection.count())
+
+        # 🔁 語意拓展
+        query_list = expand_query(question) #給 chunks_paper的語意拓展用
+        #給 chunks_experiment的語意拓展用
+
+        # 分別召回
+        chunks_paper = retrieve_chunks_multi_query(paper_vectorstore, query_list, k=5)
+        chunks_experiment = retrieve_chunks_multi_query(experiment_vectorstore, [question], k=5) #question 問，語意未拓展
+        preview_chunks(chunks_paper, title="文獻向量庫")
+        preview_chunks(chunks_experiment, title="實驗向量庫")
+
+        # 🧠 合併餵入 dual prompt injection
+        prompt, citations = build_dual_inference_prompt(
+            chunks_paper, df, question, experiment_chunks=chunks_experiment
+        )
+
+    else:
+        # 一般模式使用單一 retriever
+        paper_vectorstore = load_paper_vectorstore()
+        chunks = retrieve_chunks_multi_query(paper_vectorstore, [question])
+        print("📦 Paper 向量庫：", paper_vectorstore._collection.count())
+
+        if inference:
+            
+            print("🧠 啟用模式：推論模式（不納入實驗資料）")
+            prompt, citations = build_inference_prompt(chunks, df, [question])
+        else:
+            print("📚 啟用模式：嚴謹模式（僅文獻，無推論）")
+            prompt, citations = build_prompt(chunks, df, [question])
+
+    response = call_llm(prompt)
+
+    return {
+        "answer": response,
+        "citations": citations
+    }
+    
+    
+    
+    
+    vectorstore = load_paper_vectorstore()
+    if use_experiment:
+        # ✅ 啟用語意拓展做 multi-query search
+        query_list = expand_query(question)
+        chunks = retrieve_chunks(vectorstore, query_list)
+    else:
+        # ✅ 一般嚴謹 / 推論模式，直接查原始 question
+        chunks = retrieve_chunks(vectorstore, question)
+
+    # 根據模式切換不同 prompt injection
+    if inference and use_experiment:
+        queries = expand_query(question)
+        chunks = retrieve_chunks(vectorstore, queries)
+        prompt, citations = build_dual_inference_prompt(chunks, df, question)  # 納入實驗資料模式
+    elif inference:
+        prompt, citations = build_inference_prompt(chunks, df, question) #推論模式
+    else:
+        prompt, citations = build_prompt(chunks, df, question) #嚴謹模式
+
+    response = call_llm(prompt)
+
+    return {
+        "answer": response,
+        "citations": citations
+    }
+
+
+def load_experiment_log(): ##########################################
+    if not os.path.exists(EXPERIMENT_DIR):
         return pd.DataFrame()
-    csv_files = [f for f in os.listdir(EXPERIMENT_CSV_DIR) if f.endswith(".csv")]
+    csv_files = [f for f in os.listdir(EXPERIMENT_DIR) if f.endswith(".csv")]
     dfs = []
     for file in csv_files:
         try:
-            df = pd.read_csv(os.path.join(EXPERIMENT_CSV_DIR, file))
+            df = pd.read_csv(os.path.join(EXPERIMENT_DIR, file))
             dfs.append(df)
         except:
             continue
     if dfs:
-        return pd.concat(dfs, ignore_index=True)
+        df_all = pd.concat(dfs, ignore_index=True)
+        print(f"[DEBUG] 實驗資料總列數：{df_all.shape[0]}, 欄位數：{df_all.shape[1]}")
+        print(f"[DEBUG] 將輸入 prompt 的 dataframe 預覽：\n{df_all.head(5)}")
+        return df_all
+
     return pd.DataFrame()
-
-def agent_answer(question, experiment_df):
-    embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
-    db = Chroma(persist_directory=VECTOR_INDEX_DIR, embedding_function=embeddings)
-    retriever = db.as_retriever(search_kwargs={"k": 5})
-    context_docs = retriever.get_relevant_documents(question)
-
-    # 建立 citation map
-    citations = []
-    citation_map = {}
-    for i, doc in enumerate(context_docs):
-        label = f"[{i+1}]"
-        snippet = " ".join(doc.page_content.strip().split()[:5]) + "..."
-        citation = {
-            "label": label,
-            "filename": doc.metadata.get("filename", "未知"),
-            "page": doc.metadata.get("page_number", "?"),
-            "snippet": snippet
-        }
-        citations.append(citation)
-        citation_map[id(doc)] = label
-
-    # 插入追蹤資訊 + snippet
-    context = "\n---\n".join(
-        f"{citation_map[id(doc)]} [來源: {doc.metadata.get('title', '')} | 頁碼: {doc.metadata.get('page_number')} | 段落開頭: \"{' '.join(doc.page_content.strip().split()[:5])}...\"]\n{doc.page_content}"
-        for doc in context_docs
-    )
-
-    past_exp = experiment_df.head(10).to_string(index=False) if not experiment_df.empty else "（無紀錄）"
-
-    system_prompt = f"""
-        You are a scientific research assistant. Answer rigorously based on the given documents.
-        Please cite sources in your response using numbered references (e.g., [1], [2]).
-        At the end of your answer, list all cited sources in the format:
-        [1] Filename | Page number | Beginning of paragraph: "..."\n
-        你是一位研究助理，回答需嚴謹。請根據下列文獻與資料內容作答，並在回答中標註來源編號（例如 [1], [2]）。
-        回答末尾請列出所有引用的來源對應標記與說明：
-        [1] 檔名 | 頁碼 | 段落開頭: "..."
-        --- 文獻摘要 ---
-        {context}
-
-        --- 實驗紀錄 ---
-        {past_exp}
-
-        --- 問題 ---
-        {question}
-        """
-        # "--- 文獻摘要 ---\n" + context + "\n\n"
-        # "--- 實驗紀錄 ---\n" + past_exp + "\n\n"
-        # "--- 問題 ---\n" + question
-
-    llm = ChatOpenAI(model="gpt-4")
-    response = llm.predict(system_prompt)
-    return response
