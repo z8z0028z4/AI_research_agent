@@ -7,12 +7,13 @@ A modular AI assistant system designed for research workflows, particularly in m
 ## ✅ Features
 
 1. **Knowledge Assistant**: Leverages Chroma vector database to embed and retrieve content from PDF/Word documents and experimental records. GPT answers user questions with citation traceability.
-2. **Academic Search**: Integrates Perplexity API for real-time academic source retrieval with references.
-3. **Interactive GUI**: Built with Streamlit for a clean and simple web interface.
-4. **CLI Mode**: Supports command-line interaction for minimal setups.
-5. **Document Tracing**: Embedded chunks now include metadata such as filename, tracing number, page number, and paragraph snippet.
-6. **Reference Injection**: GPT responses include numbered references `[1]`, linking to document, page, and chunk beginning text for traceability.
-7. **Semantic Embedding**: Embedding pipeline supports academic-specific `nomic-ai/nomic-embed-text-v1.5`.
+2. **Experimental Reasoning Mode (NEW)**: Dual Retriever architecture—allows the assistant to reason with both **literature data** and **user-uploaded experimental logs**, providing creative and practical synthesis suggestions.
+3. **Academic Search**: Integrates Perplexity API for real-time academic source retrieval with references.
+4. **Interactive GUI**: Built with Streamlit for a clean and simple web interface.
+5. **CLI Mode**: Supports command-line interaction for minimal setups.
+6. **Document Tracing**: Embedded chunks now include metadata such as filename, tracing number, page number, and paragraph snippet.
+7. **Reference Injection**: GPT responses include numbered references `[1]`, linking to document, page, and chunk beginning text for traceability.
+8. **Semantic Embedding**: Embedding pipeline supports academic-specific `nomic-ai/nomic-embed-text-v1.5`.
 
 ---
 
@@ -22,30 +23,48 @@ A modular AI assistant system designed for research workflows, particularly in m
 AI-research-agent/
 ├── research_agent/
 │   ├── app/
-│   │   ├──browser.py                    # Streamlit file selector
-│   │   ├──chunk_embedding.py           # Embedding from PDF metadata
-│   │   ├── config.py                    # API keys and path config
-│   │   ├──document_renamer.py         # Auto rename and copy uploaded files
-│   │   ├──file_upload.py              # Upload handler and pipeline
-│   │   ├──knowledge_agent.py          # Core logic for RAG-based QA
-│   │   ├──main.py                     # CLI or GUI entry point
-│   │   ├──metadata_extractor.py       # Extract DOI, title from PDF/docx
-│   │   ├──metadata_registry.py        # Append to experiment log/registry
-│   │   ├──pdf_read_and_chunk_page_get.py # Read PDF and locate page number
-│   │   ├──perplexity_search_fallback.py # Fallback to Perplexity search
-│   │   ├──rag_core.py                 # Load, retrieve, build prompt, call LLM
-│   │   ├──research_gui.py             # GUI layout and tab integration
-│   │   ├── semantic_lookup.py          # DOI/title query via API
+│   │   ├──browser.py
+│   │   ├──chunk_embedding.py
+│   │   ├── config.py
+│   │   ├──document_renamer.py
+│   │   ├──file_upload.py
+│   │   ├──knowledge_agent.py
+│   │   ├──main.py
+│   │   ├──metadata_extractor.py
+│   │   ├──metadata_registry.py
+│   │   ├──pdf_read_and_chunk_page_get.py
+│   │   ├──perplexity_search_fallback.py
+│   │   ├──rag_core.py
+│   │   ├──research_gui.py
+│   │   ├──semantic_lookup.py
+│   │   ├──verify_embedding.py
 │   ├── requirements.txt
 │   ├── run.bat
 │   ├── README.md
-│   ├── logo.txt
 │   └── .env.example
 └── experiment_data/
-    ├── papers/                     # Named + moved PDF archive
-    ├── vector_index/               # Chroma vector DB
-    └── experiment/                 # CSV logs of experiments
+    ├── papers/
+    ├── vector_index/
+    └── experiment/
 ```
+
+---
+
+## 🧠 Modes of Use
+
+### 📘 GUI Mode (default)
+```bash
+python app/main.py
+```
+
+### 🧠 CLI Mode
+```bash
+python app/main.py --mode cli
+```
+
+### 🧪 Experimental Reasoning Mode
+- Access via GUI Tab 1 → 選擇模式：「納入實驗資料，進行推論與建議」
+- Embeds `.xlsx` experimental logs and retrieves them alongside literature for dual-context prompting.
 
 ---
 
@@ -57,23 +76,9 @@ cd research_agent
 python -m venv venv
 venv\Scripts\activate      # or source venv/bin/activate (macOS/Linux)
 pip install -r requirements.txt
-cp .env.example .env       # or fill in keys manually
-python app/main.py         # GUI mode by default
+cp .env.example .env         # or fill in keys manually
+python app/main.py           # GUI mode by default
 ✅ Supported Python Versions: 3.10, 3.11
-```
-
----
-
-## 🚀 Modes of Use
-
-### 📘 GUI Mode (default)
-```bash
-python app/main.py
-```
-
-### 🧠 CLI Mode
-```bash
-python app/main.py --mode cli
 ```
 
 ---
@@ -87,42 +92,10 @@ PERPLEXITY_API_KEY=your-perplexity-key
 
 ---
 
-## 📌 Notes
+## 🔍 Notes
 
 - All path configurations (papers, vectors) are relative, managed via `config.py`
-- Perplexity API requires a Pro account: https://www.perplexity.ai/pro
-- Vector chunks include: `filename`, `page_number`, `chunk_index`, `tracing_number`, and snippet of the paragraph for fast lookup.
-
----
-
-## 🧪 Recommended Embedding Models for Chemistry & Materials
-
-| Model | Strength | HF Path |
-|-------|----------|---------|
-| `hkunlp/instructor-xl` | Instruction-guided, versatile | ✅ Recommended |
-| `allenai/specter2` | Fine-tuned on scientific citations | Suitable |
-| `microsoft/SciNCL-Base` | Embedding with contrastive learning | Optional |
-| `bge-m3`, `bge-large-en` | Multi-task (retrieval, QA, summarization) | Optional |
-
-> Replace default OpenAI embeddings in `summarize_and_embed.py` if needed.
-
----
-
-
-🔍 Upcoming: Search Agent for Open Access Chemistry & Materials Data
-
-We are developing a search agent that can:
-
-Interpret user queries and convert them to structured keyword searches
-
-Search open-access scientific databases (e.g. ChemRxiv, EuropePMC, PubChem)
-
-Download PDF or structured data, embed and store it locally
-
-Answer the question using freshly retrieved information
-
-Initially designed for Tab 2 of the GUI, and later will integrate with fallback mode in Tab 1.
-
----
-
-Maintained by: **this is a self project used in research of ITRI, Taiwan**
+- `vector_index/` 資料夾下有兩種 Collection:
+  - `paper`：來自文獻的 embedding
+  - `experiment`：由 Excel 匯出 `.txt` 的實驗資料
+- Dual Retriever 啟用時，語意查詢將拓展後檢索文獻資料，並使用原始語句查詢實驗向量資料
