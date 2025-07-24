@@ -108,7 +108,7 @@ def preview_chunks(chunks: list[Document], title: str, max_preview: int = 5):
 #     return context_docs
 
 
-def build_prompt(chunks: List[Document], df: pd.DataFrame, question: str) -> Tuple[str, List[Dict]]:
+def build_prompt(chunks: List[Document], question: str) -> Tuple[str, List[Dict]]:
     context_text = ""
     citations = []
     citation_map = {}
@@ -152,7 +152,7 @@ def call_llm(prompt: str) -> str:
     llm = ChatOpenAI(model_name=LLM_MODEL_NAME, temperature=0)
     return llm.predict(prompt)
 
-def build_inference_prompt(chunks: List[Document], df: pd.DataFrame, question: str) -> Tuple[str, List[Dict]]:
+def build_inference_prompt(chunks: List[Document], question: str) -> Tuple[str, List[Dict]]:
     context_text = ""
     citations = []
     for i, doc in enumerate(chunks):
@@ -173,8 +173,6 @@ def build_inference_prompt(chunks: List[Document], df: pd.DataFrame, question: s
 
         context_text += f"{label} {title} | Page {page}\n{doc.page_content}\n\n"
 
-    past_exp = df.to_string(index=False) if not df.empty else "無紀錄"
-
     system_prompt = f"""
 你是一位材料合成顧問，你了解並善於比較材料間於化學、物理性質上的差異，能夠針對尚未有明確文獻的情境，根據已知之實驗條件推論出創新建議。
 
@@ -187,9 +185,6 @@ def build_inference_prompt(chunks: List[Document], df: pd.DataFrame, question: s
 --- 文獻摘要 ---
 {context_text}
 
---- 實驗紀錄 ---
-{past_exp}
-
 --- 問題 ---
 {question}
 """
@@ -197,17 +192,17 @@ def build_inference_prompt(chunks: List[Document], df: pd.DataFrame, question: s
 
 def build_dual_inference_prompt(
     chunks_paper: List[Document],
-    df: pd.DataFrame,
     question: str,
     experiment_chunks: List[Document]
     ) -> Tuple[str, List[Dict]]:
 
-    context_text = ""
+    paper_context_text = ""
+    exp_context_text = ""
     citations = []
     label_index = 1
 
     # --- 文獻摘要 ---
-    context_text += "--- 文獻摘要 ---\n"
+    paper_context_text += "--- 文獻摘要 ---\n"
     for doc in chunks_paper:
         meta = doc.metadata
         title = meta.get("title", "Untitled")
@@ -225,11 +220,11 @@ def build_dual_inference_prompt(
             "type": "paper"
         })
 
-        context_text += f"{label} {title} | Page {page}\n{doc.page_content}\n\n"
+        paper_context_text += f"{label} {title} | Page {page}\n{doc.page_content}\n\n"
         label_index += 1
 
     # --- 實驗摘要 ---
-    context_text += "--- 類似實驗摘要 ---\n"
+    exp_context_text += "--- 類似實驗摘要 ---\n"
     for doc in experiment_chunks:
         meta = doc.metadata
         filename = meta.get("filename") or meta.get("source", "Unknown")
@@ -246,12 +241,9 @@ def build_dual_inference_prompt(
             "type": "experiment"
         })
 
-        context_text += f"{label} 實驗 {exp_id}\n{doc.page_content}\n\n"
+        exp_context_text += f"{label} 實驗 {exp_id}\n{doc.page_content}\n\n"
         label_index += 1
-
-    # --- 實驗紀錄表格（DataFrame） ---
-    past_exp = df.to_string(index=False) if not df.empty else "無紀錄"
-
+        
     # --- Prompt 注入 ---
     system_prompt = f"""
 你是一位材料合成顧問，你了解並善於比較材料在化學與物理性質上的差異。
@@ -266,11 +258,11 @@ def build_dual_inference_prompt(
 - 可能影響合成成功率的變因
 - 推論其背後的原因，必要時引用文獻（[1]、[2]...）或類似實驗結果
 
---- 知識來源與摘要 ---
-{context_text}
+--- 文獻知識來源 ---
+{paper_context_text}
 
---- 實驗紀錄表格 ---
-{past_exp}
+--- 實驗紀錄 ---
+{exp_context_text}
 
 --- 研究問題 ---
 {question}
@@ -307,3 +299,124 @@ Only return a list of 3 to 6 search queries in English. Do not explain, do not i
 
     queries = [line.strip("-• ").strip() for line in output.split("\n") if line.strip()]
     return [q for q in queries if len(q) > 4]
+
+
+def build_proposal_prompt(chunks: List[Document], question: str) -> Tuple[str, List[Dict]]:
+    paper_context_text = ""
+    citations = []
+
+    for i, doc in enumerate(chunks):
+        
+        meta = doc.metadata
+        title = meta.get("title", "Untitled")
+        filename = meta.get("filename") or meta.get("source", "Unknown")
+        page = meta.get("page_number") or meta.get("page", "?")
+        snippet = doc.page_content[:80].replace("\n", " ")
+        label = f"[{i+1}]"
+
+        citations.append({
+            "label": label,
+            "title": title,
+            "source": filename,
+            "page": page,
+            "snippet": snippet
+        })
+
+        paper_context_text += f"{label} {title} | Page {page}\n{doc.page_content}\n\n"
+
+    system_prompt = f"""
+你是一位材料化學專家，擅長根據文獻摘要與研究目標，提出具有創新性與可行性的材料合成研究提案。
+如能根據文獻提出新的配體種類（如 pyridyl, biphenyl, sulfonate）或金屬節點（如 Zn, Mg, Zr），請具體列出並說明其結構優勢與反應性。
+
+請你根據下方文獻內容與研究目標，撰寫一份結構化提案，格式如下（請完整產出每一段）：
+
+---
+Proposal: （請自動產生提案標題，濃縮研究目標與創新點）
+
+Need:
+- 簡述研究目標與目前材料在應用上的限制
+- 明確指出產業、世界、政府等待解決的痛點或技術瓶頸
+
+Solution:
+- 提出具體的材料設計與合成策略
+- 建議新的化學結構（如金屬、有機配體、功能官能基)，明確指出建議的化學結構名稱(如配體名稱)
+- 請說明新設計的化學邏輯（如配位環境、孔徑、官能基作用）
+
+Differentiation:
+- 與現有文獻材料的差異（可列表比較）
+- 強調結構、條件或性能上的突破
+
+Benefit:
+- 預期改善的性能或應用面向
+- 若能量化（如提升 CO₂ 吸附量、穩定性、選擇性）請盡量列出
+
+Based Literature:
+- 使用段落標籤列出引用的依據，例如：[1]、[2]...
+- 請確保每個推論都有文獻對照依據或合理延伸理由
+
+Experimental overview:
+1. 使用的起始材料與反應條件（如溫度、時間）
+2. 合成使用儀器、設備描述並列表
+3. 合成步驟敘述（描述關鍵邏輯）
+
+
+
+最後，請在回答最末段，以 JSON 格式列出此提案所使用到的所有化學品（包含金屬鹽、有機配體、溶劑等）。以IUPAC Name回答，格式與範例如下：
+
+```markdown
+
+```json
+["formic acid", "N,N-dimethylformamide", "copper;dinitrate;trihydrate"]
+```
+---
+
+請注意：
+- 結構建議要有邏輯依據，避免隨意編造不合理結構
+- 請保持科學性、可讀性，並避免空泛敘述
+- 引用標註請使用提供的文獻段落標籤 [1]、[2]，不要使用虛構來源
+
+--- 文獻段落 ---
+{paper_context_text}
+
+--- 研究目標 ---
+{question}
+
+"""
+    
+    return system_prompt.strip(), citations
+
+def build_detail_experimental_plan_prompt(chunks: List[Document], proposal_text: str) -> str:
+    paper_context_text = "\n\n".join(doc.page_content for doc in chunks)
+
+    system_prompt = f"""
+你是一位熟練的材料實驗設計顧問，請根據以下研究提案內容與相關文獻段落，為研究者提供一份詳細的建議實驗步驟：
+
+請包含：
+1. 合成流程：步驟-by-步驟說明每個實驗操作，含順序、邏輯與目的
+2. 材料與條件：每步驟所需的原料（含比例）、反應條件（溫度、時間、容器）
+3. 分析方法：建議使用哪些表徵工具（如 XRD, BET, TGA），以及目的為何
+4. 注意事項：文獻中提醒的重點或參數限制
+
+請以條列或分段方式清楚列出。
+
+--- 文獻段落 ---
+{paper_context_text}
+
+--- 使用者的 Proposal ---
+{proposal_text}
+"""
+    return system_prompt.strip()
+
+def build_rejection_feedback_prompt(reason: str, old_proposal: str, goal: str) -> str:
+    return f"""
+使用者針對以下提案給出了批評與修改建議，請根據此理由重寫一份新的 proposal，格式與風格需保持一致，內容需貼近原始研究目標但具新意。
+
+--- 研究目標 ---
+{goal}
+
+--- 不喜歡的原因 ---
+{reason}
+
+--- 原始 Proposal ---
+{old_proposal}
+"""

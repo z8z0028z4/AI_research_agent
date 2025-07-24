@@ -4,13 +4,15 @@ from search_agent import search_and_download_only
 import os
 import tempfile
 import re
-from knowledge_agent import agent_answer, load_experiment_log
+from knowledge_agent import agent_answer
 from browser import select_files
 from file_upload import process_uploaded_files
 from chunk_embedding import embed_documents_from_metadata, embed_experiment_txt_batch
 import pandas as pd
 from excel_to_txt_by_row import export_new_experiments_to_txt
 from config import EXPERIMENT_DIR
+from pubchem_handler import chemical_metadata_extractor
+from rag_core import build_detail_experimental_plan_prompt
 
 st.set_page_config(page_title="研究助理系統", layout="wide")
 st.title("🧪 AI 研究助理系統")
@@ -40,6 +42,40 @@ def format_references_block(text):
         else:
             markdown_links.append(ref)
     return markdown_links
+def render_chemical_table(chemical_metadata_list):
+    st.markdown("## 🧪 Chemical Summary Table")
+
+    for chem in chemical_metadata_list:
+        cols = st.columns([2, 2, 3, 3])
+
+        # Chemical Name
+        with cols[0]:
+            st.markdown(f"**{chem.get('name', 'Unknown')}**")
+
+        # Structure Image
+        with cols[1]:
+            st.image(chem.get("image_url", ""), width=200)
+
+        # Properties block
+        with cols[2]:
+            st.markdown("**Properties**")
+            st.markdown(f"- **Formula**: `{chem.get('formula', '-')}`")
+            st.markdown(f"- **MW**: `{chem.get('weight', '-')}`")
+            st.markdown(f"- **Boiling Point**: `{chem.get('boiling_point_c', '-')}`")
+            st.markdown(f"- **Melting Point**: `{chem.get('melting_point_c', '-')}`")
+            st.markdown(f"- **SMILES**: `{chem.get('smiles', '-')}`")
+
+        # Safety block (GHS + NFPA)
+        with cols[3]:
+            st.markdown("**Handling Safety**")
+            if chem.get("safety_icons", {}).get("nfpa_image"):
+                st.image(chem["safety_icons"]["nfpa_image"], width=60)
+
+            ghs = chem.get("safety_icons", {}).get("ghs_icons", [])
+            if ghs:
+                st.image(ghs, width=50)
+
+        st.markdown("---")
 
 with tab1:
     st.subheader("📘 功能 1：利用知識庫回答問題")
@@ -49,7 +85,8 @@ with tab1:
         options=[
             "僅嚴謹文獻溯源",
             "允許延伸與推論",
-            "納入實驗資料，進行推論與建議"
+            "納入實驗資料，進行推論與建議",
+            "make proposal"
         ],
         index=0,
         key="mode_selector"
@@ -59,21 +96,50 @@ with tab1:
 
     if st.button("由知識庫回答", key="knowledgebtn"):
         with st.spinner("查詢知識庫中..."):
-            use_inference = answer_mode != "僅嚴謹文獻溯源"
-            use_experiment = answer_mode == "納入實驗資料，進行推論與建議"
-            df = load_experiment_log() if use_experiment else pd.DataFrame()
+            result = agent_answer(q1, mode = answer_mode)
+            #產生乾淨答案 (分離LLM答案中的json)
+            if answer_mode == "make proposal":
+                chemical_metadata_list, not_found_list, cleaned_LLM_answer = chemical_metadata_extractor(result["answer"])
+                st.session_state["proposal_chunks"] = result.get("chunks", [])
+                st.session_state["cleaned_LLM_answer"] = cleaned_LLM_answer
+                st.session_state["not_found_list"] = not_found_list
+                st.session_state["chemical_metadata_list"] = chemical_metadata_list
+                st.session_state["result"] = result
 
-            result = agent_answer(q1, df, inference=use_inference, use_experiment=use_experiment)
+    if answer_mode == "make proposal" and "cleaned_LLM_answer" in st.session_state:
+        st.markdown("### 🤖 回答")
+        st.markdown(st.session_state["cleaned_LLM_answer"])
 
-            st.markdown("### 🤖 回答")
-            st.markdown(result["answer"])
+        if st.session_state.get("chemical_metadata_list"):
+            render_chemical_table(st.session_state["chemical_metadata_list"])
+        if st.session_state.get("not_found_list"):
+            st.markdown("### ⚠️ 以下化學品未能查詢成功")
+            for name in st.session_state["not_found_list"]:
+                st.markdown(f"- `{name}`")
 
-            st.markdown("### 📚 引用資料")
-            for i, citation in enumerate(result["citations"], start=1):
-                title = citation.get("title", "未知")
-                page = citation.get("page", "?")
-                snippet = citation.get("snippet", "...")
-                st.markdown(f"**[{i}]** `{title}` | 頁碼：{page} | 段落開頭：{snippet}")
+        
+        if st.button("✅ Accept & Generate Experiment Detail", key="accept_btn"):
+            with st.spinner("🧪 正在分析實驗細節..."):
+                chunks = st.session_state.get("proposal_chunks", [])
+                proposal = st.session_state["result"]["answer"]
+                result = agent_answer(
+                    "",  # 問題不重要，給空也可以
+                    mode="expand to experiment detail",
+                    chunks=chunks,
+                    proposal=proposal
+                )
+                st.markdown("### 🔬 建議實驗細節")
+                st.markdown(result["answer"])
+
+        # 引用資料
+        st.markdown("### 📚 引用資料")
+        for i, citation in enumerate(st.session_state["result"]["citations"], start=1):
+            title = citation.get("title", "未知")
+            page = citation.get("page", "?")
+            snippet = citation.get("snippet", "...")
+            st.markdown(f"**[{i}]** `{title}` | 頁碼：{page} | 段落開頭：{snippet}")
+
+            
 
 with tab2:
     st.subheader("🔍 功能 2：使用關鍵字搜尋外部文獻並下載 PDF")
