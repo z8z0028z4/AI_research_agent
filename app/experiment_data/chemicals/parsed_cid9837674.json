@@ -1,0 +1,24 @@
+{
+  "cid": 9837674,
+  "name": "copper;dinitrate;trihydrate",
+  "formula": "CuH6N2O9",
+  "weight": "241.60",
+  "smiles": "[N+](=O)([O-])[O-].[N+](=O)([O-])[O-].O.O.O.[Cu+2]",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=9837674&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/9837674",
+  "boiling_point": null,
+  "melting_point": null,
+  "boiling_point_c": null,
+  "melting_point_c": null,
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS03.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS05.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS07.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS08.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS09.svg"
+    ],
+    "nfpa_image": null
+  },
+  "cas": "10031-43-3"
+}

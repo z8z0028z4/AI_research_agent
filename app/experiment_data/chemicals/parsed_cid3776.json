@@ -1,0 +1,24 @@
+{
+  "cid": 3776,
+  "name": "propan-2-ol",
+  "formula": "C3H8O",
+  "weight": "60.10",
+  "smiles": "CC(C)O",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=3776&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/3776",
+  "boiling_point": "180.5 \u00b0F at 760 mmHg (NTP, 1992)",
+  "melting_point": "-127.3 \u00b0F (NTP, 1992)",
+  "boiling_point_c": "82.5 \u00b0C",
+  "melting_point_c": "-88.5 \u00b0C",
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS02.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS05.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS07.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS08.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS09.svg"
+    ],
+    "nfpa_image": "https://pubchem.ncbi.nlm.nih.gov/image/nfpa.cgi?code=130"
+  },
+  "cas": "67-63-0"
+}

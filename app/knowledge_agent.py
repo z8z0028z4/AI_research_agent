@@ -1,5 +1,5 @@
 import pandas as pd
-from rag_core import load_paper_vectorstore,build_proposal_prompt,build_detail_experimental_plan_prompt, load_experiment_vectorstore, preview_chunks, retrieve_chunks_multi_query, build_prompt, call_llm, build_inference_prompt, build_dual_inference_prompt, expand_query
+from rag_core import load_paper_vectorstore,build_proposal_prompt,build_detail_experimental_plan_prompt, build_iterative_proposal_prompt, load_experiment_vectorstore, preview_chunks, retrieve_chunks_multi_query, build_prompt, call_llm, build_inference_prompt, build_dual_inference_prompt, expand_query
 from config import EXPERIMENT_DIR
 import os
 
@@ -47,14 +47,23 @@ def agent_answer(question: str, mode:str ="defualt",  **kwargs):
 
     elif mode == "expand to experiment detail":
     # 使用 proposal + paper_chunks 產出 detail
+        print(" 啟用模式：expand to experiment detail")
         chunks = kwargs.get("chunks", [])
         proposal = kwargs.get("proposal", "")
         prompt = build_detail_experimental_plan_prompt(chunks, proposal)
-        response = call_llm(prompt)
-        return {
-            "answer": response,
-            "citations": [],  # 你可以留空或保留 chunks 資訊
-        }
+
+    elif mode == "generate new idea":
+    # 使用 proposal + paper_chunks 產出 detail
+        print(" 啟用模式：generate new idea")
+        paper_vectorstore = load_paper_vectorstore()
+        print("📦 Paper 向量庫：", paper_vectorstore._collection.count())
+        query_list = expand_query(question) #給 chunks_paper的語意拓展用
+        chunks = retrieve_chunks_multi_query(paper_vectorstore, query_list, k=5)
+        old_chunks = kwargs.get("old_chunks", [])
+        proposal = kwargs.get("proposal", "")
+        prompt, citations = build_iterative_proposal_prompt(question, chunks, old_chunks, proposal)
+
+
 
     else:
         raise ValueError(f"未知的模式：{mode}")

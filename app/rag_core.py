@@ -407,16 +407,77 @@ def build_detail_experimental_plan_prompt(chunks: List[Document], proposal_text:
 """
     return system_prompt.strip()
 
-def build_rejection_feedback_prompt(reason: str, old_proposal: str, goal: str) -> str:
-    return f"""
-使用者針對以下提案給出了批評與修改建議，請根據此理由重寫一份新的 proposal，格式與風格需保持一致，內容需貼近原始研究目標但具新意。
 
---- 研究目標 ---
-{goal}
 
---- 不喜歡的原因 ---
-{reason}
+def build_iterative_proposal_prompt(
+    question: str,
+    new_chunks: List[Document],
+    old_chunks: List[Document],
+    past_proposal: str
+) -> Tuple[str, List[Dict]]:
+    """
+    建立新的研究提案 prompt，結合使用者的反饋、新檢索文獻、舊文獻與原始提案。
+    同時回傳 citation list。
+    """
+    citations = []
 
---- 原始 Proposal ---
-{old_proposal}
+    def format_chunks(chunks: List[Document], label_offset=0) -> Tuple[str, List[Dict]]:
+        text = ""
+        local_citations = []
+        for i, doc in enumerate(chunks):
+            meta = doc.metadata
+            title = meta.get("title", "Untitled")
+            filename = meta.get("filename") or meta.get("source", "Unknown")
+            page = meta.get("page_number") or meta.get("page", "?")
+            snippet = doc.page_content[:80].replace("\n", " ")
+            label = f"[{label_offset + i + 1}]"
+
+            local_citations.append({
+                "label": label,
+                "title": title,
+                "source": filename,
+                "page": page,
+                "snippet": snippet
+            })
+
+            text += f"{label} {title} | Page {page}\n{doc.page_content}\n\n"
+
+        return text, local_citations
+
+    old_text, old_citations = format_chunks(old_chunks)
+    new_text, new_citations = format_chunks(new_chunks, label_offset=len(old_citations))
+    citations.extend(old_citations + new_citations)
+
+    system_prompt = f"""
+你是一位熟練的材料實驗設計顧問，請根據使用者提供的反饋、原始提案、與文獻內容，協助修改部分的研究提案。
+
+請依循以下指引：
+1. 優先處理使用者提出欲修改之處，並從文獻中尋找可能的改進方向。
+2. 除了使用者提出之不滿意處進行修改外，其他部分(NSDB)請保持原提案內容，不須更動，直接輸出
+3. 保持提案格式與原始提案內容一致，並請於第一段簡要說明更改的方向，總共包含下列區塊：
+   - revision explanation: 簡要說明本次提案與前次提案的差異
+   - Need
+   - Solution
+   - Differentiation
+   - Benefit
+   - Based Literature
+   - Experimental overview
+
+最後，請在回答最末段，以 JSON 格式列出此提案所使用到的所有化學品（包含金屬鹽、有機配體、溶劑等）。以 IUPAC Name 回答，格式如下：
+
+```json
+["formic acid", "N,N-dimethylformamide", "copper;dinitrate;trihydrate"]
+--- 使用者的反饋 ---
+{question}
+
+--- 原始提案內容 ---
+{past_proposal}
+
+--- 原始提案所基於的文獻段落 ---
+{old_text}
+
+--- 根據反饋補充的新檢索段落 ---
+{new_text}
 """
+    return system_prompt.strip(), citations
+

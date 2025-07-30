@@ -1,0 +1,24 @@
+{
+  "cid": 284,
+  "name": "formic acid",
+  "formula": "CH2O2",
+  "weight": "46.025",
+  "smiles": "C(=O)O",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=284&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/284",
+  "boiling_point": "213.3 \u00b0F at 760 mmHg (NTP, 1992)",
+  "melting_point": "47.1 \u00b0F (NTP, 1992)",
+  "boiling_point_c": "100.7 \u00b0C",
+  "melting_point_c": "8.4 \u00b0C",
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS02.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS05.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS06.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS07.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS08.svg"
+    ],
+    "nfpa_image": "https://pubchem.ncbi.nlm.nih.gov/image/nfpa.cgi?code=320"
+  },
+  "cas": "64-18-6"
+}

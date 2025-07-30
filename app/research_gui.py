@@ -50,7 +50,12 @@ def render_chemical_table(chemical_metadata_list):
 
         # Chemical Name
         with cols[0]:
-            st.markdown(f"**{chem.get('name', 'Unknown')}**")
+            url = chem.get("pubchem_url")
+            if url:
+                st.markdown(f"[**{chem.get('name', 'Unknown')}**]({url})")
+            else:
+                st.markdown(f"**{chem.get('name', 'Unknown')}**")
+            
 
         # Structure Image
         with cols[1]:
@@ -63,6 +68,7 @@ def render_chemical_table(chemical_metadata_list):
             st.markdown(f"- **MW**: `{chem.get('weight', '-')}`")
             st.markdown(f"- **Boiling Point**: `{chem.get('boiling_point_c', '-')}`")
             st.markdown(f"- **Melting Point**: `{chem.get('melting_point_c', '-')}`")
+            st.markdown(f"- **CAS No.**: `{chem.get('cas', '-')}`")
             st.markdown(f"- **SMILES**: `{chem.get('smiles', '-')}`")
 
         # Safety block (GHS + NFPA)
@@ -99,26 +105,57 @@ with tab1:
             result = agent_answer(q1, mode = answer_mode)
             #產生乾淨答案 (分離LLM答案中的json)
             if answer_mode == "make proposal":
-                chemical_metadata_list, not_found_list, cleaned_LLM_answer = chemical_metadata_extractor(result["answer"])
+                chemical_metadata_list, not_found_list, proposal_answer = chemical_metadata_extractor(result["answer"])
                 st.session_state["proposal_chunks"] = result.get("chunks", [])
-                st.session_state["cleaned_LLM_answer"] = cleaned_LLM_answer
+                st.session_state["proposal_answer"] = proposal_answer
                 st.session_state["not_found_list"] = not_found_list
                 st.session_state["chemical_metadata_list"] = chemical_metadata_list
                 st.session_state["result"] = result
+    
+    has_proposal = (
+    "proposal_answer" in st.session_state and
+    "chemical_metadata_list" in st.session_state
+    )
 
-    if answer_mode == "make proposal" and "cleaned_LLM_answer" in st.session_state:
+    if has_proposal:
         st.markdown("### 🤖 回答")
-        st.markdown(st.session_state["cleaned_LLM_answer"])
+        st.markdown(st.session_state["proposal_answer"])
 
         if st.session_state.get("chemical_metadata_list"):
             render_chemical_table(st.session_state["chemical_metadata_list"])
         if st.session_state.get("not_found_list"):
             st.markdown("### ⚠️ 以下化學品未能查詢成功")
             for name in st.session_state["not_found_list"]:
-                st.markdown(f"- `{name}`")
-
+                st.markdown(f"- {name}")      
+            
         
-        if st.button("✅ Accept & Generate Experiment Detail", key="accept_btn"):
+        st.markdown("### 💡 Don't like the proposal？ Provide your opinion here")
+        user_reason = st.text_input("How you want to revise?", key="revise_reason")
+        if st.button("💡 Generate New Idea", key="new_idea_btn"):
+            with st.spinner("🔄 根據您的理由重新檢索文獻並生成提案..."):
+                old_chunks = st.session_state.get("proposal_chunks", [])
+                past_proposal = st.session_state.get("proposal_answer", "")
+
+                result = agent_answer(
+                    user_reason,
+                    mode="generate new idea",
+                    chunks=old_chunks,
+                    proposal=past_proposal
+                )
+
+                # ✅ 直接覆蓋 session_state，繼續共用顯示區塊
+                st.session_state["proposal_chunks"] = result.get("chunks", [])
+                st.session_state["proposal_answer"] = result["answer"]
+                print(result["answer"])
+                print(result.get("chunks", []))
+
+                chemical_metadata_list, not_found_list, _ = chemical_metadata_extractor(result["answer"])
+                st.session_state["chemical_metadata_list"] = chemical_metadata_list
+                st.session_state["not_found_list"] = not_found_list
+
+                st.rerun()
+
+        if st.button("✅ Accept & Generate Experiment Detail", key="accept_btn"): #按鈕生成實驗細節
             with st.spinner("🧪 正在分析實驗細節..."):
                 chunks = st.session_state.get("proposal_chunks", [])
                 proposal = st.session_state["result"]["answer"]
@@ -131,13 +168,14 @@ with tab1:
                 st.markdown("### 🔬 建議實驗細節")
                 st.markdown(result["answer"])
 
-        # 引用資料
+
+        # 📚 引用資料（支援原始或改寫皆可）
         st.markdown("### 📚 引用資料")
-        for i, citation in enumerate(st.session_state["result"]["citations"], start=1):
+        for i, citation in enumerate(st.session_state.get("result", {}).get("citations", []), start=1):
             title = citation.get("title", "未知")
             page = citation.get("page", "?")
             snippet = citation.get("snippet", "...")
-            st.markdown(f"**[{i}]** `{title}` | 頁碼：{page} | 段落開頭：{snippet}")
+            st.markdown(f"**[{i}]** {title} | 頁碼：{page} | 段落開頭：{snippet}")
 
             
 

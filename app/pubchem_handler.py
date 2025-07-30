@@ -136,29 +136,33 @@ def get_boiling_and_melting_point(cid: int) -> dict:
         print(f"❌ 擷取熔點沸點失敗 CID {cid}: {e}")
         return {}
 
-def get_safety_icons(cid: int) -> dict:
+def get_safety_info(cid: int) -> dict:
     """
     從 PubChem PUG View API 擷取：
-    - GHS hazard icon URL list（唯一）
-    - NFPA diamond image URL（若有）
+    - GHS hazard icon URL list
+    - NFPA diamond image URL
+    - CAS No.（第一組合法格式）
     """
     url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/{cid}/JSON"
     try:
         r = requests.get(url, timeout=15, verify=False)
         if not r.ok:
             print(f"⚠️ PubChem View 查詢失敗：CID {cid} / {r.status_code}")
-            return {"ghs_icons": [], "nfpa_image": None}
+            return {"ghs_icons": [], "nfpa_image": None, "cas": None}
 
         json_data = r.json()
         sections = json_data.get("Record", {}).get("Section", [])
 
         ghs_urls = set()
         nfpa_url = None
+        cas_number = None
 
         def walk(sections):
-            nonlocal ghs_urls, nfpa_url
+            nonlocal ghs_urls, nfpa_url, cas_number
             for sec in sections:
                 heading = sec.get("TOCHeading", "")
+
+                # GHS 圖示
                 if heading == "GHS Classification":
                     for info in sec.get("Information", []):
                         if info.get("Name") == "Pictogram(s)":
@@ -167,6 +171,7 @@ def get_safety_icons(cid: int) -> dict:
                                     if markup.get("Type") == "Icon":
                                         ghs_urls.add(markup.get("URL"))
 
+                # NFPA 標誌
                 elif heading == "NFPA Hazard Classification":
                     for info in sec.get("Information", []):
                         if info.get("Name") == "NFPA 704 Diamond":
@@ -175,6 +180,18 @@ def get_safety_icons(cid: int) -> dict:
                                     if markup.get("Type") == "Icon":
                                         nfpa_url = markup.get("URL")
 
+                # CAS Number
+                elif heading == "CAS" and not cas_number:
+                    for info in sec.get("Information", []):
+                        val = info.get("Value", {}).get("StringWithMarkup", [])
+                        if val:
+                            for entry in val:
+                                maybe_cas = entry.get("String", "")
+                                if "-" in maybe_cas and maybe_cas.count("-") == 2:
+                                    cas_number = maybe_cas
+                                    break
+
+                # 遞迴深入子區塊
                 if "Section" in sec:
                     walk(sec["Section"])
 
@@ -182,12 +199,14 @@ def get_safety_icons(cid: int) -> dict:
 
         return {
             "ghs_icons": sorted(ghs_urls),
-            "nfpa_image": nfpa_url
+            "nfpa_image": nfpa_url,
+            "cas": cas_number
         }
 
     except Exception as e:
-        print(f"❌ 擷取 hazard icon 失敗 CID {cid}: {e}")
-        return {"ghs_icons": [], "nfpa_image": None}
+        print(f"❌ 擷取 hazard icon / CAS No. 失敗 CID {cid}: {e}")
+        return {"ghs_icons": [], "nfpa_image": None, "cas": None}
+
 
 def extract_and_fetch_chemicals(name_list: List[str], save_dir="experiment_data/chemicals") -> List[dict]:
     """
@@ -223,12 +242,21 @@ def extract_and_fetch_chemicals(name_list: List[str], save_dir="experiment_data/
             json_data = r_main.json()
             parsed = parse_pubchem_json(json_data)
 
+            #加入pubchem超連結:
+            parsed["pubchem_url"] = f"https://pubchem.ncbi.nlm.nih.gov/compound/{cid}"
+
             # Step 2: 補充熔/沸點資訊（含轉攝氏）
             bp_info = get_boiling_and_melting_point(cid)
             parsed.update(bp_info)
 
             # Step 3: 補充 GHS icon URLs
-            parsed["safety_icons"] = get_safety_icons(cid)
+            safety_info = get_safety_info(cid)
+
+            parsed["safety_icons"] = {
+                "ghs_icons": safety_info.get("ghs_icons", []),
+                "nfpa_image": safety_info.get("nfpa_image")
+            }
+            parsed["cas"] = safety_info.get("cas")
 
             # Step 4: 儲存乾淨版本
             save_path = os.path.join(save_dir, f"parsed_cid{cid}.json")

@@ -1,0 +1,18 @@
+{
+  "cid": 570409,
+  "name": "3,5-dipyridin-4-yl-1,2,4-triazol-4-amine",
+  "formula": "C12H10N6",
+  "weight": "238.25",
+  "smiles": "C1=CN=CC=C1C2=NN=C(N2N)C3=CC=NC=C3",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=570409&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/570409",
+  "boiling_point": null,
+  "melting_point": null,
+  "boiling_point_c": null,
+  "melting_point_c": null,
+  "safety_icons": {
+    "ghs_icons": [],
+    "nfpa_image": null
+  },
+  "cas": null
+}
