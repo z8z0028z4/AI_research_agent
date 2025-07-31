@@ -50,10 +50,11 @@ def agent_answer(question: str, mode:str ="defualt",  **kwargs):
         print(" 啟用模式：expand to experiment detail")
         chunks = kwargs.get("chunks", [])
         proposal = kwargs.get("proposal", "")
-        prompt = build_detail_experimental_plan_prompt(chunks, proposal)
+        prompt, citations = build_detail_experimental_plan_prompt(chunks, proposal)
 
     elif mode == "generate new idea":
     # 使用 proposal + paper_chunks 產出 detail
+        
         print(" 啟用模式：generate new idea")
         paper_vectorstore = load_paper_vectorstore()
         print("📦 Paper 向量庫：", paper_vectorstore._collection.count())
@@ -62,6 +63,7 @@ def agent_answer(question: str, mode:str ="defualt",  **kwargs):
         old_chunks = kwargs.get("old_chunks", [])
         proposal = kwargs.get("proposal", "")
         prompt, citations = build_iterative_proposal_prompt(question, chunks, old_chunks, proposal)
+        
 
 
 

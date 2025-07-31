@@ -1,0 +1,22 @@
+{
+  "cid": 8861,
+  "name": "pyridine-2,6-diamine",
+  "formula": "C5H7N3",
+  "weight": "109.13",
+  "smiles": "C1=CC(=NC(=C1)N)N",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=8861&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/8861",
+  "boiling_point": null,
+  "melting_point": null,
+  "boiling_point_c": null,
+  "melting_point_c": null,
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS06.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS07.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS09.svg"
+    ],
+    "nfpa_image": null
+  },
+  "cas": "141-86-6"
+}

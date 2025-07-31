@@ -1,0 +1,24 @@
+{
+  "cid": 3301,
+  "name": "ethane-1,2-diamine",
+  "formula": "C2H8N2",
+  "weight": "60.10",
+  "smiles": "C(CN)N",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=3301&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/3301",
+  "boiling_point": "241 \u00b0F at 760 mmHg (EPA, 1998)",
+  "melting_point": "46 \u00b0F (EPA, 1998)",
+  "boiling_point_c": "116.1 \u00b0C",
+  "melting_point_c": "7.8 \u00b0C",
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS02.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS05.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS06.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS07.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS08.svg"
+    ],
+    "nfpa_image": "https://pubchem.ncbi.nlm.nih.gov/image/nfpa.cgi?code=320"
+  },
+  "cas": "107-15-3"
+}

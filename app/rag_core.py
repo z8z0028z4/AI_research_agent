@@ -386,26 +386,31 @@ Experimental overview:
     return system_prompt.strip(), citations
 
 def build_detail_experimental_plan_prompt(chunks: List[Document], proposal_text: str) -> str:
+    citations=[]
     paper_context_text = "\n\n".join(doc.page_content for doc in chunks)
 
     system_prompt = f"""
-你是一位熟練的材料實驗設計顧問，請根據以下研究提案內容與相關文獻段落，為研究者提供一份詳細的建議實驗步驟：
+You are an experienced consultant in materials experiment design. Based on the following research proposal and related literature excerpts, please provide the researcher with a detailed set of recommended experimental procedures:
 
-請包含：
-1. 合成流程：步驟-by-步驟說明每個實驗操作，含順序、邏輯與目的
-2. 材料與條件：每步驟所需的原料（含比例）、反應條件（溫度、時間、容器）
-3. 分析方法：建議使用哪些表徵工具（如 XRD, BET, TGA），以及目的為何
-4. 注意事項：文獻中提醒的重點或參數限制
+Please include:
 
-請以條列或分段方式清楚列出。
+Synthesis Process: A step-by-step description of each experimental operation, including sequence, logic, and purpose.
 
---- 文獻段落 ---
+Materials and Conditions: The required raw materials for each step (including proportions), and the reaction conditions (temperature, time, containers).
+
+Analytical Methods: Suggested characterization tools (such as XRD, BET, TGA) and the purpose for each.
+
+Precautions: Key points or parameter limitations mentioned in the literature.
+
+Please clearly list the information in bullet points or paragraphs.
+
+--- literature chunks ---
 {paper_context_text}
 
---- 使用者的 Proposal ---
+--- User's Proposal ---
 {proposal_text}
 """
-    return system_prompt.strip()
+    return system_prompt.strip(), citations
 
 
 
@@ -463,7 +468,7 @@ def build_iterative_proposal_prompt(
    - Based Literature
    - Experimental overview
 
-最後，請在回答最末段，以 JSON 格式列出此提案所使用到的所有化學品（包含金屬鹽、有機配體、溶劑等）。以 IUPAC Name 回答，格式如下：
+最後，請在回答最末段，以 JSON 格式列出此提案所使用到的所有化學品（包含金屬鹽、有機配體、溶劑等）。以 IUPAC Name 回答，回答格式與範例如下：
 
 ```json
 ["formic acid", "N,N-dimethylformamide", "copper;dinitrate;trihydrate"]
