@@ -25,6 +25,14 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 # 將當前目錄添加到Python模塊搜索路徑中，這樣可以導入同目錄下的其他Python文件
 sys.path.append(current_dir)
 
+# 如果從根目錄運行，需要設置工作目錄為app目錄
+if os.path.basename(os.getcwd()) != "app":
+    # 檢查是否在根目錄運行
+    app_dir = os.path.join(os.getcwd(), "app")
+    if os.path.exists(app_dir):
+        os.chdir(app_dir)
+        print(f"🔄 切換工作目錄到: {app_dir}")
+
 def run_gui():
     """
     啟動GUI界面的主要函數
@@ -47,10 +55,19 @@ def run_gui():
         print("🚀 正在啟動AI研究助理GUI界面...")
         print(f"📁 GUI文件路徑: {gui_file}")
         
+        # 設置環境變量，確保Streamlit能找到正確的模塊
+        env = os.environ.copy()
+        env['PYTHONPATH'] = current_dir + os.pathsep + env.get('PYTHONPATH', '')
+        
         # 使用subprocess.run()替代os.system()，更安全且跨平台
         # check=True 表示如果命令執行失敗會拋出CalledProcessError
         try:
-            subprocess.run(["streamlit", "run", gui_file], check=True)
+            # 使用完整的Python解釋器路徑來避免路徑問題
+            python_executable = sys.executable
+            streamlit_cmd = [python_executable, "-m", "streamlit", "run", gui_file]
+            print(f"🔧 使用Python解釋器：{python_executable}")
+            print(f"🔧 執行命令：{' '.join(streamlit_cmd)}")
+            subprocess.run(streamlit_cmd, check=True, env=env)
         except subprocess.CalledProcessError as e:
             # Streamlit執行過程中發生錯誤
             print(f"❌ Streamlit執行錯誤：{e}")
@@ -138,4 +155,4 @@ if __name__ == "__main__":
     else:
         # 理論上不會執行到這裡，因為argparse會自動驗證choices
         print(f"❌ 不支持的模式：{args.mode}")
-        print("�� 支持的模式：gui, cli")
+        print(" 支持的模式：gui, cli")

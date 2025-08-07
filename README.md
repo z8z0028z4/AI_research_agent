@@ -6,19 +6,31 @@ A comprehensive AI-powered research assistant system designed for materials scie
 
 ## ✨ Key Features
 
-### 🔍 **Knowledge Assistant**
+### 🎯 **Proposal Generator** *(NEW - Main Feature)*
+- **AI-Powered Research Proposals**: Generate comprehensive research proposals based on your research goals
+- **Chemical Safety Integration**: Automatic chemical information retrieval from PubChem with safety data
+- **Interactive Refinement**: Revise proposals based on your feedback and requirements
+- **Experiment Detail Generation**: Expand proposals into detailed experimental plans
+- **Document Export**: Download complete proposals as Word documents with chemical tables and safety icons
+- **Citation Tracking**: Every proposal includes numbered references linking to source documents
+
+### 📥 **Document Embedding & Knowledge Base**
 - **Document Processing**: Supports PDF and Word documents with intelligent chunking and metadata extraction
 - **Vector Database**: Uses ChromaDB for efficient semantic search and retrieval
-- **Citation Tracking**: Every response includes numbered references `[1]` linking to source documents, pages, and text snippets
 - **Academic Embeddings**: Utilizes `nomic-ai/nomic-embed-text-v1.5` for domain-specific semantic understanding
+- **Batch Processing**: Upload multiple documents for comprehensive knowledge base building
 
-### 🧪 **Experimental Reasoning Mode** *(NEW)*
+### 🔍 **Knowledge Assistant** *(Currently Disabled)*
+- **Citation Tracking**: Every response includes numbered references `[1]` linking to source documents, pages, and text snippets
+- **Multiple Answer Modes**: Choose between strict citation mode, extended reasoning, or experimental data integration
+
+### 🧪 **Experimental Reasoning Mode** *(Currently Disabled)*
 - **Dual Retriever Architecture**: Combines literature data with experimental logs for comprehensive analysis
 - **Excel Integration**: Processes experimental data from `.xlsx` files and converts to searchable text
 - **Synthesis Suggestions**: Provides creative and practical synthesis recommendations based on both literature and experimental data
 - **Chemical Safety**: Integrates PubChem data for chemical safety information and NFPA hazard codes
 
-### 🔬 **Academic Search Integration**
+### 🔬 **Academic Search Integration** *(Currently Disabled)*
 - **Perplexity API**: Real-time academic source retrieval with proper citations
 - **Europe PMC**: Direct access to biomedical literature
 - **Reference Management**: Automatic citation formatting and source tracking
@@ -31,50 +43,22 @@ A comprehensive AI-powered research assistant system designed for materials scie
 
 ---
 
-## 📂 Project Structure
-
-```
-AI-research-agent/
-├── research_agent/
-│   ├── app/
-│   │   ├── main.py                 # Application entry point
-│   │   ├── research_gui.py         # Streamlit GUI interface
-│   │   ├── config.py               # Configuration management
-│   │   ├── rag_core.py             # RAG (Retrieval-Augmented Generation) core
-│   │   ├── knowledge_agent.py      # Knowledge processing agent
-│   │   ├── chunk_embedding.py      # Document chunking and embedding
-│   │   ├── browser.py              # File browser and selection
-│   │   ├── file_upload.py          # File upload processing
-│   │   ├── perplexity_search_fallback.py  # Academic search integration
-│   │   ├── pubchem_handler.py      # Chemical data integration
-│   │   ├── europepmc_handler.py    # Europe PMC integration
-│   │   ├── search_agent.py         # Search functionality
-│   │   ├── query_parser.py         # Query parsing and processing
-│   │   ├── metadata_extractor.py   # Document metadata extraction
-│   │   ├── metadata_registry.py    # Metadata management
-│   │   └── excel_to_txt_by_row.py  # Excel to text conversion
-│   ├── requirements.txt            # Python dependencies
-│   ├── env.example                 # Environment variables template
-│   ├── run.bat                     # Windows startup script
-│   └── README.md                   # This file
-├── experiment_data/
-│   ├── papers/                     # Research papers and documents
-│   ├── experiment/                 # Experimental data files
-│   ├── vector_index/               # Vector database storage
-│   └── metadata_registry.xlsx      # Document metadata registry
-└── conductive mof/                 # Domain-specific research materials
-```
-
----
-
 ## 🚀 Quick Start
 
 ### Prerequisites
-- **Python**: 3.10 or 3.11
+- **Python**: 3.10 or 3.11 or 3.12
 - **Memory**: Minimum 8GB RAM (16GB recommended for large document sets)
 - **Storage**: At least 2GB free space for vector database
 
 ### Installation
+
+**Option 1: Quick Installation (Windows)**
+```bash
+# Run the automated installation script
+install.bat
+```
+
+**Option 2: Manual Installation**
 
 1. **Clone the repository**
    ```bash
@@ -84,28 +68,34 @@ AI-research-agent/
 
 2. **Create virtual environment**
    ```bash
-   python -m venv venv
+   python -m venv venv_company
    # Windows
-   venv\Scripts\activate
+   venv_company\Scripts\activate
    # macOS/Linux
-   source venv/bin/activate
+   source venv_company/bin/activate
    ```
 
 3. **Install dependencies**
    ```bash
-   pip install -r research_agent/requirements.txt
+   pip install -r requirements.txt
    ```
 
 4. **Set up environment variables**
    ```bash
-   cp research_agent/env.example research_agent/.env
+   cp env.example .env
    # Edit .env file with your API keys
    ```
 
 5. **Launch the application**
    ```bash
-   cd research_agent
+   # Option 1: Use the batch file (Windows)
+   run.bat
+   
+   # Option 2: Direct Python execution
    python app/main.py
+   
+   # Option 3: Use the root launcher
+   python run_from_root.py
    ```
 
 The application will open in your default browser at `http://localhost:8501`
@@ -114,7 +104,7 @@ The application will open in your default browser at `http://localhost:8501`
 
 ## 🔑 Environment Configuration
 
-Create a `.env` file in the `research_agent/` directory:
+Create a `.env` file in the project root directory:
 
 ```env
 # Required API Keys
@@ -128,31 +118,72 @@ PERPLEXITY_API_KEY (optional)=pplx-your-perplexity-api-key-here
 
 ### API Key Setup
 
-1. **OpenAI API Key**: Get from [OpenAI Platform](https://platform.openai.com/api-keys)
-2. **Perplexity API Key**: Get from [Perplexity API](https://www.perplexity.ai/settings/api)
+After running `install.bat` or manual installation, you need to configure your API keys:
+
+1. **Edit the `.env` file** in the project root directory
+2. **Add your API keys**:
+   - **OpenAI API Key**: Get from [OpenAI Platform](https://platform.openai.com/api-keys)
+   - **Perplexity API Key**: Get from [Perplexity API](https://www.perplexity.ai/settings/api) (optional)
+
+Example `.env` file:
+```env
+OPENAI_API_KEY=sk-your-openai-api-key-here
+PERPLEXITY_API_KEY=pplx-your-perplexity-api-key-here
+```
 
 ---
 
-## 🎯 Usage Modes
+## 🎯 Usage Guide
 
-### 📘 GUI Mode (Default)
-```bash
-python app/main.py
-```
-- **Tab 1**: Proposal mode - drafting your research proposal
-- **Tab 2**: Literature embedding 
+### 📋 **Proposal Generator** (Main Feature)
 
-### 🖥️ CLI Mode
-```bash
-python app/main.py --mode cli
-```
-*Note: CLI mode is under development*
+The Proposal Generator is the primary feature of this release. Here's how to use it:
 
-### 🧪 Experimental Reasoning Mode
-1. Upload experimental data (`.xlsx` files) in Tab 3
-2. Select "納入實驗資料，進行推論與建議" mode
-3. Ask synthesis or experimental questions
-4. Get responses based on both literature and experimental data
+1. **Enter Research Goal**: Describe your research objective in the text area
+2. **Generate Proposal**: Click "Generate proposal" to create an AI-powered research proposal
+3. **Review Results**: The system will display:
+   - Complete research proposal
+   - Chemical information table with safety data
+   - Citations from knowledge base
+4. **Refine Proposal**: 
+   - Provide feedback and click "Generate New Idea" to revise
+   - Click "Accept & Generate Experiment Detail" to expand into detailed experimental plans
+5. **Export Document**: Download the complete proposal as a Word document
+
+**Features:**
+- Automatic chemical safety data retrieval from PubChem
+- Interactive proposal refinement based on user feedback
+- Detailed experimental plan generation
+- Professional document export with chemical tables and safety icons
+
+### 📥 **Document Embedding**
+
+Upload and process research documents to build your knowledge base:
+
+1. **Upload Documents**: Drag and drop PDF or Word files
+2. **Processing**: The system will chunk, embed, and store documents
+3. **Knowledge Base**: Documents become searchable for proposal generation
+
+### 🔧 **Enabling Other Features**
+
+Currently, only the Proposal Generator and Document Embedding features are enabled. To enable other features:
+
+1. **Edit `app/research_gui.py`**
+2. **Modify the `TAB_FLAGS` dictionary**:
+   ```python
+   TAB_FLAGS = {
+       "tab_1_proposal_generator": True,    # Currently enabled
+       "tab_2_embedding": True,             # Currently enabled
+       "tab_3_search_pdf": False,           # Set to True to enable
+       "tab_4_perplexity_search": False,    # Set to True to enable
+       "tab_5_research_assitant": False     # Set to True to enable
+   }
+   ```
+
+**Available Features to Enable:**
+- **Search PDF**: External literature search and PDF download
+- **Perplexity Search**: Real-time academic search using Perplexity API
+- **Knowledge Assistant**: Q&A with knowledge base using different reasoning modes
 
 ---
 
@@ -165,7 +196,7 @@ python app/main.py --mode cli
 - **TXT**: Plain text files
 
 ### Output Formats
-- **DOCX**: Generated reports with chemical safety data
+- **DOCX**: Generated proposals with chemical safety data
 - **PNG**: Chemical hazard icons and safety diagrams
 - **JSON**: Structured chemical data from PubChem
 
@@ -198,18 +229,24 @@ The system includes automatic SSL certificate handling for enterprise environmen
 
 1. **"Module not found" errors**
    ```bash
-   pip install -r research_agent/requirements.txt --upgrade
+   pip install -r requirements.txt --upgrade
    ```
 
-2. **SSL Certificate errors**
+2. **Streamlit startup issues**
+   ```bash
+   # Use the modified startup command
+   python app/main.py
+   ```
+
+3. **SSL Certificate errors**
    - The system automatically handles SSL issues
    - Check your corporate firewall settings
 
-3. **Memory issues with large documents**
+4. **Memory issues with large documents**
    - Reduce document chunk size in `config.py`
    - Process documents in smaller batches
 
-4. **API rate limiting**
+5. **API rate limiting**
    - Check your OpenAI and Perplexity API quotas
    - Implement rate limiting in your queries
 
@@ -231,14 +268,14 @@ The system includes automatic SSL certificate handling for enterprise environmen
 ### Development Setup
 ```bash
 # Install development dependencies
-pip install -r research_agent/requirements.txt
+pip install -r requirements.txt
 pip install pytest black flake8
 
 # Run tests
-pytest research_agent/app/
+pytest app/
 
 # Code formatting
-black research_agent/app/
+black app/
 ```
 
 ---
@@ -263,8 +300,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Support
 
 - **Issues**: [GitHub Issues](https://github.com/z8z0028z4/AI-research-agent/issues)
-- **Documentation**: See `research_agent/app/ARCHITECTURE_OVERVIEW.md`
-- **Learning Guide**: See `research_agent/app/LEARNING_GUIDE.md`
+- **Documentation**: See `app/ARCHITECTURE_OVERVIEW.md`
+- **Learning Guide**: See `app/LEARNING_GUIDE.md`
 
 ---
 
