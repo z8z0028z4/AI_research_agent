@@ -4,6 +4,7 @@ import json
 from typing import List, Dict
 import re
 from typing import Optional
+from config import PARSED_CHEMICAL_DIR
 
 BASE_URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
 
@@ -75,12 +76,34 @@ def parse_pubchem_json(json_data: dict) -> dict:
                 return p.get("value", {}).get("sval") or p.get("value", {}).get("fval")
         return None
 
+    def clean_text_for_xml(text):
+        """清理文本以確保XML兼容性"""
+        if not text:
+            return ""
+        # 移除NULL字節和控制字符
+        cleaned = "".join(char for char in str(text) if ord(char) >= 32 or char in '\n\r\t')
+        # 移除其他可能導致XML問題的字符
+        cleaned = cleaned.replace('\x00', '')  # NULL字節
+        cleaned = cleaned.replace('\x01', '')  # SOH
+        cleaned = cleaned.replace('\x02', '')  # STX
+        cleaned = cleaned.replace('\x03', '')  # ETX
+        cleaned = cleaned.replace('\x04', '')  # EOT
+        cleaned = cleaned.replace('\x05', '')  # ENQ
+        cleaned = cleaned.replace('\x06', '')  # ACK
+        cleaned = cleaned.replace('\x07', '')  # BEL
+        cleaned = cleaned.replace('\x08', '')  # BS
+        cleaned = cleaned.replace('\x0b', '')  # VT
+        cleaned = cleaned.replace('\x0c', '')  # FF
+        cleaned = cleaned.replace('\x0e', '')  # SO
+        cleaned = cleaned.replace('\x0f', '')  # SI
+        return cleaned
+
     return {
         "cid": cid,
-        "name": find_prop("IUPAC Name", "Preferred") or find_prop("IUPAC Name", "Traditional"),
-        "formula": find_prop("Molecular Formula"),
-        "weight": find_prop("Molecular Weight"),
-        "smiles": find_prop("SMILES", "Absolute") or find_prop("SMILES", "Connectivity"),
+        "name": clean_text_for_xml(find_prop("IUPAC Name", "Preferred") or find_prop("IUPAC Name", "Traditional")),
+        "formula": clean_text_for_xml(find_prop("Molecular Formula")),
+        "weight": clean_text_for_xml(find_prop("Molecular Weight")),
+        "smiles": clean_text_for_xml(find_prop("SMILES", "Absolute") or find_prop("SMILES", "Connectivity")),
         "image_url": f"https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid={cid}&t=l"
     }
 
@@ -112,6 +135,8 @@ def get_boiling_and_melting_point(cid: int) -> dict:
             return None
 
         def extract_celsius(temp_str: str):
+            if not temp_str:
+                return None
             match = re.search(r"([-+]?[0-9.]+)\s*°F", temp_str)
             if match:
                 f = float(match.group(1))
@@ -122,13 +147,35 @@ def get_boiling_and_melting_point(cid: int) -> dict:
                 return match.group(0)
             return None
 
+        def clean_text_for_xml(text):
+            """清理文本以確保XML兼容性"""
+            if not text:
+                return ""
+            # 移除NULL字節和控制字符
+            cleaned = "".join(char for char in str(text) if ord(char) >= 32 or char in '\n\r\t')
+            # 移除其他可能導致XML問題的字符
+            cleaned = cleaned.replace('\x00', '')  # NULL字節
+            cleaned = cleaned.replace('\x01', '')  # SOH
+            cleaned = cleaned.replace('\x02', '')  # STX
+            cleaned = cleaned.replace('\x03', '')  # ETX
+            cleaned = cleaned.replace('\x04', '')  # EOT
+            cleaned = cleaned.replace('\x05', '')  # ENQ
+            cleaned = cleaned.replace('\x06', '')  # ACK
+            cleaned = cleaned.replace('\x07', '')  # BEL
+            cleaned = cleaned.replace('\x08', '')  # BS
+            cleaned = cleaned.replace('\x0b', '')  # VT
+            cleaned = cleaned.replace('\x0c', '')  # FF
+            cleaned = cleaned.replace('\x0e', '')  # SO
+            cleaned = cleaned.replace('\x0f', '')  # SI
+            return cleaned
+
         bp_raw = find_in_sections(sections, "Boiling Point")
         mp_raw = find_in_sections(sections, "Melting Point")
 
-        result["boiling_point"] = bp_raw
-        result["melting_point"] = mp_raw
-        result["boiling_point_c"] = extract_celsius(bp_raw) if bp_raw else None
-        result["melting_point_c"] = extract_celsius(mp_raw) if mp_raw else None
+        result["boiling_point"] = clean_text_for_xml(bp_raw)
+        result["melting_point"] = clean_text_for_xml(mp_raw)
+        result["boiling_point_c"] = clean_text_for_xml(extract_celsius(bp_raw) if bp_raw else None)
+        result["melting_point_c"] = clean_text_for_xml(extract_celsius(mp_raw) if mp_raw else None)
 
         return result
 
@@ -157,6 +204,28 @@ def get_safety_info(cid: int) -> dict:
         nfpa_url = None
         cas_number = None
 
+        def clean_text_for_xml(text):
+            """清理文本以確保XML兼容性"""
+            if not text:
+                return ""
+            # 移除NULL字節和控制字符
+            cleaned = "".join(char for char in str(text) if ord(char) >= 32 or char in '\n\r\t')
+            # 移除其他可能導致XML問題的字符
+            cleaned = cleaned.replace('\x00', '')  # NULL字節
+            cleaned = cleaned.replace('\x01', '')  # SOH
+            cleaned = cleaned.replace('\x02', '')  # STX
+            cleaned = cleaned.replace('\x03', '')  # ETX
+            cleaned = cleaned.replace('\x04', '')  # EOT
+            cleaned = cleaned.replace('\x05', '')  # ENQ
+            cleaned = cleaned.replace('\x06', '')  # ACK
+            cleaned = cleaned.replace('\x07', '')  # BEL
+            cleaned = cleaned.replace('\x08', '')  # BS
+            cleaned = cleaned.replace('\x0b', '')  # VT
+            cleaned = cleaned.replace('\x0c', '')  # FF
+            cleaned = cleaned.replace('\x0e', '')  # SO
+            cleaned = cleaned.replace('\x0f', '')  # SI
+            return cleaned
+
         def walk(sections):
             nonlocal ghs_urls, nfpa_url, cas_number
             for sec in sections:
@@ -171,7 +240,6 @@ def get_safety_info(cid: int) -> dict:
                                     if markup.get("Type") == "Icon":
                                         ghs_urls.add(markup.get("URL"))
 
-                # NFPA 標誌
                 elif heading == "NFPA Hazard Classification":
                     for info in sec.get("Information", []):
                         if info.get("Name") == "NFPA 704 Diamond":
@@ -188,7 +256,7 @@ def get_safety_info(cid: int) -> dict:
                             for entry in val:
                                 maybe_cas = entry.get("String", "")
                                 if "-" in maybe_cas and maybe_cas.count("-") == 2:
-                                    cas_number = maybe_cas
+                                    cas_number = clean_text_for_xml(maybe_cas)
                                     break
 
                 # 遞迴深入子區塊
@@ -208,7 +276,9 @@ def get_safety_info(cid: int) -> dict:
         return {"ghs_icons": [], "nfpa_image": None, "cas": None}
 
 
-def extract_and_fetch_chemicals(name_list: List[str], save_dir="experiment_data/chemicals") -> List[dict]:
+
+
+def extract_and_fetch_chemicals(name_list: List[str], save_dir=PARSED_CHEMICAL_DIR) -> List[dict]:
     """
     接收一組 GPT 傳回的化學品名稱清單，逐一查詢、擷取、儲存乾淨的 JSON。
     僅留下 parse 過的 parsed_cid{cid}.json
@@ -276,8 +346,21 @@ def remove_json_chemical_block(text: str) -> str:
 
     
 def chemical_metadata_extractor(proposal_text: str):
+    print(f"🔍 開始提取化學品，提案文本長度：{len(proposal_text)} 字符")
+    print(f"📝 提案文本預覽：{proposal_text[:300]}...")
+    
     name_list = extract_json_chemical_list_from_llm(proposal_text)
     print(f"🔍 擷取到的化學品：{name_list}")
+    
+    if not name_list:
+        print("⚠️ 沒有找到化學品列表，這可能是因為 LLM 沒有生成 JSON 格式的化學品列表")
+        print("🔍 檢查提案文本中是否包含 JSON 格式的化學品列表...")
+        json_match = re.search(r"```json\s*\[[^\]]+\]\s*```", proposal_text, re.DOTALL)
+        if json_match:
+            print(f"✅ 找到 JSON 格式：{json_match.group(0)}")
+        else:
+            print("❌ 沒有找到 JSON 格式的化學品列表")
+    
     metadata_list, not_found_list = extract_and_fetch_chemicals(name_list)
     cleaned_proposal_text = remove_json_chemical_block(proposal_text)
     return metadata_list, not_found_list, cleaned_proposal_text

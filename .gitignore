@@ -1,22 +1,177 @@
+# Environment variables and API keys
 .env
-venv/
+.env.local
+.env.*.local
 
-venv_itri/
-.venv/
-venv_home/
-venv_test
-venv_test1
-
-
-# Python cache
+# Python
 __pycache__/
-.pytest_cache/
 *.py[cod]
-*.pyo
-.git
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# 系統與 IDE 雜項
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+venv_company/**
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 .DS_Store
+Thumbs.db
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Development and testing files
+testing_material/
+archive_code/
+test_*.py
+*_test.py
+test_*.docx
+test_*.pdf
+test_*.mp4
+requirements_svglib.txt
+SVGLIB_MIGRATION.md
+install_cairo_deps.py
+
+# Logs
 *.log
+logs/
+log/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Vector database files (can be regenerated)
+experiment_data/vector_index/
+experiment_data/index_old/
+testing_material/**
+
+
+# Large data files
+*.pdf
+*.docx
+*.xlsx
+*.csv
+*.json
+experiment_data/papers/
+experiment_data/old-paper/
+experiment_data/experiment/
+conductive mof/
+
+# Chemical data cache
+research_agent/app/experiment_data/chemicals/
+
+# Test outputs
+research_agent/app/test_output/
+testing_material/
+
+# Temporary files
 *.tmp
-run_itri.bat".venv/" 
+*.temp
+temp/
+tmp/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+*.lnk
+
+# Chrome driver (if downloaded)
+chromedriver.exe
+chromedriver
+geckodriver
+
+# Selenium
+selenium-debug.log
+
+# Streamlit
+.streamlit/
+
+# Model files (can be large)
+*.bin
+*.pkl
+*.pickle
+*.model
+*.h5
+*.hdf5
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Documentation build
+docs/_build/
+
+# Node.js (if any frontend components)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.yml
+.docker/
+
+# Kubernetes
+*.kubeconfig
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Local configuration
+config.local.py
+settings.local.py 

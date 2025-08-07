@@ -4,7 +4,7 @@ import fitz  # PyMuPDF
 import docx
 import json
 from openai import OpenAI
-from config import OPENAI_API_KEY
+from config import OPENAI_API_KEY, LLM_PARAMS
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -35,11 +35,13 @@ def gpt_detect_type_and_title(text, filename):
     for attempt in range(2):
         try:
             response = client.chat.completions.create(
-                model="gpt-4o",
+                model=LLM_PARAMS["model_name"],
                 messages=[
                     {"role": "system", "content": "你是專業的學術文件分類與標題擷取工具"},
                     {"role": "user", "content": prompt}
-                ]
+                ],
+                max_completion_tokens=LLM_PARAMS.get("max_completion_tokens", 4000),
+                timeout=LLM_PARAMS.get("timeout", 120),
             )
             content = response.choices[0].message.content.strip()
             parsed = json.loads(content)
