@@ -26,7 +26,7 @@ from rag_core import (
 from config import EXPERIMENT_DIR
 import os
 
-def agent_answer(question: str, mode: str = "default", **kwargs):
+def agent_answer(question: str, mode: str = "make proposal", **kwargs):
     """
     知識代理的主要回答函數
     
@@ -39,7 +39,7 @@ def agent_answer(question: str, mode: str = "default", **kwargs):
     參數：
         question (str): 用戶問題
         mode (str): 處理模式，支持多種模式
-        **kwargs: 額外參數，如chunks、proposal等
+        **kwargs: 額外參數，如chunks、proposal、k等
     
     返回：
         dict: 包含回答、引用和相關文檔塊的字典
@@ -52,6 +52,20 @@ def agent_answer(question: str, mode: str = "default", **kwargs):
     - "expand to experiment detail": 擴展實驗細節
     - "generate new idea": 生成新想法
     """
+    
+    # 獲取檢索參數
+    k = kwargs.get("k", 10)  # 預設檢索 10 個文檔
+    fetch_k = k * 2  # fetch_k 自動設為 k 的 2 倍
+    
+    # ==================== DEBUG 日誌 ====================
+    print(f"🔍 DEBUG: agent_answer 被調用")
+    print(f"🔍 DEBUG: question = '{question}'")
+    print(f"🔍 DEBUG: mode = '{mode}'")
+    print(f"🔍 DEBUG: k = {k}, fetch_k = {fetch_k}")
+    print(f"🔍 DEBUG: kwargs = {kwargs}")
+    print(f"🔍 DEBUG: mode type = {type(mode)}")
+    print(f"🔍 DEBUG: mode == 'make proposal' = {mode == 'make proposal'}")
+    print(f"🔍 DEBUG: mode == 'default' = {mode == 'default'}")
     
     # ==================== 模式1：納入實驗資料，進行推論與建議 ====================
     if mode == "納入實驗資料，進行推論與建議":
@@ -95,9 +109,10 @@ def agent_answer(question: str, mode: str = "default", **kwargs):
         - 使用較多的檢索結果（k=10）
         - 專注於提案結構化生成
         """
+        print("📝 啟用模式：make proposal")
         paper_vectorstore = load_paper_vectorstore()
         print("📦 Paper 向量庫：", paper_vectorstore._collection.count())
-        chunks = retrieve_chunks_multi_query(paper_vectorstore, [question], k=10)
+        chunks = retrieve_chunks_multi_query(paper_vectorstore, [question], k=k, fetch_k=fetch_k)
         prompt, citations = build_proposal_prompt(chunks, question)
 
     # ==================== 模式3：允許延伸與推論 ====================
@@ -169,6 +184,8 @@ def agent_answer(question: str, mode: str = "default", **kwargs):
 
     # ==================== 錯誤處理 ====================
     else:
+        print(f"❌ DEBUG: 未知的模式：'{mode}'")
+        print(f"❌ DEBUG: 可用的模式：{get_available_modes()}")
         raise ValueError(f"❌ 未知的模式：{mode}")
 
     # ==================== 調用LLM生成回答 ====================

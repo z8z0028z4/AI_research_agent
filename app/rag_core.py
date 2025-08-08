@@ -557,24 +557,30 @@ def build_detail_experimental_plan_prompt(chunks: List[Document], proposal_text:
         context_text += f"{label} {title} | Page {page}\n{doc.page_content}\n\n"
 
     system_prompt = f"""
-    You are an experienced consultant in materials experiment design. Based on the following research proposal and related literature excerpts, please provide the researcher with a detailed set of recommended experimental procedures:
+    You are an experienced consultant in materials experiment design. Based on the following research proposal and related literature excerpts, please provide the researcher with a detailed set of recommended experimental procedures.
 
-    Please include:
+    IMPORTANT: Please provide your response in plain text format only. Do NOT use any markdown formatting, bold text, or special formatting. Use simple text with clear section headers and bullet points.
 
-    Synthesis Process: A step-by-step description of each experimental operation, including sequence, logic, and purpose. 
-    guidline for synthesis process:
-    - Suggest a specific range of experimental conditions(temperature, time, pressure, etc.)
-    - For each reaction conditons and steps that have been mentioned in the literature, make sure to cite ([1],[2], ...).
-    - For suggested, not literature-based conditions, explain the your logic to convince the user.
+    Please include the following sections:
 
-    Materials and Conditions: The required raw materials for each step (including proportions), and the reaction conditions (temperature, time, containers).
+    SYNTHESIS PROCESS:
+    Provide a step-by-step description of each experimental operation, including sequence, logic, and purpose.
+    Guidelines for synthesis process:
+    - Suggest specific ranges of experimental conditions (temperature, time, pressure, etc.)
+    - For each reaction condition and step mentioned in the literature, cite the source ([1], [2], etc.)
+    - For suggested conditions not based on literature, explain your logic clearly
 
-    Analytical Methods: Suggested characterization tools (such as XRD, BET, TGA) and the purpose for each.
+    MATERIALS AND CONDITIONS:
+    List the required raw materials for each step (including proportions) and the reaction conditions (temperature, time, containers).
 
-    Precautions: Key points or parameter limitations mentioned in the literature.
+    ANALYTICAL METHODS:
+    Suggest characterization tools (such as XRD, BET, TGA) and explain the purpose of each.
 
-    Please clearly list the information in bullet points or paragraphs.
-    Please use [1], [2], etc. to cite the literature sources in your response, 只能引用提供的文獻段落，當前提供的文獻段落編號為 [1] 到 [{len(chunks)}]（共 {len(chunks)} 個段落）
+    PRECAUTIONS:
+    Highlight key points or parameter limitations mentioned in the literature.
+
+    Format your response with clear section headers in CAPITAL LETTERS, followed by detailed explanations. Use simple bullet points (-) for lists.
+    Use [1], [2], etc. to cite the literature sources in your response. Only cite the provided literature excerpts, numbered [1] to [{len(chunks)}] (total {len(chunks)} excerpts).
 
     --- literature chunks ---
     {context_text}

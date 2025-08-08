@@ -1,35 +1,37 @@
+# FastAPI and web framework dependencies
+fastapi>=0.115.9
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+
 # Core AI and ML dependencies
 langchain-openai>=0.1.6
-langchain==0.3.26
-langchain_community==0.3.27
-langchain_core==0.3.70
-openai==1.97.0
+langchain>=0.3.26
+langchain_community>=0.3.27
+langchain_core>=0.3.70
+openai>=1.97.0
 
 # Vector database and embeddings
-chromadb==1.0.11
-sentence-transformers==5.0.0
-transformers==4.53.2
-tokenizers==0.21.2
-huggingface-hub==0.33.4
-einops==0.8.1
+chromadb>=1.0.11
+sentence-transformers>=5.0.0
+transformers>=4.53.2
+tokenizers>=0.21.2
+huggingface-hub>=0.33.4
+einops>=0.8.1
 
 # Document processing
-PyMuPDF==1.26.0
-python-docx==1.1.2
-openpyxl==3.1.5
-PyYAML==6.0.2
+PyMuPDF>=1.26.0
+python-docx>=1.1.2
+openpyxl>=3.1.5
+PyYAML>=6.0.2
 
 # Data processing and analysis
-pandas==2.3.1
-scikit-learn==1.6.1
+pandas>=2.3.1
+scikit-learn>=1.6.1
 numpy>=1.24.0
 
-# Web framework and UI (for Streamlit version)
-streamlit==1.45.1
-
 # HTTP requests and networking
-requests==2.32.4
-certifi==2025.1.31
+requests>=2.32.4
+certifi>=2025.1.31
 
 # Image processing and visualization
 Pillow>=10.0.0
@@ -40,10 +42,10 @@ reportlab>=4.0.0
 selenium>=4.15.0
 
 # Environment and configuration
-python-dotenv==1.1.1
+python-dotenv>=1.1.1
 
 # Progress tracking and utilities
-tqdm==4.67.1
+tqdm>=4.67.1
 
 # PyTorch (with CUDA support for GPU acceleration)
 torch>=2.0.0
@@ -54,4 +56,3 @@ torchaudio==2.5.1+cu121
 urllib3>=2.0.0
 beautifulsoup4>=4.12.0
 lxml>=4.9.0
-

@@ -41,8 +41,9 @@ PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")  # Perplexity API密鑰，�
 
 # ==================== 項目路徑配置 ====================
 # 設置基礎目錄路徑，確保跨平台兼容性
-# BASE_DIR 指向項目根目錄的上一級目錄
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+# BASE_DIR 應指向專案根目錄 AI-research-agent
+# 原先設為上上層導致寫入到父資料夾（如 d:\OneDrive\3. tool\coding），現修正為上一層（專案根目錄）
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 # ==================== 數據目錄配置 ====================
 # 定義各種數據存儲目錄，用於組織和管理數據文件
@@ -65,7 +66,7 @@ REGISTRY_PATH = os.path.join(BASE_DIR, "experiment_data", "metadata_registry.xls
 
 # 化學品解析目錄：存儲從PubChem下載的化學品數據
 # 用於存儲化學品的JSON格式數據和元數據
-PARSED_CHEMICAL_DIR = os.path.join(BASE_DIR, "research_agent", "app", "experiment_data", "chemicals")
+PARSED_CHEMICAL_DIR = os.path.join(BASE_DIR, "experiment_data", "parsed_chemicals")
 
 
 # ==================== 模型配置 ====================

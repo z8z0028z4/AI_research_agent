@@ -22,6 +22,24 @@ if errorlevel 1 (
 )
 
 echo.
+echo Checking Node.js installation...
+node --version >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: Node.js is not installed or not in PATH
+    echo Please install Node.js 16+ from https://nodejs.org
+    pause
+    exit /b 1
+)
+
+echo Node.js found. Checking version...
+node --version
+if errorlevel 1 (
+    echo ERROR: Node.js version check failed
+    pause
+    exit /b 1
+)
+
+echo.
 echo Creating virtual environment...
 python -m venv venv
 if errorlevel 1 (
@@ -44,14 +62,37 @@ echo Upgrading pip...
 python -m pip install --upgrade pip
 
 echo.
-echo Installing dependencies...
+echo Installing Python dependencies...
 pip install -r requirements.txt
 if errorlevel 1 (
-    echo ERROR: Failed to install dependencies
+    echo ERROR: Failed to install Python dependencies
     echo Please check your internet connection and try again
     pause
     exit /b 1
 )
+
+echo.
+echo Installing backend dependencies...
+cd backend
+pip install -r requirements.txt
+if errorlevel 1 (
+    echo ERROR: Failed to install backend dependencies
+    pause
+    exit /b 1
+)
+cd ..
+
+echo.
+echo Installing frontend dependencies...
+cd frontend
+npm install
+if errorlevel 1 (
+    echo ERROR: Failed to install frontend dependencies
+    echo Please check your internet connection and try again
+    pause
+    exit /b 1
+)
+cd ..
 
 echo.
 echo Setting up environment file...
@@ -71,10 +112,20 @@ echo ========================================
 echo Installation completed successfully!
 echo ========================================
 echo.
-echo To start the application:
-echo 1. run.bat
-echo 2. python app\main.py
+echo To start the React application:
+echo 1. start_react_app.bat (Recommended - starts both frontend and backend)
 echo.
-echo The application will open at http://localhost:8501
+echo Or start services separately:
+echo 2. Backend: cd backend && run_api.bat
+echo 3. Frontend: cd frontend && run_frontend.bat
+echo.
+echo The application will be available at:
+echo - Frontend: http://localhost:3000
+echo - Backend API: http://localhost:8000
+echo - API Documentation: http://localhost:8000/api/docs
+echo.
+echo For Streamlit version (legacy):
+echo - run.bat
+echo - Available at: http://localhost:8501
 echo.
 pause 
