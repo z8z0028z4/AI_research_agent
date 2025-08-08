@@ -1,18 +1,28 @@
-# 🧪 AI Research Assistant v2.0
+# 🧪 AI Research Assistant v3.0 - React Edition
 
-A comprehensive AI-powered research assistant system designed for materials science and chemistry research workflows. This tool combines document ingestion, vector embedding, GPT-based QA with source tracking, and experimental data analysis capabilities.
+A comprehensive AI-powered research assistant system designed for materials science and chemistry research workflows. **Major Update: Migrated from Streamlit to React frontend for better user experience and modern UI.**
+
+This tool combines document ingestion, vector embedding, GPT-based QA with source tracking, and experimental data analysis capabilities.
 
 ---
 
 ## ✨ Key Features
 
-### 🎯 **Proposal Generator** *(NEW - Main Feature)*
+### 🎯 **Proposal Generator** *(React Version - Enhanced)*
 - **AI-Powered Research Proposals**: Generate comprehensive research proposals based on your research goals
 - **Chemical Safety Integration**: Automatic chemical information retrieval from PubChem with safety data
 - **Interactive Refinement**: Revise proposals based on your feedback and requirements
 - **Experiment Detail Generation**: Expand proposals into detailed experimental plans
 - **Document Export**: Download complete proposals as Word documents with chemical tables and safety icons
 - **Citation Tracking**: Every proposal includes numbered references linking to source documents
+- **Smart Text Cleaning**: Automatic markdown format removal for clean document output
+
+### 🖥️ **Modern User Interface** *(NEW)*
+- **React Frontend**: Modern, responsive web interface built with React 18 + Ant Design
+- **FastAPI Backend**: RESTful API architecture for better performance and scalability
+- **Real-time Updates**: Live status updates and progress indicators
+- **Responsive Design**: Works seamlessly on desktop and mobile devices
+- **Component-based Architecture**: Modular design for easy maintenance and extension
 
 ### 📥 **Document Embedding & Knowledge Base**
 - **Document Processing**: Supports PDF and Word documents with intelligent chunking and metadata extraction
@@ -20,26 +30,20 @@ A comprehensive AI-powered research assistant system designed for materials scie
 - **Academic Embeddings**: Utilizes `nomic-ai/nomic-embed-text-v1.5` for domain-specific semantic understanding
 - **Batch Processing**: Upload multiple documents for comprehensive knowledge base building
 
-### 🔍 **Knowledge Assistant** *(Currently Disabled)*
+### 🔍 **Knowledge Assistant** *(Coming Soon)*
 - **Citation Tracking**: Every response includes numbered references `[1]` linking to source documents, pages, and text snippets
 - **Multiple Answer Modes**: Choose between strict citation mode, extended reasoning, or experimental data integration
 
-### 🧪 **Experimental Reasoning Mode** *(Currently Disabled)*
+### 🧪 **Experimental Reasoning Mode** *(Coming Soon)*
 - **Dual Retriever Architecture**: Combines literature data with experimental logs for comprehensive analysis
 - **Excel Integration**: Processes experimental data from `.xlsx` files and converts to searchable text
 - **Synthesis Suggestions**: Provides creative and practical synthesis recommendations based on both literature and experimental data
 - **Chemical Safety**: Integrates PubChem data for chemical safety information and NFPA hazard codes
 
-### 🔬 **Academic Search Integration** *(Currently Disabled)*
+### 🔬 **Academic Search Integration** *(Coming Soon)*
 - **Perplexity API**: Real-time academic source retrieval with proper citations
 - **Europe PMC**: Direct access to biomedical literature
 - **Reference Management**: Automatic citation formatting and source tracking
-
-### 🖥️ **User Interface**
-- **Streamlit GUI**: Clean, modern web interface with tabbed navigation
-- **CLI Mode**: Command-line interface for minimal setups and automation
-- **File Upload**: Drag-and-drop support for documents and experimental data
-- **Real-time Processing**: Live status updates and progress indicators
 
 ---
 
@@ -47,15 +51,19 @@ A comprehensive AI-powered research assistant system designed for materials scie
 
 ### Prerequisites
 - **Python**: 3.10 or 3.11 or 3.12
+- **Node.js**: 16.0 or higher
 - **Memory**: Minimum 8GB RAM (16GB recommended for large document sets)
 - **Storage**: At least 2GB free space for vector database
 
 ### Installation
 
-**Option 1: Quick Installation (Windows)**
+**Option 1: Quick Installation (Windows) - Recommended**
 ```bash
 # Run the automated installation script
 install.bat
+
+# Start the React application
+start_react_app.bat
 ```
 
 **Option 2: Manual Installation**
@@ -66,45 +74,56 @@ install.bat
    cd AI-research-agent
    ```
 
-2. **Create virtual environment**
+2. **Install Python dependencies**
    ```bash
-   python -m venv venv_company
+   # Create virtual environment
+   python -m venv .venv
+   
    # Windows
-   venv_company\Scripts\activate
+   .venv\Scripts\activate
    # macOS/Linux
-   source venv_company/bin/activate
+   source .venv/bin/activate
+   
+   # Install dependencies
+   pip install -r requirements.txt
+   pip install -r backend/requirements.txt
    ```
 
-3. **Install dependencies**
+3. **Install Node.js dependencies**
    ```bash
-   pip install -r requirements.txt
+   cd frontend
+   npm install
+   cd ..
    ```
 
 4. **Set up environment variables**
    ```bash
-   cp env.example .env
-   # Edit .env file with your API keys
+   cp env.example research_agent/.env
+   # Edit research_agent/.env file with your API keys
    ```
 
 5. **Launch the application**
    ```bash
-   # Option 1: Use the batch file (Windows)
+   # Option 1: Use the batch file (Windows) - Recommended
+   start_react_app.bat
+   
+   # Option 2: Start services separately
+   # Backend
+   cd backend && run_api.bat
+   # Frontend (in new terminal)
+   cd frontend && run_frontend.bat
+   
+   # Option 3: Legacy Streamlit version
    run.bat
-   
-   # Option 2: Direct Python execution
-   python app/main.py
-   
-   # Option 3: Use the root launcher
-   python run_from_root.py
    ```
 
-The application will open in your default browser at `http://localhost:8501`
+The application will open in your default browser at `http://localhost:3000` (React version) or `http://localhost:8501` (Streamlit version)
 
 ---
 
 ## 🔑 Environment Configuration
 
-Create a `.env` file in the project root directory:
+Create a `.env` file in the `research_agent/` directory:
 
 ```env
 # Required API Keys
@@ -120,7 +139,7 @@ PERPLEXITY_API_KEY (optional)=pplx-your-perplexity-api-key-here
 
 After running `install.bat` or manual installation, you need to configure your API keys:
 
-1. **Edit the `.env` file** in the project root directory
+1. **Edit the `.env` file** in the `research_agent/` directory
 2. **Add your API keys**:
    - **OpenAI API Key**: Get from [OpenAI Platform](https://platform.openai.com/api-keys)
    - **Perplexity API Key**: Get from [Perplexity API](https://www.perplexity.ai/settings/api) (optional)
@@ -135,28 +154,30 @@ PERPLEXITY_API_KEY=pplx-your-perplexity-api-key-here
 
 ## 🎯 Usage Guide
 
-### 📋 **Proposal Generator** (Main Feature)
+### 📋 **Proposal Generator** (Main Feature - React Version)
 
 The Proposal Generator is the primary feature of this release. Here's how to use it:
 
 1. **Enter Research Goal**: Describe your research objective in the text area
-2. **Generate Proposal**: Click "Generate proposal" to create an AI-powered research proposal
+2. **Generate Proposal**: Click "✍️ Generate proposal" to create an AI-powered research proposal
 3. **Review Results**: The system will display:
-   - Complete research proposal
-   - Chemical information table with safety data
+   - Complete research proposal (with smart text cleaning)
+   - Chemical information table with safety data and icons
    - Citations from knowledge base
 4. **Refine Proposal**: 
-   - Provide feedback and click "Generate New Idea" to revise
-   - Click "Accept & Generate Experiment Detail" to expand into detailed experimental plans
-5. **Export Document**: Download the complete proposal as a Word document
+   - Provide feedback and click "💡 Generate New Idea" to revise
+   - Click "✅ Accept & Generate Experiment Detail" to expand into detailed experimental plans
+5. **Export Document**: Click "📥 Download DOCX" to download the complete proposal as a Word document
 
-**Features:**
+**Enhanced Features:**
+- Modern React UI with responsive design
 - Automatic chemical safety data retrieval from PubChem
 - Interactive proposal refinement based on user feedback
 - Detailed experimental plan generation
 - Professional document export with chemical tables and safety icons
+- Smart text cleaning (removes markdown formatting)
 
-### 📥 **Document Embedding**
+### 📥 **Document Embedding** (Coming Soon)
 
 Upload and process research documents to build your knowledge base:
 
@@ -166,94 +187,88 @@ Upload and process research documents to build your knowledge base:
 
 ### 🔧 **Enabling Other Features**
 
-Currently, only the Proposal Generator and Document Embedding features are enabled. To enable other features:
+Currently, only the Proposal Generator feature is fully implemented in the React version. Other features are being migrated:
 
-1. **Edit `app/research_gui.py`**
-2. **Modify the `TAB_FLAGS` dictionary**:
-   ```python
-   TAB_FLAGS = {
-       "tab_1_proposal_generator": True,    # Currently enabled
-       "tab_2_embedding": True,             # Currently enabled
-       "tab_3_search_pdf": False,           # Set to True to enable
-       "tab_4_perplexity_search": False,    # Set to True to enable
-       "tab_5_research_assitant": False     # Set to True to enable
-   }
-   ```
+**React Version (Current):**
+- ✅ Proposal Generator
+- ✅ Chemical Information Lookup
+- ✅ DOCX Export
+- 🔄 Document Upload (In Progress)
+- 🔄 Literature Search (Coming Soon)
+- 🔄 Knowledge Assistant (Coming Soon)
 
-**Available Features to Enable:**
-- **Search PDF**: External literature search and PDF download
-- **Perplexity Search**: Real-time academic search using Perplexity API
-- **Knowledge Assistant**: Q&A with knowledge base using different reasoning modes
+**Legacy Streamlit Version:**
+- ✅ All features available
+- Use `run.bat` to start the Streamlit version
 
 ---
 
-## 📚 Supported File Formats
+## 🏗️ Architecture
 
-### Input Documents
-- **PDF**: Research papers, reports, manuals
-- **DOCX**: Word documents, reports
-- **XLSX**: Experimental data, measurement logs
-- **TXT**: Plain text files
+### React Version (New)
+```
+frontend/                 # React 18 + Vite + Ant Design
+├── src/
+│   ├── pages/           # Page components
+│   ├── components/      # Reusable components
+│   └── services/        # API services
+backend/                  # FastAPI backend
+├── api/routes/          # API endpoints
+├── core/                # Core configuration
+└── main.py              # FastAPI application
+```
 
-### Output Formats
-- **DOCX**: Generated proposals with chemical safety data
-- **PNG**: Chemical hazard icons and safety diagrams
-- **JSON**: Structured chemical data from PubChem
-
----
-
-## 🔧 Advanced Configuration
-
-### Custom Model Settings
-Edit `app/config.py` to customize:
-- Embedding model selection
-- LLM parameters (temperature, max tokens)
-- Vector database settings
-- File path configurations
-
-### Vector Database Management
-- **Location**: `experiment_data/vector_index/`
-- **Collections**: 
-  - `paper`: Literature embeddings
-  - `experiment`: Experimental data embeddings
-- **Backup**: ChromaDB automatically handles persistence
-
-### SSL Certificate Issues
-The system includes automatic SSL certificate handling for enterprise environments. If you encounter SSL issues, the system will automatically bypass certificate verification.
+### Legacy Streamlit Version
+```
+app/                     # Streamlit application
+├── main.py              # Main application
+├── knowledge_agent.py   # AI agent logic
+└── rag_core.py          # RAG implementation
+```
 
 ---
 
 ## 🛠️ Troubleshooting
+
+### React Version Issues
+
+1. **Frontend not starting**
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+2. **Backend API errors**
+   ```bash
+   cd backend
+   pip install -r requirements.txt
+   python main.py
+   ```
+
+3. **Port conflicts**
+   - Frontend: http://localhost:3000
+   - Backend: http://localhost:8000
+   - API Docs: http://localhost:8000/api/docs
 
 ### Common Issues
 
 1. **"Module not found" errors**
    ```bash
    pip install -r requirements.txt --upgrade
+   pip install -r backend/requirements.txt --upgrade
    ```
 
-2. **Streamlit startup issues**
+2. **Node.js version issues**
    ```bash
-   # Use the modified startup command
-   python app/main.py
+   node --version  # Should be >= 16.0
+   npm --version
    ```
 
-3. **SSL Certificate errors**
-   - The system automatically handles SSL issues
-   - Check your corporate firewall settings
-
-4. **Memory issues with large documents**
-   - Reduce document chunk size in `config.py`
-   - Process documents in smaller batches
-
-5. **API rate limiting**
-   - Check your OpenAI and Perplexity API quotas
-   - Implement rate limiting in your queries
-
-### Performance Optimization
-
-- **Memory optimization**: Process documents in batches
-- **Speed optimization**: Use smaller embedding models for faster processing
+3. **API connection errors**
+   - Check if backend is running on port 8000
+   - Check browser console for CORS errors
+   - Verify API keys in `.env` file
 
 ---
 
@@ -267,15 +282,15 @@ The system includes automatic SSL certificate handling for enterprise environmen
 
 ### Development Setup
 ```bash
-# Install development dependencies
+# Backend development
+cd backend
 pip install -r requirements.txt
-pip install pytest black flake8
+python main.py
 
-# Run tests
-pytest app/
-
-# Code formatting
-black app/
+# Frontend development
+cd frontend
+npm install
+npm run dev
 ```
 
 ---
@@ -291,7 +306,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **OpenAI** for GPT models and API
 - **Perplexity** for academic search capabilities
 - **ChromaDB** for vector database functionality
-- **Streamlit** for the web interface framework
+- **React** and **Ant Design** for the modern UI framework
+- **FastAPI** for the backend API framework
 - **PubChem** for chemical safety data
 - **Europe PMC** for biomedical literature access
 
@@ -301,8 +317,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Issues**: [GitHub Issues](https://github.com/z8z0028z4/AI-research-agent/issues)
 - **Documentation**: See `app/ARCHITECTURE_OVERVIEW.md`
+- **React Guide**: See `README_REACT.md`
 - **Learning Guide**: See `app/LEARNING_GUIDE.md`
 
 ---
 
-*Last updated: January 2025*
+*Last updated: January 2025 - React Version v3.0*
