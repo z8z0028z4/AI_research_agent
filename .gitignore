@@ -94,7 +94,9 @@ testing_material/**
 *.docx
 *.xlsx
 *.csv
-*.json
+# Exclude package.json from being ignored
+!package.json
+!**/package.json
 experiment_data/papers/
 experiment_data/old-paper/
 experiment_data/experiment/

@@ -96,15 +96,23 @@ cd ..
 
 echo.
 echo Setting up environment file...
-if not exist "research_agent\.env" (
-    copy "env.example" "research_agent\.env"
+if not exist ".env" (
+    copy "env.example" ".env"
     echo.
-    echo IMPORTANT: Please edit research_agent\.env and add your API keys:
+    echo IMPORTANT: Please edit .env and add your API keys:
     echo - OPENAI_API_KEY: Get from https://platform.openai.com/api-keys
     echo - PERPLEXITY_API_KEY: Get from https://www.perplexity.ai/settings/api
     echo.
 ) else (
     echo Environment file already exists
+)
+
+echo.
+echo Setting PowerShell execution policy for npm scripts...
+powershell -Command "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"
+if errorlevel 1 (
+    echo WARNING: Failed to set PowerShell execution policy
+    echo You may need to run npm commands manually
 )
 
 echo.
