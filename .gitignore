@@ -86,6 +86,7 @@ log/
 # Vector database files (can be regenerated)
 experiment_data/vector_index/
 experiment_data/index_old/
+experiment_data/parsed_chemicals/
 testing_material/**
 
 

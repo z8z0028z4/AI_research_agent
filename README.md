@@ -17,6 +17,14 @@ This tool combines document ingestion, vector embedding, GPT-based QA with sourc
 - **Citation Tracking**: Every proposal includes numbered references linking to source documents
 - **Smart Text Cleaning**: Automatic markdown format removal for clean document output
 
+### 🤖 **Model Selector** *(NEW - Model Selection System)*
+- **Multi-Model Support**: Choose from GPT-5, GPT-5 Nano, GPT-5 Mini, and GPT-4 Turbo Preview
+- **Dynamic Parameter Configuration**: Adjust temperature, max tokens, timeout, and GPT-5-specific parameters
+- **Real-time Model Switching**: Change models on-the-fly without restarting the application
+- **Parameter Validation**: Automatic validation of model-specific parameters and constraints
+- **Settings Persistence**: Model preferences and parameters are saved and restored automatically
+- **GPT-5 Advanced Features**: Support for reasoning_effort and verbosity controls for enhanced reasoning
+
 ### 🖥️ **Modern User Interface** *(NEW)*
 - **React Frontend**: Modern, responsive web interface built with React 18 + Ant Design
 - **FastAPI Backend**: RESTful API architecture for better performance and scalability
@@ -44,6 +52,30 @@ This tool combines document ingestion, vector embedding, GPT-based QA with sourc
 - **Perplexity API**: Real-time academic source retrieval with proper citations
 - **Europe PMC**: Direct access to biomedical literature
 - **Reference Management**: Automatic citation formatting and source tracking
+
+---
+
+## 🎛️ Model Configuration
+
+### Available Models
+- **GPT-5**: Latest model with reasoning controls and tool chain support
+- **GPT-5 Nano**: Lightweight version for fast, simple formatting tasks
+- **GPT-5 Mini**: Balanced version with speed and functionality
+- **GPT-4 Turbo Preview**: Stable, reliable model with traditional API interface
+
+### Model Parameters
+- **Temperature**: Controls response randomness (0.0-2.0)
+- **Max Tokens**: Maximum response length (1-32,000)
+- **Timeout**: Request timeout in seconds (10-600)
+- **Reasoning Effort** (GPT-5 only): Controls reasoning depth (minimal/low/medium/high)
+- **Verbosity** (GPT-5 only): Controls response detail level (low/medium/high)
+
+### Configuration
+Access the Settings page in the React interface to:
+1. Select your preferred model
+2. Adjust model parameters
+3. Save settings for future sessions
+4. View model-specific parameter information
 
 ---
 
@@ -98,6 +130,12 @@ start_react_app.bat
 
 4. **Set up environment variables**
    ```bash
+   # Copy the example environment file
+   cp env.example .env
+   
+   # Edit .env and add your OpenAI API key
+   # OPENAI_API_KEY=your_api_key_here
+   ```
    cp env.example research_agent/.env
    # Edit research_agent/.env file with your API keys
    ```

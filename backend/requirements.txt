@@ -43,6 +43,7 @@ selenium>=4.15.0
 
 # Environment and configuration
 python-dotenv>=1.1.1
+pydantic-settings>=2.0.0
 
 # Progress tracking and utilities
 tqdm>=4.67.1

@@ -7,6 +7,7 @@ import {
   SearchOutlined,
   ExperimentOutlined,
   UploadOutlined,
+  SettingOutlined,
 } from '@ant-design/icons'
 
 const { Sider } = Layout
@@ -36,6 +37,11 @@ const menuItems = [
     key: '/upload',
     icon: <UploadOutlined />,
     label: '文件上傳',
+  },
+  {
+    key: '/settings',
+    icon: <SettingOutlined />,
+    label: '系統設定',
   },
 ]
 

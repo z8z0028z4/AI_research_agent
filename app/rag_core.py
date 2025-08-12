@@ -21,7 +21,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 from langchain.chat_models import ChatOpenAI
-from config import VECTOR_INDEX_DIR, EMBEDDING_MODEL_NAME, LLM_MODEL_NAME, LLM_PARAMS
+from config import VECTOR_INDEX_DIR, EMBEDDING_MODEL_NAME, LLM_MODEL_NAME
 import pandas as pd
 from typing import List, Tuple, Dict
 import os
@@ -243,33 +243,198 @@ def build_prompt(chunks: List[Document], question: str) -> Tuple[str, List[Dict]
         # context_text 累加每個 chunk 的內容，格式為 [n] title | Page n
         context_text += f"{label} {title} | Page {page}\n{doc.page_content}\n\n"
 
-    # system_prompt 為最終提示詞，包含 context_text 及 question
+    # system_prompt is the final prompt containing context_text and question
     system_prompt = f"""
 
-    你是一位研究文獻搜尋助理，僅根據提供的文獻段落來並回答問題。
-    請在回答中使用 [1], [2] 等標註段落出處，不要在結尾重複列出來源。
-    如段落中有提到具體的實驗條件（溫度、時間等），請務必包含在回答中。
-    重要：只能引用提供的文獻段落，當前提供的文獻段落編號為 [1] 到 [{len(chunks)}]（共 {len(chunks)} 個段落）
+    You are a research literature search assistant. Please answer questions based only on the provided literature excerpts.
+    Please use [1], [2], etc. to cite paragraph sources in your answers, and do not repeat the sources at the end.
+    If the paragraphs mention specific experimental conditions (temperature, time, etc.), please be sure to include them in your answer.
+    Important: You can only cite the provided literature excerpts. The current literature excerpt numbers are [1] to [{len(chunks)}] (total {len(chunks)} excerpts)
 
-    --- 文獻摘要 ---
+    --- Literature Summary ---
     {context_text}
 
 
-    --- 問題 ---
+    --- Question ---
     {question}
     """
-    # 檢查：回傳 system_prompt 去除首尾空白，以及 citations 列表
+    # Check: return system_prompt with trimmed whitespace and citations list
     return system_prompt.strip(), citations
 
 
 def call_llm(prompt: str) -> str:
     print(f"🔍 調用 LLM，提示詞長度：{len(prompt)} 字符")
+    print(f"🔍 DEBUG: prompt 類型: {type(prompt)}")
+    print(f"🔍 DEBUG: prompt 前100字符: {prompt[:100]}...")
+    
+    # 獲取當前使用的模型信息和參數
     try:
-        llm = ChatOpenAI(**LLM_PARAMS)
-        response = llm.invoke(prompt)
-        print(f"✅ LLM 調用成功，回應長度：{len(response.content)} 字符")
-        print(f"📝 LLM 回應預覽：{response.content[:200]}...")
-        return response.content
+        from model_config_bridge import get_current_model, get_model_params
+        current_model = get_current_model()
+        llm_params = get_model_params()
+        print(f"🤖 使用模型：{current_model}")
+        print(f"🔧 模型參數：{llm_params}")
+        print(f"🔍 DEBUG: current_model 類型: {type(current_model)}")
+        print(f"🔍 DEBUG: current_model.startswith('gpt-5'): {current_model.startswith('gpt-5')}")
+    except Exception as e:
+        print(f"⚠️ 無法獲取模型信息：{e}")
+        # 使用fallback配置
+        llm_params = {
+            "model": "gpt-4-1106-preview",
+            "temperature": 0.3,
+            "max_tokens": 4000,
+            "timeout": 120,
+        }
+    
+    try:
+        # 根據模型類型選擇不同的API
+        if current_model.startswith('gpt-5'):
+            # GPT-5系列使用Responses API
+            from openai import OpenAI
+            client = OpenAI()
+            
+            # 準備Responses API的參數
+            # 對於複雜的proposal prompt，使用更高的token限制
+            base_max_tokens = llm_params.get('max_output_tokens', 2000)
+            if len(prompt) > 1000:  # 複雜prompt
+                max_tokens = max(base_max_tokens, 8000)  # 大幅提高到8000 tokens
+                print(f"🔧 檢測到複雜prompt，大幅提高max_output_tokens到: {max_tokens}")
+            else:
+                max_tokens = base_max_tokens
+            
+            responses_params = {
+                'model': current_model,
+                'input': [{'role': 'user', 'content': prompt}],
+                'max_output_tokens': max_tokens
+            }
+            
+            # 添加其他參數（排除model、input和max_output_tokens）
+            for key, value in llm_params.items():
+                if key not in ['model', 'input', 'max_output_tokens']:
+                    responses_params[key] = value
+            
+            print(f"🔧 使用Responses API，參數：{responses_params}")
+            print(f"🔍 DEBUG: 準備調用 client.responses.create")
+            
+
+            
+            # 處理GPT-5的incomplete狀態
+            max_retries = 3
+            retry_count = 0
+            
+            while retry_count < max_retries:
+                response = client.responses.create(**responses_params)
+                
+                print(f"🔍 DEBUG: API調用完成 (嘗試 {retry_count + 1}/{max_retries})")
+                print(f"🔍 DEBUG: response 類型: {type(response)}")
+                print(f"🔍 DEBUG: response.status: {getattr(response, 'status', 'N/A')}")
+                
+                # 檢查整體response狀態
+                if hasattr(response, 'status') and response.status == 'incomplete':
+                    print(f"⚠️ 檢測到incomplete狀態，等待後重試...")
+                    print(f"💡 提示：如果持續遇到incomplete狀態，建議在設置頁面提高max_output_tokens參數")
+                    print(f"💡 當前max_output_tokens: {max_tokens}，建議提高到8000-12000")
+                    retry_count += 1
+                    if retry_count < max_retries:
+                        import time
+                        time.sleep(2)  # 等待2秒後重試
+                        continue
+                    else:
+                        print(f"❌ 達到最大重試次數，使用incomplete的結果")
+                
+                # 提取文本內容（優先使用output_text，後備解析output陣列）
+                output = ""
+                
+                # 1) 優先嘗試官方便捷屬性 output_text
+                try:
+                    if getattr(response, "output_text", None):
+                        txt = response.output_text.strip()
+                        if txt:
+                            print(f"✅ 使用 output_text: {len(txt)} 字符")
+                            output = txt
+                except Exception as e:
+                    print(f"⚠️ output_text 提取失敗: {e}")
+                
+                # 2) 如果output_text為空，後備解析output陣列
+                if not output:
+                    if hasattr(response, 'output') and response.output:
+                        print(f"🔍 DEBUG: 開始解析 output 陣列，共 {len(response.output)} 個項目")
+                        
+                        for i, item in enumerate(response.output):
+                            item_type = getattr(item, "type", None)
+                            item_status = getattr(item, "status", None)
+                            print(f"  - [{i}] type={item_type}, status={item_status}")
+                            
+                            # 最終答案通常在 type="message"
+                            if item_type == "message":
+                                content = getattr(item, "content", []) or []
+                                print(f"    📝 message 有 {len(content)} 個 content 項目")
+                                
+                                for j, c in enumerate(content):
+                                    # content 物件通常有 .text
+                                    textval = getattr(c, "text", None)
+                                    if textval:
+                                        print(f"    ✅ content[{j}] 提取到文本: {len(textval)} 字符")
+                                        output += textval
+                                    else:
+                                        print(f"    ⚠️ content[{j}] 沒有 text 屬性")
+                    else:
+                        print(f"🔍 DEBUG: response 沒有 output 屬性或 output 為空")
+
+                output = output.strip()
+                print(f"🔍 DEBUG: 最終 output 長度: {len(output)}")
+                print(f"🔍 DEBUG: 最終 output 內容: {output[:200]}...")
+
+                # 檢查整體response狀態
+                response_status = getattr(response, 'status', None)
+                if response_status == 'incomplete':
+                    print(f"⚠️ 整體響應狀態為 incomplete")
+                    if output:
+                        print(f"✅ 即使incomplete狀態，仍成功提取文本: {len(output)} 字符")
+                        print(f"✅ LLM 調用成功，回應長度：{len(output)} 字符")
+                        print(f"📝 LLM 回應預覽：{output[:200]}...")
+                        return output
+                    else:
+                        print(f"❌ incomplete狀態且無法提取文本")
+                        retry_count += 1
+                        if retry_count < max_retries:
+                            import time
+                            time.sleep(2)  # 等待2秒後重試
+                            continue
+                        else:
+                            print(f"❌ 達到最大重試次數")
+                            print(f"💡 建議：請在設置頁面將max_output_tokens提高到8000-12000，或降低verbosity設置")
+                            return ""
+                else:
+                    # 正常狀態
+                    if output:
+                        print(f"✅ 成功提取文本: {len(output)} 字符")
+                        print(f"✅ LLM 調用成功，回應長度：{len(output)} 字符")
+                        print(f"📝 LLM 回應預覽：{output[:200]}...")
+                        return output
+                    else:
+                        print(f"❌ 無法提取文本")
+                        retry_count += 1
+                        if retry_count < max_retries:
+                            import time
+                            time.sleep(2)
+                            continue
+                        else:
+                            print(f"❌ 達到最大重試次數")
+                            print(f"💡 建議：請在設置頁面將max_output_tokens提高到8000-12000，或降低verbosity設置")
+                            return ""
+
+            print(f"❌ 所有重試都失敗，返回空字符串")
+            return ""
+            
+        else:
+            # GPT-4系列使用Chat Completions API (LangChain)
+            llm = ChatOpenAI(**llm_params)
+            response = llm.invoke(prompt)
+            print(f"✅ LLM 調用成功，回應長度：{len(response.content)} 字符")
+            print(f"📝 LLM 回應預覽：{response.content[:200]}...")
+            return response.content
+            
     except Exception as e:
         print(f"❌ LLM 調用失敗：{e}")
         return ""
@@ -304,17 +469,17 @@ def build_inference_prompt(chunks: List[Document], question: str) -> Tuple[str, 
         context_text += f"{label} {title} | Page {page}\n{doc.page_content}\n\n"
 
     system_prompt = f"""
-    你是一位材料合成顧問，你了解並善於比較材料間於化學、物理性質上的差異，能夠針對尚未有明確文獻的情境，根據已知之實驗條件推論出創新建議。
+    You are a materials synthesis consultant who understands and excels at comparing the chemical and physical properties of materials. You can propose innovative suggestions based on known experimental conditions for situations where there is no clear literature.
 
-    請根據以下文獻與實驗資料，進行延伸思考：
-    - 你可以提出新的組合、溫度、時間或路徑。
-    - 即使文獻中尚未記載的組合也可以建議，但要提出合理推論。
-    - 推論、延伸思考的同時，請儘可能提到「這樣的想法源於哪種文獻線索」來輔助解釋，當前提供的文獻段落編號為 [1] 到 [{len(chunks)}]（共 {len(chunks)} 個段落）
+    Please conduct extended thinking based on the following literature and experimental data:
+    - You can propose new combinations, temperatures, times, or pathways.
+    - Even combinations not yet documented in the literature can be suggested, but you must provide reasonable reasoning.
+    - When making inferences and extended thinking, please try to mention "what literature clues this idea originates from" to support your explanation. The current literature excerpt numbers are [1] to [{len(chunks)}] (total {len(chunks)} excerpts)
 
-    --- 文獻摘要 ---
+    --- Literature Summary ---
     {context_text}
 
-    --- 問題 ---
+    --- Question ---
     {question}
     """
     return system_prompt.strip(), citations
@@ -330,8 +495,8 @@ def build_dual_inference_prompt(
     citations = []
     label_index = 1
 
-    # --- 文獻摘要 ---
-    paper_context_text += "--- 文獻摘要 ---\n"
+    # --- Literature Summary ---
+    paper_context_text += "--- Literature Summary ---\n"
     for doc in chunks_paper:
         meta = doc.metadata
         title = meta.get("title", "Untitled")
@@ -352,8 +517,8 @@ def build_dual_inference_prompt(
         paper_context_text += f"{label} {title} | Page {page}\n{doc.page_content}\n\n"
         label_index += 1
 
-    # --- 實驗摘要 ---
-    exp_context_text += "--- 類似實驗摘要 ---\n"
+    # --- Experiment Summary ---
+    exp_context_text += "--- Similar Experiment Summary ---\n"
     for doc in experiment_chunks:
         meta = doc.metadata
         filename = meta.get("filename") or meta.get("source", "Unknown")
@@ -370,31 +535,31 @@ def build_dual_inference_prompt(
             "type": "experiment"
         })
 
-        exp_context_text += f"{label} 實驗 {exp_id}\n{doc.page_content}\n\n"
+        exp_context_text += f"{label} Experiment {exp_id}\n{doc.page_content}\n\n"
         label_index += 1
         
-    # --- Prompt 注入 ---
+    # --- Prompt Injection ---
     system_prompt = f"""
-    你是一位材料合成顧問，你了解並善於比較材料在化學與物理性質上的差異。
+    You are a materials synthesis consultant who understands and excels at comparing the chemical and physical properties of materials.
 
-    你將看到三個部分資訊，請綜合分析，對實驗進行具體推論與創新建議：
-    1. 文獻摘要（有標註來源 [1]、[2]）
-    2. 類似實驗摘要（來自向量資料庫）
-    3. 實驗紀錄（表格）
+    You will see three parts of information. Please conduct comprehensive analysis and provide specific inferences and innovative suggestions for experiments:
+    1. Literature summary (with source annotations [1], [2])
+    2. Similar experiment summary (from vector database)
+    3. Experiment records (tables)
 
-    請針對研究問題提出新的建議，包含：
-    - 調整的合成路徑、條件（如溫度、時間、配比）
-    - 可能影響合成成功率的變因
-    - 推論其背後的原因，必要時引用文獻（[1]、[2]...）或類似實驗結果
-    重要：只能引用提供的文獻段落，當前提供的文獻段落編號為 [1] 到 [{len(chunks_paper) + len(experiment_chunks)}]（共 {len(chunks_paper) + len(experiment_chunks)} 個段落）
+    Please propose new suggestions for the research question, including:
+    - Adjusted synthesis pathways and conditions (such as temperature, time, ratios)
+    - Factors that may affect synthesis success rate
+    - Reasoning behind the causes, citing literature ([1], [2]...) or similar experiment results when necessary
+    Important: You can only cite the provided literature excerpts. The current literature excerpt numbers are [1] to [{len(chunks_paper) + len(experiment_chunks)}] (total {len(chunks_paper) + len(experiment_chunks)} excerpts)
 
-    --- 文獻知識來源 ---
+    --- Literature Knowledge Sources ---
     {paper_context_text}
 
-    --- 實驗紀錄 ---
+    --- Experiment Records ---
     {exp_context_text}
 
-    --- 研究問題 ---
+    --- Research Question ---
     {question}
     """
     return system_prompt.strip(), citations
@@ -403,32 +568,108 @@ def build_dual_inference_prompt(
 
 def expand_query(user_prompt: str) -> List[str]:
     """
-    將使用者輸入的自然語言問題轉為多個 semantic search 查詢語句。
-    回傳的英文語句可用於文獻向量檢索。
+    Convert user input natural language questions into multiple semantic search query statements.
+    The returned English statements can be used for literature vector retrieval.
     """
-    llm = ChatOpenAI(**LLM_PARAMS)
+    # Get dynamic model parameters
+    try:
+        from model_config_bridge import get_current_model, get_model_params
+        current_model = get_current_model()
+        llm_params = get_model_params()
+    except Exception as e:
+        print(f"⚠️ 無法獲取模型參數：{e}")
+        current_model = "gpt-4-1106-preview"
+        llm_params = {
+            "model": "gpt-4-1106-preview",
+            "temperature": 0.3,
+            "max_tokens": 4000,
+            "timeout": 120,
+        }
 
     system_prompt = """You are a scientific assistant helping expand a user's synthesis question into multiple semantic search queries. 
     Each query should be precise, relevant, and useful for retrieving related technical documents. 
-    Only return a list of 3 to 6 search queries in English. Do not explain, do not include numbering if not needed.
-
-    你是一位科學助理，協助將使用者的合成相關問題擴展為多個語意搜尋查詢。
-    每個查詢都應該準確、相關，並有助於檢索相關的技術文件。
-    只需回傳 3 到 6 個英文查詢的列表。不需要解釋，也不需加上編號（除非必要）。"""
+    Only return a list of 3 to 6 search queries in English. Do not explain, do not include numbering if not needed."""
 
     full_prompt = f"{system_prompt}\n\nUser question:\n{user_prompt}"
 
-    output = llm.predict(full_prompt).strip()
+    try:
+        # 根據模型類型選擇不同的API
+        if current_model.startswith('gpt-5'):
+            # GPT-5系列使用Responses API
+            from openai import OpenAI
+            client = OpenAI()
+            
+            # 準備Responses API的參數
+            responses_params = {
+                'model': current_model,
+                'input': [{'role': 'user', 'content': full_prompt}]
+            }
+            
+            # 添加其他參數（排除model和input）
+            for key, value in llm_params.items():
+                if key not in ['model', 'input']:
+                    responses_params[key] = value
+            
+            # 修復：移除reasoning參數，避免返回ResponseReasoningItem
+            if 'reasoning' in responses_params:
+                del responses_params['reasoning']
+            
+            # 確保移除reasoning參數
+            if 'reasoning' in responses_params:
+                print(f"🔍 DEBUG: 移除 reasoning 參數: {responses_params['reasoning']}")
+                del responses_params['reasoning']
+                print(f"🔍 DEBUG: 更新後的參數: {responses_params}")
+            
+            response = client.responses.create(**responses_params)
+            
+            # 修復：根據GPT-5 cookbook正確處理Responses API的回應格式
+            output = ""
+            if hasattr(response, 'output') and response.output:
+                for item in response.output:
+                    # 跳過ResponseReasoningItem對象
+                    if hasattr(item, 'type') and item.type == 'reasoning':
+                        continue
+                    
+                    if hasattr(item, "content"):
+                        for content in item.content:
+                            if hasattr(content, "text"):
+                                output += content.text
+                    elif hasattr(item, "text"):
+                        # 直接文本輸出
+                        output += item.text
+                    elif hasattr(item, "message"):
+                        # message對象
+                        if hasattr(item.message, "content"):
+                            output += item.message.content
+                        else:
+                            output += str(item.message)
+                    else:
+                        # 其他情況，嘗試轉換為字符串，但過濾掉ResponseReasoningItem
+                        item_str = str(item)
+                        if not item_str.startswith('ResponseReasoningItem'):
+                            output += item_str
+            
+            output = output.strip()
+            
+        else:
+            # GPT-4系列使用Chat Completions API (LangChain)
+            llm = ChatOpenAI(**llm_params)
+            output = llm.predict(full_prompt).strip()
 
-    # 嘗試解析成 query list
-    if output.startswith("[") and output.endswith("]"):
-        try:
-            return eval(output)
-        except Exception:
-            pass  # fall back
+        # Try to parse into query list
+        if output.startswith("[") and output.endswith("]"):
+            try:
+                return eval(output)
+            except Exception:
+                pass  # fall back
 
-    queries = [line.strip("-• ").strip() for line in output.split("\n") if line.strip()]
-    return [q for q in queries if len(q) > 4]
+        queries = [line.strip("-• ").strip() for line in output.split("\n") if line.strip()]
+        return [q for q in queries if len(q) > 4]
+        
+    except Exception as e:
+        print(f"❌ 查詢擴展失敗：{e}")
+        # 返回原始查詢作為fallback
+        return [user_prompt]
 
 
 def build_proposal_prompt(chunks: List[Document], question: str) -> Tuple[str, List[Dict]]:
@@ -462,63 +703,73 @@ def build_proposal_prompt(chunks: List[Document], question: str) -> Tuple[str, L
         paper_context_text += f"{label} {title} | Page {page}\n{doc.page_content}\n\n"
 
     system_prompt = f"""
-    你是一位材料化學專家，擅長根據文獻摘要與研究目標，提出具有創新性與可行性的材料合成研究提案。
-    如能根據文獻提出新的配體種類（如 pyridyl, biphenyl, sulfonate）或金屬節點（如 Zn, Mg, Zr），請具體列出並說明其結構優勢與反應性。
+    You are a scientific research expert who excels at proposing innovative and feasible research proposals based on literature summaries and research objectives.
+Your expertise covers materials science, chemistry, physics, and engineering, and you are capable of deriving new ideas grounded in experimental evidence and theoretical principles.
 
-    請你根據下方文獻內容與研究目標，撰寫一份結構化提案，格式如下（請完整產出每一段）：
+If possible, propose new components, structures, or mechanisms (e.g., new ligands, frameworks, catalysts, processing techniques) based on the literature, and clearly explain their structural or functional advantages and potential reactivity/performance.
 
-    ---
-    Proposal: （請自動產生提案標題，濃縮研究目標與創新點）
+Write a structured proposal based on the provided literature excerpts and research objectives in the following format (complete each section):
 
-    Need:
-    - 簡述研究目標與目前材料在應用上的限制
-    - 明確指出產業、世界、政府等待解決的痛點或技術瓶頸
+Proposal: (Automatically generate a proposal title summarizing research objectives and innovation points)
 
-    Solution:
-    - 提出具體的材料設計與合成策略
-    - 建議新的化學結構（如金屬、有機配體、功能官能基)，明確指出化學結構名稱(例如配體名稱)
-    - 請說明新設計的化學邏輯（如配位環境、孔徑、官能基作用）
+Need:
 
-    Differentiation:
-    - 列表比較與現有文獻材料的差異
-    - 強調結構、條件或性能上的突破
+Briefly describe the research objectives and current limitations in existing solutions
 
-    Benefit:
-    - 預期改善的性能或應用面向
-    - 列出量化的預估值（如提升 CO₂ 吸附量、穩定性、選擇性）
+Clearly identify the pain points or technical bottlenecks that need to be addressed at industry, academic, or global level
 
-    Based Literature:
-    - 使用段落標籤列出引用的依據，每段話都需要提供文獻段落編號，文獻段落編號為 [1] 到 [{len(chunks)}]（共 {len(chunks)} 個段落）
-    - 請確保每個推論都有文獻對照依據或合理延伸理由
+Solution:
 
-    Experimental overview:
-    1. 使用的起始材料與反應條件（如溫度、時間）
-    2. 合成使用儀器、設備描述並列表
-    3. 合成步驟敘述（描述關鍵邏輯）
+Propose specific design and development strategies
 
+Suggest new structures, compositions, or methods, clearly naming the proposed elements (e.g., chemical names, material systems, fabrication methods)
 
+Explain the logic behind the proposed design (e.g., structure-property relationship, mechanism of action, processing advantages)
 
-    最後，請在回答最末段，以 JSON 格式列出此提案所使用到的所有化學品（包含金屬鹽、有機配體、溶劑等）。以IUPAC Name回答，格式與範例如下：
+Differentiation:
 
-    ```markdown
+Compare with existing literature or technologies
 
-    ```json
-    ["formic acid", "N,N-dimethylformamide", "copper;dinitrate;trihydrate"]
-    ```
-    ---
+Emphasize breakthroughs in structure, performance, or implementation
 
-    請注意：
-    - 結構建議要有邏輯依據，避免隨意編造不合理結構
-    - 請保持科學性、可讀性，並避免空泛敘述
-    - 引用標註請使用提供的文獻段落標籤 [1]、[2]，不要使用虛構來源
+Benefit:
 
-    --- 文獻段落 ---
+Expected improvements in performance or application scope
+
+Provide quantitative estimates if possible (e.g., % improvement, target metrics)
+
+Based Literature:
+
+Use paragraph labels to cite sources, with labels from [1] to [{len(chunks)}] (total {len(chunks)} excerpts)
+
+Ensure every claim is supported by a cited source or reasonable extension from the literature
+
+Experimental overview:
+
+Starting materials/components and conditions (e.g., temperature, duration, environment)
+
+Instruments/equipment description and list
+
+Step-by-step description of the procedure (highlighting key logic and rationale)
+
+Finally, list all materials/chemicals used in this proposal (including metals, ligands, solvents, or other relevant reagents) in JSON format at the end of your answer. Use IUPAC names where applicable.
+Example:
+
+```json
+["formic acid", "N,N-dimethylformamide", "copper;dinitrate;trihydrate"]
+Notes:
+
+All proposed designs must have a logical basis — avoid inventing unreasonable structures without justification
+
+Maintain scientific rigor, clarity, and avoid vague descriptions
+
+Use only the provided literature labels ([1], [2], etc.) for citations, and do not fabricate sources
+
+    --- Literature Excerpts ---
     {paper_context_text}
 
-    --- 研究目標 ---
-    {question}
-
-    """
+    --- Research Objectives ---
+    {question}"""
     
     return system_prompt.strip(), citations
 
@@ -599,8 +850,8 @@ def build_iterative_proposal_prompt(
     past_proposal: str
 ) -> Tuple[str, List[Dict]]:
     """
-    建立新的研究提案 prompt，結合使用者的反饋、新檢索文獻、舊文獻與原始提案。
-    同時回傳 citation list。
+    Build a new research proposal prompt that combines user feedback, newly retrieved literature, old literature, and the original proposal.
+    Also returns citation list.
     """
     citations = []
 
@@ -632,35 +883,35 @@ def build_iterative_proposal_prompt(
     citations.extend(old_citations + new_citations)
 
     system_prompt = f"""
-    你是一位熟練的材料實驗設計顧問，請根據使用者提供的反饋、原始提案、與文獻內容，協助修改部分的研究提案。
+    You are an experienced materials experiment design consultant. Please help modify parts of the research proposal based on user feedback, original proposal, and literature content.
 
-    請依循以下指引：
-    1. 優先處理使用者提出欲修改之處，並從文獻中尋找可能的改進方向。
-    2. 除了使用者提出之不滿意處進行修改外，其他部分(NSDB)請保持原提案內容，不須更動，直接輸出
-    3. 保持提案格式與原始提案內容一致，並請於第一段簡要說明更改的方向，總共包含下列區塊：
-    - revision explanation: 簡要說明本次提案與前次提案的差異
+    Please follow these guidelines:
+    1. Prioritize the areas that the user wants to modify and look for possible improvement directions from the literature.
+    2. Except for the areas that the user is dissatisfied with, other parts (NSDB) should maintain the original proposal content without changes, output directly.
+    3. Maintain the proposal format consistent with the original proposal content, and please briefly explain the direction of changes in the first paragraph, including the following sections:
+    - revision explanation: Briefly explain the differences between this proposal and the previous proposal
     - Need
     - Solution
     - Differentiation
     - Benefit
     - Based Literature
     - Experimental overview
-    重要：只能引用提供的文獻段落，當前提供的文獻段落編號為 [1] 到 [{len(old_chunks) + len(new_chunks)}]（共 {len(old_chunks) + len(new_chunks)} 個段落）
+    Important: You can only cite the provided literature excerpts. The current literature excerpt numbers are [1] to [{len(old_chunks) + len(new_chunks)}] (total {len(old_chunks) + len(new_chunks)} excerpts)
 
-    最後，請在回答最末段，以 JSON 格式列出此提案所使用到的所有化學品（包含金屬鹽、有機配體、溶劑等）。以 IUPAC Name 回答，回答格式與範例如下：
+    Finally, please list all chemicals used in this proposal (including metal salts, organic ligands, solvents, etc.) in JSON format at the end of your answer. Answer with IUPAC names, format and example as follows:
 
     ```json
     ["formic acid", "N,N-dimethylformamide", "copper;dinitrate;trihydrate"]
-    --- 使用者的反饋 ---
+    --- User Feedback ---
     {question}
 
-    --- 原始提案內容 ---
+    --- Original Proposal Content ---
     {past_proposal}
 
-    --- 原始提案所基於的文獻段落 ---
+    --- Literature Excerpts Based on Original Proposal ---
     {old_text}
 
-    --- 根據反饋補充的新檢索段落 ---
+    --- New Retrieved Excerpts Based on Feedback ---
     {new_text}
     """
     return system_prompt.strip(), citations

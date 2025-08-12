@@ -8,6 +8,7 @@ import Proposal from './pages/Proposal'
 import Search from './pages/Search'
 import Chemical from './pages/Chemical'
 import Upload from './pages/Upload'
+import Settings from './pages/Settings'
 import './App.css'
 
 const { Content } = Layout
@@ -35,6 +36,7 @@ function App() {
               <Route path="/search" element={<Search />} />
               <Route path="/chemical" element={<Chemical />} />
               <Route path="/upload" element={<Upload />} />
+              <Route path="/settings" element={<Settings />} />
             </Routes>
           </Content>
         </Layout>

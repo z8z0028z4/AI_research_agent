@@ -69,6 +69,7 @@ class ProposalResponse(BaseModel):
     not_found: List[str]
     # 以可序列化的結構回傳 chunks：[{ page_content, metadata }]
     chunks: List[Dict[str, Any]]
+    used_model: Optional[str] = None
 
 class ProposalRevisionRequest(BaseModel):
     """提案修訂請求模型"""
@@ -121,14 +122,23 @@ async def generate_proposal(request: ProposalRequest):
         result = agent_answer(request.research_goal, mode="make proposal", k=request.retrieval_count)
         
         print(f"🔍 BACKEND DEBUG: agent_answer 調用成功")
+        print(f"🔍 BACKEND DEBUG: result 類型: {type(result)}")
+        print(f"🔍 BACKEND DEBUG: result 鍵: {list(result.keys())}")
+        print(f"🔍 BACKEND DEBUG: result['answer'] 長度: {len(result.get('answer', ''))}")
+        print(f"🔍 BACKEND DEBUG: result['answer'] 內容: {result.get('answer', '')[:200]}...")
 
         # 從回答中抽取化學品資訊與提案正文
+        print(f"🔍 BACKEND DEBUG: 準備調用 chemical_metadata_extractor")
         chemical_metadata_list, not_found_list, proposal_answer = chemical_metadata_extractor(
             result.get("answer", "")
         )
+        print(f"🔍 BACKEND DEBUG: chemical_metadata_extractor 完成")
+        print(f"🔍 BACKEND DEBUG: proposal_answer 長度: {len(proposal_answer)}")
+        print(f"🔍 BACKEND DEBUG: chemical_metadata_list 數量: {len(chemical_metadata_list)}")
 
         citations = result.get("citations", [])
         chunks = result.get("chunks", [])
+        used_model = result.get("used_model", "unknown")
 
         # 修復 citations 中的 page 欄位類型問題
         fixed_citations = []
@@ -144,7 +154,8 @@ async def generate_proposal(request: ProposalRequest):
             chemicals=chemical_metadata_list,
             citations=fixed_citations,
             not_found=not_found_list,
-            chunks=_serialize_chunks(chunks)
+            chunks=_serialize_chunks(chunks),
+            used_model=used_model
         )
         
     except Exception as e:

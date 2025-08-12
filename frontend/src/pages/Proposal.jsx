@@ -23,7 +23,6 @@ const Proposal = () => {
   const [isTextareaFocused, setIsTextareaFocused] = useState(false); // 追蹤輸入框是否被聚焦
   const [isReviseInputFocused, setIsReviseInputFocused] = useState(false); // 追蹤修訂輸入框是否被聚焦
   const reviseInputRef = useRef(null); // 修訂輸入框的 ref
-  const [isButtonClicked, setIsButtonClicked] = useState(false); // 追蹤按鈕是否被點擊
 
   const hasResult = useMemo(
     () => Boolean(proposal) || chemicals.length > 0 || citations.length > 0,
@@ -79,10 +78,16 @@ const Proposal = () => {
   };
 
   const onRevise = async () => {
+    console.log('🔍 FRONTEND DEBUG: onRevise called');
+    console.log('🔍 FRONTEND DEBUG: reviseFeedback:', reviseFeedback);
+    console.log('🔍 FRONTEND DEBUG: proposal exists:', !!proposal);
+    
     if (!reviseFeedback) return message.warning('請輸入修訂意見');
     if (!proposal) return message.warning('請先生成提案');
+    
     setLoading(true);
     try {
+      console.log('🔍 FRONTEND DEBUG: Sending revise request to backend');
       const data = await callApi('/proposal/revise', {
         body: JSON.stringify({
           original_proposal: proposal,
@@ -90,6 +95,8 @@ const Proposal = () => {
           chunks,
         }),
       });
+      console.log('🔍 FRONTEND DEBUG: Revise response received:', data);
+      
       setProposal(data.proposal || '');
       setChemicals(data.chemicals || []);
       setNotFound(data.not_found || []);
@@ -99,10 +106,11 @@ const Proposal = () => {
       setShowReviseInput(false); // 隱藏修訂輸入框
       setReviseFeedback(''); // 清空修訂意見
       setHasGeneratedContent(true); // 設置為已生成內容
+      
+      message.success('提案修訂成功！');
     } catch (e) {
+      console.error('❌ FRONTEND DEBUG: Revise failed:', e);
       showError(e, '修訂失敗');
-      // eslint-disable-next-line no-console
-      console.error(e);
     } finally {
       setLoading(false);
     }
@@ -111,20 +119,15 @@ const Proposal = () => {
   const onShowReviseInput = () => {
     if (showReviseInput) {
       // 如果已經顯示，則直接隱藏
-      setIsButtonClicked(true);
       setShowReviseInput(false);
       setReviseFeedback('');
       setIsReviseInputFocused(false);
-      // 重置按鈕點擊狀態
-      setTimeout(() => setIsButtonClicked(false), 100);
     } else {
       // 如果未顯示，則顯示並聚焦
-      setIsButtonClicked(true);
       setShowReviseInput(true);
       // 使用 setTimeout 確保 DOM 更新後再聚焦
       setTimeout(() => {
         reviseInputRef.current?.focus();
-        setIsButtonClicked(false);
       }, 0);
     }
   };
@@ -449,7 +452,12 @@ const Proposal = () => {
           {/* Action Buttons - 只在有結果時顯示 */}
           <Card style={{ marginBottom: 16 }}>
             <Space wrap>
-              <Button size="large" onClick={onShowReviseInput} loading={loading}>
+              <Button 
+                size="large" 
+                onClick={onShowReviseInput} 
+                loading={loading}
+                type={showReviseInput ? "primary" : "default"}
+              >
                 💡 Generate New Idea
               </Button>
               <Button size="large" onClick={onGenerateExperimentDetail} loading={loading}>
@@ -460,6 +468,19 @@ const Proposal = () => {
             {/* 修訂輸入框 - 點擊 Generate New Idea 後顯示 */}
             {showReviseInput && (
               <div style={{ marginTop: 16, padding: 16, backgroundColor: '#f5f5f5', borderRadius: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <Text strong>Enter your revision idea:</Text>
+                  <Button 
+                    type="text" 
+                    size="small" 
+                    onClick={() => {
+                      setShowReviseInput(false);
+                      setReviseFeedback('');
+                    }}
+                  >
+                    ✕ Close
+                  </Button>
+                </div>
                 <Space>
                   <TextArea
                     placeholder="Your revision idea"
@@ -470,16 +491,18 @@ const Proposal = () => {
                     onFocus={() => setIsReviseInputFocused(true)}
                     onBlur={() => {
                       setIsReviseInputFocused(false);
-                      // 只有在按鈕沒有被點擊時才隱藏
-                      setTimeout(() => {
-                        if (!isButtonClicked) {
-                          setShowReviseInput(false);
-                        }
-                      }, 100);
                     }}
                     ref={reviseInputRef} // 將 ref 綁定到 TextArea
                   />
-                  <Button type="primary" size="large" onClick={onRevise} loading={loading}>
+                  <Button 
+                    type="primary" 
+                    size="large" 
+                    onClick={() => {
+                      console.log('🔍 FRONTEND DEBUG: Revise it! button clicked');
+                      onRevise();
+                    }} 
+                    loading={loading}
+                  >
                     Revise it!
                   </Button>
                 </Space>

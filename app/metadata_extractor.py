@@ -4,7 +4,7 @@ import fitz  # PyMuPDF
 import docx
 import json
 from openai import OpenAI
-from config import OPENAI_API_KEY, LLM_PARAMS
+from config import OPENAI_API_KEY
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -21,27 +21,30 @@ def extract_text_from_docx(docx_path):
 
 def gpt_detect_type_and_title(text, filename):
     prompt = f"""
-    你是一位學術論文分析工具，請從以下內容協助判斷：
-    1. 此文件是主文（paper）還是 Supporting Information（SI）？
-    2. 請擷取對應主文的標題（若可得）。
+    You are an academic paper analysis tool. Please help determine from the following content:
+    1. Is this document a main paper or Supporting Information (SI)?
+    2. Please extract the corresponding main paper title (if available).
 
-    僅以以下 JSON 格式回覆，不要加入任何多餘文字，也不要使用 code block：
-    {{"type": "SI" 或 "paper", "title": "主文標題（若無則為空字串）"}}
+    Reply only in the following JSON format, do not add any extra text, and do not use code blocks:
+    {{"type": "SI" or "paper", "title": "main paper title (empty string if none)"}}
 
-    檔案名稱：{filename}
-    檔案內容：{text.strip()[:3000]}
+    File name: {filename}
+    File content: {text.strip()[:3000]}
     """
 
     for attempt in range(2):
         try:
+            from model_config_bridge import get_model_params
+            llm_params = get_model_params()
+            
             response = client.chat.completions.create(
-                model=LLM_PARAMS["model_name"],
+                model=llm_params["model"],
                 messages=[
-                    {"role": "system", "content": "你是專業的學術文件分類與標題擷取工具"},
+                    {"role": "system", "content": "You are a professional academic document classification and title extraction tool"},
                     {"role": "user", "content": prompt}
                 ],
-                max_completion_tokens=LLM_PARAMS.get("max_completion_tokens", 4000),
-                timeout=LLM_PARAMS.get("timeout", 120),
+                max_tokens=llm_params.get("max_tokens", 4000),
+                timeout=llm_params.get("timeout", 120),
             )
             content = response.choices[0].message.content.strip()
             parsed = json.loads(content)

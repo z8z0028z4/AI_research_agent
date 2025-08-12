@@ -189,14 +189,40 @@ def agent_answer(question: str, mode: str = "make proposal", **kwargs):
         raise ValueError(f"❌ 未知的模式：{mode}")
 
     # ==================== 調用LLM生成回答 ====================
+    print(f"🔍 DEBUG: 準備調用 call_llm")
+    print(f"🔍 DEBUG: prompt 長度: {len(prompt)}")
+    print(f"🔍 DEBUG: prompt 前200字符: {prompt[:200]}...")
+    
     response = call_llm(prompt)
+    
+    print(f"🔍 DEBUG: call_llm 返回結果")
+    print(f"🔍 DEBUG: response 類型: {type(response)}")
+    print(f"🔍 DEBUG: response 長度: {len(response) if response else 0}")
+    print(f"🔍 DEBUG: response 內容: {response[:500] if response else 'None'}...")
+    
+    # ==================== 獲取使用的模型信息 ====================
+    try:
+        from model_config_bridge import get_current_model
+        used_model = get_current_model()
+        print(f"🔍 DEBUG: 使用的模型: {used_model}")
+    except Exception as e:
+        print(f"❌ DEBUG: 獲取模型信息失敗: {e}")
+        used_model = "unknown"
 
     # ==================== 返回結果 ====================
-    return {
+    result = {
         "answer": response,      # AI生成的回答
         "citations": citations,  # 相關引用信息
-        "chunks": chunks        # 檢索到的相關文檔塊
+        "chunks": chunks,       # 檢索到的相關文檔塊
+        "used_model": used_model  # 使用的模型信息
     }
+    
+    print(f"🔍 DEBUG: 返回結果")
+    print(f"🔍 DEBUG: answer 長度: {len(result['answer'])}")
+    print(f"🔍 DEBUG: citations 數量: {len(result['citations'])}")
+    print(f"🔍 DEBUG: chunks 數量: {len(result['chunks'])}")
+    
+    return result
 
 
 # ==================== 輔助函數 ====================
