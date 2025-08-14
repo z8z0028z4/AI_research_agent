@@ -340,6 +340,8 @@ app/                     # Legacy Streamlit components
 - **Research Progress Tracking**: Monitor proposal and experiment progress
 - **Analytics Dashboard**: Visualize research metrics and trends
 - **Project Management**: Organize and track multiple research projects
+- **API Key setting function**: Import API key from setting page
+
 
 ---
 
