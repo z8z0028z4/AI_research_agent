@@ -24,19 +24,15 @@ try:
     from svglib.svglib import svg2rlg
     from reportlab.graphics import renderPDF
     SVGLIB_AVAILABLE = True
-    print("✅ svglib 導入成功")
 except ImportError as e:
     SVGLIB_AVAILABLE = False
-    print(f"❌ svglib 導入失敗: {e}")
 
 # PyMuPDF 用於 PDF 到 PNG 轉換
 try:
     import fitz
     PYMUPDF_AVAILABLE = True
-    print("✅ PyMuPDF 導入成功")
 except ImportError as e:
     PYMUPDF_AVAILABLE = False
-    print(f"⚠️ PyMuPDF 導入失敗: {e}")
 
 import time
 from selenium import webdriver

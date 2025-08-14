@@ -1,31 +1,217 @@
 """
-AI 研究助理 - RAG核心模塊
-========================
+RAG核心模組
+==========
 
-這個模塊是整個系統的RAG（檢索增強生成）核心，負責：
-1. 向量數據庫管理
-2. 文檔檢索和相似度搜索
-3. 提示詞構建和優化
-4. LLM調用和回答生成
-
-架構說明：
-- 使用Chroma作為向量數據庫
-- 支持多查詢檢索
-- 提供多種提示詞模板
-- 集成OpenAI GPT模型
-
-⚠️ 注意：此模塊是系統的核心組件，所有知識處理都依賴於此模塊
+基於檢索增強生成的AI研究助手核心功能
+整合文獻檢索、知識提取和智能問答
 """
 
-from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_core.documents import Document
-from langchain.chat_models import ChatOpenAI
-from config import VECTOR_INDEX_DIR, EMBEDDING_MODEL_NAME, LLM_MODEL_NAME
-import pandas as pd
-from typing import List, Tuple, Dict
 import os
+import json
+import time
+import re
+from typing import List, Dict, Any, Optional, Tuple
+from pathlib import Path
 from collections import defaultdict
+
+# 導入必要的模組
+from langchain_openai import ChatOpenAI
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import Chroma
+from langchain.schema import Document
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+import openai
+
+# 導入配置和橋接模組
+from config import (
+    OPENAI_API_KEY, 
+    VECTOR_INDEX_DIR, 
+    EMBEDDING_MODEL_NAME,
+    MAX_TOKENS,
+    CHUNK_SIZE,
+    CHUNK_OVERLAP
+)
+from model_config_bridge import get_model_params, get_current_model
+
+# 設定OpenAI API Key
+openai.api_key = OPENAI_API_KEY
+
+def get_dynamic_schema_params():
+    """
+    從設定管理器獲取動態的 JSON Schema 參數
+    
+    Returns:
+        Dict: 包含 min_length 和 max_length 的字典
+    """
+    try:
+        # 導入設定管理器
+        import sys
+        backend_path = os.path.join(os.path.dirname(__file__), "..", "backend")
+        if backend_path not in sys.path:
+            sys.path.insert(0, backend_path)
+        
+        from core.settings_manager import settings_manager
+        json_schema_params = settings_manager.get_json_schema_parameters()
+        
+        return {
+            "min_length": json_schema_params.get("min_length", 5),
+            "max_length": json_schema_params.get("max_length", 100)
+        }
+    except Exception as e:
+        print(f"⚠️ 無法獲取動態 schema 參數，使用預設值: {e}")
+        return {
+            "min_length": 5,
+            "max_length": 100
+        }
+
+def create_research_proposal_schema():
+    """
+    動態創建研究提案的 JSON Schema
+    
+    Returns:
+        Dict: 研究提案的 JSON Schema
+    """
+    schema_params = get_dynamic_schema_params()
+    
+    return {
+        "type": "object",
+        "title": "ResearchProposal",
+        "additionalProperties": False,
+        "required": [
+            "proposal_title",
+            "need",
+            "solution", 
+            "differentiation",
+            "benefit",
+            "experimental_overview",
+            "materials_list"
+        ],
+        "properties": {
+            "proposal_title": {
+                "type": "string",
+                "description": "研究提案的標題，總結研究目標和創新點",
+                "minLength": 10
+                #"maxLength": 1000
+            },
+            "need": {
+                "type": "string", 
+                "description": "研究需求和現有解決方案的局限性，明確需要解決的技術瓶頸",
+                "minLength": 10
+                #"maxLength": 600  # 允許更長的描述
+            },
+            "solution": {
+                "type": "string",
+                "description": "具體的設計和開發策略，包括新的結構、組成或方法",
+                "minLength": 10
+                #"maxLength": 1000
+            },
+            "differentiation": {
+                "type": "string",
+                "description": "與現有文獻或技術的比較，強調結構、性能或實施方面的突破",
+                "minLength": 10
+                #"maxLength": 800
+            },
+            "benefit": {
+                "type": "string",
+                "description": "預期的性能改進或應用範圍擴展，盡可能提供定量估計",
+                "minLength": 10
+                #"maxLength": 600
+            },
+            "experimental_overview": {
+                "type": "string",
+                "description": "實驗概述，包括起始材料、條件、儀器設備和步驟描述",
+                "minLength": 10
+                #"maxLength": 600
+            },
+            "materials_list": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                },
+                "description": "CRITICAL: 僅列出IUPAC化學品名稱，每個項目必須是單一化學品名稱，不包含任何描述、備註、括號說明或其他文字。嚴禁包含如'(dobpdc)'、'(representative...)'、'(trifluoromethyl-substituted...)'等括號內容。每個化學品名稱必須是標準的IUPAC命名，例如：magnesium nitrate hexahydrate, 4,4'-dioxidobiphenyl-3,3'-dicarboxylic acid, 2-(2,2,2-trifluoroethylamino)ethan-1-amine, N,N-dimethylacetamide",
+                "minItems": 1
+            }
+        }
+    }
+
+def create_experimental_detail_schema():
+    """
+    動態創建實驗細節的 JSON Schema
+    
+    Returns:
+        Dict: 實驗細節的 JSON Schema
+    """
+    schema_params = get_dynamic_schema_params()
+    
+    # 根據測試報告，簡化 schema 以避免過長輸出
+    return {
+        "type": "object",
+        "title": "ExperimentalDetail",
+        "additionalProperties": False,
+        "required": [
+            "synthesis_process",
+            "materials_and_conditions",
+            "analytical_methods",
+            "precautions"
+        ],
+        "properties": {
+            "synthesis_process": {
+                "type": "string",
+                "description": "詳細的合成過程，包括步驟、條件、時間等",
+                "minLength": 10
+                #"maxLength": 1000  # 限制長度避免過長輸出
+            },
+            "materials_and_conditions": {
+                "type": "string",
+                "description": "使用的材料和反應條件，包括濃度、溫度、壓力等",
+                "minLength": 10
+                #"maxLength": 600  # 限制長度
+            },
+            "analytical_methods": {
+                "type": "string",
+                "description": "分析方法和表徵技術，如XRD、SEM、NMR等",
+                "minLength": 10
+                #"maxLength": 400  # 限制長度
+            },
+            "precautions": {
+                "type": "string",
+                "description": "實驗注意事項和安全預防措施",
+                "minLength": 10
+                #"maxLength": 400  # 限制長度
+            }
+        }
+    }
+
+def create_revision_explain_schema():
+    """
+    動態創建修訂說明的 JSON Schema
+    
+    Returns:
+        Dict: 修訂說明的 JSON Schema
+    """
+    schema_params = get_dynamic_schema_params()
+    
+    return {
+        "type": "object",
+        "title": "RevisionExplain",
+        "additionalProperties": False,
+        "required": [
+            "revision_explain"
+        ],
+        "properties": {
+            "revision_explain": {
+                "type": "string",
+                "description": "詳細說明修訂的原因、改進點和新的研究方向，包括技術創新點和預期效果",
+                "minLength": 10
+                #"maxLength": 1000  # 允許較長的說明
+            }
+        }
+    }
+
+# 動態生成 JSON Schema
+RESEARCH_PROPOSAL_SCHEMA = create_research_proposal_schema()
+EXPERIMENTAL_DETAIL_SCHEMA = create_experimental_detail_schema()
+REVISION_EXPLAIN_SCHEMA = create_revision_explain_schema()
 
 # Embedding model configuration
 
@@ -208,7 +394,7 @@ def preview_chunks(chunks: List[Document], title: str, max_preview: int = 5):
 
 # ==================== 提示詞構建功能 ====================
 
-def build_prompt(chunks: List[Document], question: str) -> Tuple[str, List[Dict]]:
+def build_prompt(chunks: List[Document], question: str) -> Tuple[str, List[Dict]]: #嚴謹回答模式，不允許使用任何外部知識
     # 檢查：chunks 必須是 List[Document]，question 應為 str
     context_text = ""
     citations = []
@@ -294,13 +480,9 @@ def call_llm(prompt: str) -> str:
             client = OpenAI()
             
             # 準備Responses API的參數
-            # 對於複雜的proposal prompt，使用更高的token限制
-            base_max_tokens = llm_params.get('max_output_tokens', 2000)
-            if len(prompt) > 1000:  # 複雜prompt
-                max_tokens = max(base_max_tokens, 8000)  # 大幅提高到8000 tokens
-                print(f"🔧 檢測到複雜prompt，大幅提高max_output_tokens到: {max_tokens}")
-            else:
-                max_tokens = base_max_tokens
+            # 使用設定的max_output_tokens，不自動提高
+            max_tokens = llm_params.get('max_output_tokens', 2000)
+            print(f"🔧 使用設定的max_output_tokens: {max_tokens}")
             
             responses_params = {
                 'model': current_model,
@@ -321,8 +503,15 @@ def call_llm(prompt: str) -> str:
             # 處理GPT-5的incomplete狀態
             max_retries = 3
             retry_count = 0
+            current_max_tokens = max_tokens
             
             while retry_count < max_retries:
+                # 更新token數（每次重試增加1500）
+                if retry_count > 0:
+                    current_max_tokens += 1500
+                    responses_params['max_output_tokens'] = current_max_tokens
+                    print(f"🔄 重試 {retry_count}：提高max_output_tokens到 {current_max_tokens}")
+                
                 response = client.responses.create(**responses_params)
                 
                 print(f"🔍 DEBUG: API調用完成 (嘗試 {retry_count + 1}/{max_retries})")
@@ -332,8 +521,7 @@ def call_llm(prompt: str) -> str:
                 # 檢查整體response狀態
                 if hasattr(response, 'status') and response.status == 'incomplete':
                     print(f"⚠️ 檢測到incomplete狀態，等待後重試...")
-                    print(f"💡 提示：如果持續遇到incomplete狀態，建議在設置頁面提高max_output_tokens參數")
-                    print(f"💡 當前max_output_tokens: {max_tokens}，建議提高到8000-12000")
+                    print(f"💡 當前max_output_tokens: {current_max_tokens}")
                     retry_count += 1
                     if retry_count < max_retries:
                         import time
@@ -403,7 +591,7 @@ def call_llm(prompt: str) -> str:
                             continue
                         else:
                             print(f"❌ 達到最大重試次數")
-                            print(f"💡 建議：請在設置頁面將max_output_tokens提高到8000-12000，或降低verbosity設置")
+                            print(f"💡 已嘗試提高token數到 {current_max_tokens}")
                             return ""
                 else:
                     # 正常狀態
@@ -421,7 +609,7 @@ def call_llm(prompt: str) -> str:
                             continue
                         else:
                             print(f"❌ 達到最大重試次數")
-                            print(f"💡 建議：請在設置頁面將max_output_tokens提高到8000-12000，或降低verbosity設置")
+                            print(f"💡 已嘗試提高token數到 {current_max_tokens}")
                             return ""
 
             print(f"❌ 所有重試都失敗，返回空字符串")
@@ -438,6 +626,771 @@ def call_llm(prompt: str) -> str:
     except Exception as e:
         print(f"❌ LLM 調用失敗：{e}")
         return ""
+
+
+def call_llm_structured_proposal(system_prompt: str, user_prompt: str) -> Dict[str, Any]:
+    """
+    使用OpenAI Responses API的JSON structured output生成結構化研究提案
+    
+    Args:
+        system_prompt: 系統提示詞
+        user_prompt: 用戶提示詞（包含文獻摘要和研究目標）
+    
+    Returns:
+        Dict[str, Any]: 符合RESEARCH_PROPOSAL_SCHEMA的結構化提案
+    """
+    print(f"🔍 調用結構化LLM，系統提示詞長度：{len(system_prompt)} 字符")
+    print(f"🔍 用戶提示詞長度：{len(user_prompt)} 字符")
+    
+    # 獲取當前使用的模型信息和參數
+    try:
+        from model_config_bridge import get_current_model, get_model_params
+        current_model = get_current_model()
+        llm_params = get_model_params()
+        print(f"🤖 使用模型：{current_model}")
+        print(f"🔧 模型參數：{llm_params}")
+    except Exception as e:
+        print(f"⚠️ 無法獲取模型信息：{e}")
+        # 使用fallback配置
+        current_model = "gpt-4-1106-preview"
+        llm_params = {
+            "model": "gpt-4-1106-preview",
+            "temperature": 0.0,  # 結構化輸出使用0溫度
+            "max_tokens": 4000,
+            "timeout": 120,
+        }
+    
+    try:
+        # 根據模型類型選擇不同的API
+        if current_model.startswith('gpt-5'):
+            # GPT-5系列使用Responses API with JSON Schema
+            from openai import OpenAI
+            client = OpenAI()
+            
+            # 準備Responses API的參數
+            max_tokens = llm_params.get('max_output_tokens', 4000)
+            
+            # 動態獲取最新的 schema
+            current_schema = create_research_proposal_schema()
+            
+            # 使用 Responses API + JSON Schema (適用於所有 GPT-5 系列模型)
+            responses_params = {
+                'model': current_model,
+                'input': [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                'text': {
+                    'format': {
+                        'type': 'json_schema',
+                        'name': 'ResearchProposal',
+                        'strict': True,
+                        'schema': current_schema,
+                    },
+                    'verbosity': 'low'  # 使用 low verbosity
+                },
+                'reasoning': {'effort': 'medium'},  # 使用 medium reasoning
+                'max_output_tokens': max_tokens
+            }
+            
+            print(f"🔧 使用Responses API with JSON Schema，參數：{responses_params}")
+            
+            # 處理GPT-5的incomplete狀態
+            max_retries = 3
+            retry_count = 0
+            
+            while retry_count < max_retries:
+                response = client.responses.create(**responses_params)
+                
+                print(f"🔍 DEBUG: API調用完成 (嘗試 {retry_count + 1}/{max_retries})")
+                print(f"🔍 DEBUG: response.status: {getattr(response, 'status', 'N/A')}")
+                
+                # 檢查整體response狀態
+                if hasattr(response, 'status') and response.status == 'incomplete':
+                    print(f"⚠️ 檢測到incomplete狀態，等待後重試...")
+                    retry_count += 1
+                    if retry_count < max_retries:
+                        import time
+                        time.sleep(2)  # 等待2秒後重試
+                        continue
+                    else:
+                        print(f"❌ 達到最大重試次數")
+                        return {}
+                
+                # 提取JSON內容
+                try:
+                    # 優先使用 resp.output_text
+                    output_text = getattr(response, 'output_text', None)
+                    if output_text:
+                        print(f"✅ 使用 resp.output_text 提取內容: {len(output_text)} 字符")
+                        try:
+                            proposal_data = json.loads(output_text)
+                            print(f"✅ 成功解析JSON結構化提案")
+                            
+                            # 本地 JSON Schema 驗證
+                            try:
+                                from jsonschema import Draft202012Validator
+                                from jsonschema.exceptions import ValidationError
+                                Draft202012Validator(current_schema).validate(proposal_data)
+                                print("✅ 本地 Schema 驗證通過")
+                            except ImportError:
+                                print("⚠️ jsonschema 未安裝，跳過本地驗證")
+                            except ValidationError as e:
+                                print(f"⚠️ 本地 Schema 驗證失敗: {e}")
+                                # 繼續返回結果，因為 API 端已經驗證過
+                            
+                            return proposal_data
+                        except json.JSONDecodeError as e:
+                            print(f"⚠️ JSON解析失敗: {e}")
+                            print(f"⚠️ 嘗試的文本: {output_text[:200]}...")
+                            return {}
+                    
+                    # 回退到 resp.output 聚合方式
+                    if hasattr(response, 'output') and response.output:
+                        parts = []
+                        for item in response.output:
+                            if hasattr(item, "content"):
+                                for content in item.content:
+                                    if hasattr(content, "text"):
+                                        parts.append(content.text)
+                        
+                        if parts:
+                            text_content = "".join(parts).strip()
+                            print(f"✅ 使用 resp.output 聚合提取內容: {len(text_content)} 字符")
+                            
+                            try:
+                                proposal_data = json.loads(text_content)
+                                print(f"✅ 成功解析JSON結構化提案")
+                                
+                                # 本地 JSON Schema 驗證
+                                try:
+                                    from jsonschema import Draft202012Validator
+                                    from jsonschema.exceptions import ValidationError
+                                    Draft202012Validator(current_schema).validate(proposal_data)
+                                    print("✅ 本地 Schema 驗證通過")
+                                except ImportError:
+                                    print("⚠️ jsonschema 未安裝，跳過本地驗證")
+                                except ValidationError as e:
+                                    print(f"⚠️ 本地 Schema 驗證失敗: {e}")
+                                    # 繼續返回結果，因為 API 端已經驗證過
+                                
+                                return proposal_data
+                            except json.JSONDecodeError as e:
+                                print(f"⚠️ JSON解析失敗: {e}")
+                                print(f"⚠️ 嘗試的文本: {text_content[:200]}...")
+                                return {}
+                    
+                    # 如果沒有找到JSON內容
+                    print(f"⚠️ 無法從Responses API提取JSON內容")
+                    return {}
+                    
+                except json.JSONDecodeError as e:
+                    print(f"❌ JSON解析失敗: {e}")
+                    retry_count += 1
+                    if retry_count < max_retries:
+                        import time
+                        time.sleep(2)
+                        continue
+                    else:
+                        print(f"❌ 達到最大重試次數")
+                        return {}
+                except Exception as e:
+                    print(f"❌ 提取JSON內容失敗: {e}")
+                    retry_count += 1
+                    if retry_count < max_retries:
+                        import time
+                        time.sleep(2)
+                        continue
+                    else:
+                        print(f"❌ 達到最大重試次數")
+                        return {}
+            
+            print(f"❌ 所有重試都失敗，返回空字典")
+            return {}
+            
+        else:
+            # GPT-4系列使用Chat Completions API with function calling
+            from openai import OpenAI
+            client = OpenAI()
+            
+            # 動態獲取最新的 schema
+            current_schema = create_research_proposal_schema()
+            
+            # 使用function calling作為fallback
+            response = client.chat.completions.create(
+                model=current_model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.0,
+                functions=[{
+                    "name": "create_research_proposal",
+                    "description": "Create a structured research proposal",
+                    "parameters": current_schema
+                }],
+                function_call={"name": "create_research_proposal"},
+                max_tokens=llm_params.get('max_tokens', 4000)
+            )
+            
+            # 提取function call結果
+            if response.choices[0].message.function_call:
+                function_call = response.choices[0].message.function_call
+                arguments = json.loads(function_call.arguments)
+                print(f"✅ 成功解析function call結構化提案")
+                return arguments
+            else:
+                print(f"❌ 無法從function call提取結果")
+                return {}
+            
+    except Exception as e:
+        print(f"❌ 結構化LLM調用失敗：{e}")
+        return {}
+
+def call_llm_structured_experimental_detail(chunks: List[Document], proposal: str) -> Dict[str, Any]:
+    """
+    使用OpenAI Responses API的JSON structured output生成結構化實驗細節
+    
+    Args:
+        chunks: 文獻片段
+        proposal: 研究提案
+    
+    Returns:
+        Dict[str, Any]: 符合EXPERIMENTAL_DETAIL_SCHEMA的結構化實驗細節
+    """
+    print(f"🔍 調用結構化實驗細節LLM，文獻片段數量：{len(chunks)}")
+    print(f"🔍 提案長度：{len(proposal)} 字符")
+    
+    # 獲取當前使用的模型信息和參數
+    try:
+        from model_config_bridge import get_current_model, get_model_params
+        current_model = get_current_model()
+        llm_params = get_model_params()
+        print(f"🤖 使用模型：{current_model}")
+        print(f"🔧 模型參數：{llm_params}")
+    except Exception as e:
+        print(f"⚠️ 無法獲取模型信息：{e}")
+        # 使用fallback配置
+        current_model = "gpt-4-1106-preview"
+        llm_params = {
+            "model": "gpt-4-1106-preview",
+            "temperature": 0.0,  # 結構化輸出使用0溫度
+            "max_tokens": 4000,
+            "timeout": 120,
+        }
+    
+    try:
+        # 根據模型類型選擇不同的API
+        if current_model.startswith('gpt-5'):
+            # GPT-5系列使用Responses API with JSON Schema
+            from openai import OpenAI
+            client = OpenAI()
+            
+            # 準備Responses API的參數
+            max_tokens = llm_params.get('max_output_tokens', 6000)  # 使用測試報告推薦的 6000
+            
+            # 構建系統提示詞
+            system_prompt = f"""
+            You are a professional materials synthesis consultant, skilled at generating detailed experimental procedures based on literature and research proposals.
+
+            Based on the following research proposal and literature information, please generate detailed experimental details:
+
+            --- Research Proposal ---
+            {proposal}
+
+            Please generate detailed experimental details including the following four sections:
+            1. Synthesis Process: Detailed synthesis steps, conditions, durations, etc.
+            2. Materials and Conditions: Materials used, concentrations, temperatures, pressures, and other reaction conditions
+            3. Analytical Methods: Characterization techniques such as XRD, SEM, NMR, etc.
+            4. Precautions: Experimental notes and safety precautions
+
+            """
+            
+            # 構建用戶提示詞（包含文獻摘要）
+            context_text = ""
+            citations = []
+            for i, doc in enumerate(chunks):
+                meta = doc.metadata
+                title = meta.get("title", "Untitled")
+                filename = meta.get("filename") or meta.get("source", "Unknown")
+                page = meta.get("page_number") or meta.get("page", "?")
+                
+                context_text += f"[{i+1}] {title} | Page {page}\n{doc.page_content}\n\n"
+                citations.append({
+                    "label": f"[{i+1}]",
+                    "title": title,
+                    "source": filename,
+                    "page": page
+                })
+            
+            user_prompt = f"""
+            基於以下文獻信息生成實驗細節：
+            
+            --- 文獻摘要 ---
+            {context_text}
+            
+            請生成詳細的實驗細節，確保所有化學品名稱都使用IUPAC命名法。
+            """
+            
+            # 動態獲取最新的 schema
+            current_schema = create_experimental_detail_schema()
+            
+            # 使用測試報告推薦的最佳實踐配置
+            responses_params = {
+                'model': current_model,
+                'input': [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                'text': {
+                    'format': {
+                        'type': 'json_schema',
+                        'name': 'ExperimentalDetail',
+                        'strict': True,
+                        'schema': current_schema,
+                    },
+                    'verbosity': 'low'  # 使用 low verbosity 避免過長輸出
+                },
+                'reasoning': {'effort': 'minimal'},  # 使用 minimal effort 提高速度
+                'max_output_tokens': max_tokens
+            }
+            
+            print(f"🔧 使用Responses API，參數：{responses_params}")
+            
+            # 處理GPT-5的incomplete狀態 - 使用測試報告推薦的配置
+            max_retries = 2  # 減少重試次數
+            retry_count = 0
+            current_max_tokens = max_tokens
+            
+            while retry_count < max_retries:
+                # 更新token數（每次重試增加1000，而不是1500）
+                if retry_count > 0:
+                    current_max_tokens += 1000
+                    responses_params['max_output_tokens'] = current_max_tokens
+                    print(f"🔄 重試 {retry_count}：提高max_output_tokens到 {current_max_tokens}")
+                
+                response = client.responses.create(**responses_params)
+                
+                print(f"🔍 DEBUG: API調用完成 (嘗試 {retry_count + 1}/{max_retries})")
+                print(f"🔍 DEBUG: response 類型: {type(response)}")
+                print(f"🔍 DEBUG: response.status: {getattr(response, 'status', 'N/A')}")
+                
+                # 檢查整體response狀態
+                if hasattr(response, 'status') and response.status == 'incomplete':
+                    print(f"⚠️ 檢測到incomplete狀態，等待後重試...")
+                    print(f"💡 當前max_output_tokens: {current_max_tokens}")
+                    retry_count += 1
+                    if retry_count < max_retries:
+                        import time
+                        time.sleep(1)  # 減少等待時間到1秒
+                        continue
+                    else:
+                        print(f"❌ 達到最大重試次數，使用incomplete的結果")
+                
+                # 提取JSON內容
+                try:
+                    # 優先使用 resp.output_text
+                    output_text = getattr(response, 'output_text', None)
+                    if output_text:
+                        print(f"✅ 使用 resp.output_text 提取內容: {len(output_text)} 字符")
+                        try:
+                            experimental_data = json.loads(output_text)
+                            print(f"✅ 成功解析JSON結構化實驗細節")
+                            
+                            # 添加引用信息
+                            experimental_data['citations'] = citations
+                            
+                            return experimental_data
+                        except json.JSONDecodeError as e:
+                            print(f"⚠️ JSON解析失敗: {e}")
+                            print(f"⚠️ 嘗試的文本: {output_text[:200]}...")
+                            
+                            # 嘗試修復常見的JSON格式問題
+                            try:
+                                # 嘗試修復未終止的字符串
+                                if "Unterminated string" in str(e):
+                                    # 找到最後一個完整的引號位置
+                                    last_quote = output_text.rfind('"')
+                                    if last_quote > 0:
+                                        # 截斷到最後一個完整引號並添加結束引號
+                                        fixed_text = output_text[:last_quote+1] + '}'
+                                        experimental_data = json.loads(fixed_text)
+                                        print(f"✅ 修復JSON格式後成功解析")
+                                        
+                                        # 添加引用信息
+                                        experimental_data['citations'] = citations
+                                        
+                                        return experimental_data
+                            except:
+                                pass
+                            
+                            return {}
+                    
+                    # 回退到 resp.output 聚合方式
+                    if hasattr(response, 'output') and response.output:
+                        parts = []
+                        for item in response.output:
+                            if hasattr(item, "content"):
+                                for content in item.content:
+                                    if hasattr(content, "text"):
+                                        parts.append(content.text)
+                        
+                        if parts:
+                            combined_text = "".join(parts)
+                            try:
+                                experimental_data = json.loads(combined_text)
+                                print(f"✅ 成功解析JSON結構化實驗細節（聚合方式）")
+                                
+                                # 添加引用信息
+                                experimental_data['citations'] = citations
+                                
+                                return experimental_data
+                            except json.JSONDecodeError as e:
+                                print(f"⚠️ JSON解析失敗（聚合方式）: {e}")
+                                return {}
+                
+                except Exception as e:
+                    print(f"⚠️ 內容提取失敗: {e}")
+                
+                # 如果無法提取內容，重試
+                retry_count += 1
+                if retry_count < max_retries:
+                    import time
+                    time.sleep(1)  # 減少等待時間
+                    continue
+                else:
+                    print(f"❌ 達到最大重試次數")
+                    print(f"💡 已嘗試提高token數到 {current_max_tokens}")
+                    return {}
+            
+            print(f"❌ 所有重試都失敗，返回空字典")
+            return {}
+            
+        else:
+            # GPT-4系列使用Chat Completions API with function calling
+            from openai import OpenAI
+            client = OpenAI()
+            
+            # 構建提示詞
+            context_text = ""
+            citations = []
+            for i, doc in enumerate(chunks):
+                meta = doc.metadata
+                title = meta.get("title", "Untitled")
+                filename = meta.get("filename") or meta.get("source", "Unknown")
+                page = meta.get("page_number") or meta.get("page", "?")
+                
+                context_text += f"[{i+1}] {title} | Page {page}\n{doc.page_content}\n\n"
+                citations.append({
+                    "label": f"[{i+1}]",
+                    "title": title,
+                    "source": filename,
+                    "page": page
+                })
+            
+            system_prompt = f"""
+            你是一個專業的材料合成顧問，擅長基於文獻和提案生成詳細的實驗細節。
+            
+            請基於以下研究提案和文獻信息，生成詳細的實驗細節：
+            
+            --- 研究提案 ---
+            {proposal}
+            
+            請生成包含以下四個部分的詳細實驗細節：
+            1. 合成過程：詳細的合成步驟、條件、時間等
+            2. 材料和條件：使用的材料、濃度、溫度、壓力等反應條件
+            3. 分析方法：XRD、SEM、NMR等表徵技術
+            4. 注意事項：實驗注意事項和安全預防措施
+            
+            請確保所有化學品名稱都使用IUPAC命名法。
+            """
+            
+            user_prompt = f"""
+            基於以下文獻信息生成實驗細節：
+            
+            --- 文獻摘要 ---
+            {context_text}
+            
+            請生成詳細的實驗細節，確保所有化學品名稱都使用IUPAC命名法。
+            """
+            
+            # 動態獲取最新的 schema
+            current_schema = create_experimental_detail_schema()
+            
+            # 使用function calling作為fallback
+            response = client.chat.completions.create(
+                model=current_model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.0,
+                functions=[{
+                    "name": "create_experimental_detail",
+                    "description": "Create a structured experimental detail",
+                    "parameters": current_schema
+                }],
+                function_call={"name": "create_experimental_detail"},
+                max_tokens=llm_params.get('max_tokens', 4000)
+            )
+            
+            # 提取function call結果
+            if response.choices[0].message.function_call:
+                function_call = response.choices[0].message.function_call
+                arguments = json.loads(function_call.arguments)
+                print(f"✅ 成功解析function call結構化實驗細節")
+                
+                # 添加引用信息
+                arguments['citations'] = citations
+                
+                return arguments
+            else:
+                print(f"❌ 無法從function call提取結果")
+                return {}
+            
+    except Exception as e:
+        print(f"❌ 結構化實驗細節LLM調用失敗：{e}")
+        return {}
+
+def call_llm_structured_revision_explain(user_feedback: str, proposal: str) -> Dict[str, Any]:
+    """
+    使用OpenAI Responses API的JSON structured output生成結構化修訂說明
+    
+    Args:
+        user_feedback: 用戶反饋
+        proposal: 原始提案
+    
+    Returns:
+        Dict[str, Any]: 符合REVISION_EXPLAIN_SCHEMA的結構化修訂說明
+    """
+    print(f"🔍 調用結構化修訂說明LLM，用戶反饋長度：{len(user_feedback)}")
+    print(f"🔍 提案長度：{len(proposal)} 字符")
+    
+    # 獲取當前使用的模型信息和參數
+    try:
+        from model_config_bridge import get_current_model, get_model_params
+        current_model = get_current_model()
+        llm_params = get_model_params()
+        print(f"🤖 使用模型：{current_model}")
+        print(f"🔧 模型參數：{llm_params}")
+    except Exception as e:
+        print(f"⚠️ 無法獲取模型信息：{e}")
+        # 使用fallback配置
+        current_model = "gpt-4-1106-preview"
+        llm_params = {
+            "model": "gpt-4-1106-preview",
+            "temperature": 0.0,  # 結構化輸出使用0溫度
+            "max_tokens": 4000,
+            "timeout": 120,
+        }
+    
+    try:
+        # 根據模型類型選擇不同的API
+        if current_model.startswith('gpt-5'):
+            # GPT-5系列使用Responses API with JSON Schema
+            from openai import OpenAI
+            client = OpenAI()
+            
+            # 準備Responses API的參數
+            max_tokens = llm_params.get('max_output_tokens', 4000)
+            
+            # 動態獲取最新的 schema
+            current_schema = create_revision_explain_schema()
+            
+            # 構建提示詞
+            system_prompt = """
+            You are a research proposal revision expert. Your task is to analyze the user's feedback and the original proposal, then provide a detailed explanation of the revision approach.
+            
+            Please provide a comprehensive explanation that includes:
+            1. Analysis of the user's feedback
+            2. Identification of key areas for improvement
+            3. Specific revision strategies
+            4. Expected outcomes and benefits
+            5. Technical innovation points
+            """
+            
+            user_prompt = f"""
+            --- Original Proposal ---
+            {proposal}
+            
+            --- User Feedback ---
+            {user_feedback}
+            
+            Please provide a detailed revision explanation based on the above information.
+            """
+            
+            # 使用 Responses API + JSON Schema (適用於所有 GPT-5 系列模型)
+            responses_params = {
+                'model': current_model,
+                'input': [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                'text': {
+                    'format': {
+                        'type': 'json_schema',
+                        'name': 'RevisionExplain',
+                        'strict': True,
+                        'schema': current_schema,
+                    },
+                    'verbosity': 'low'  # 使用 low verbosity
+                },
+                'reasoning': {'effort': 'medium'},  # 使用 medium reasoning
+                'max_output_tokens': max_tokens
+            }
+            
+            print(f"🔧 使用Responses API with JSON Schema，參數：{responses_params}")
+            
+            # 處理GPT-5的incomplete狀態
+            max_retries = 3
+            retry_count = 0
+            
+            while retry_count < max_retries:
+                response = client.responses.create(**responses_params)
+                
+                print(f"🔍 DEBUG: API調用完成 (嘗試 {retry_count + 1}/{max_retries})")
+                print(f"🔍 DEBUG: response.status: {getattr(response, 'status', 'N/A')}")
+                
+                # 檢查整體response狀態
+                if hasattr(response, 'status') and response.status == 'incomplete':
+                    print(f"⚠️ 檢測到incomplete狀態，等待後重試...")
+                    retry_count += 1
+                    if retry_count < max_retries:
+                        import time
+                        time.sleep(2)  # 等待2秒後重試
+                        continue
+                    else:
+                        print(f"❌ 達到最大重試次數")
+                        return {}
+                
+                # 提取JSON內容
+                try:
+                    # 優先使用 resp.output_text
+                    output_text = getattr(response, 'output_text', None)
+                    if output_text:
+                        print(f"✅ 使用 resp.output_text 提取內容: {len(output_text)} 字符")
+                        try:
+                            revision_data = json.loads(output_text)
+                            print(f"✅ 成功解析JSON結構化修訂說明")
+                            
+                            # 本地驗證 schema
+                            try:
+                                from jsonschema import validate
+                                validate(instance=revision_data, schema=current_schema)
+                                print(f"✅ 本地 Schema 驗證通過")
+                            except Exception as e:
+                                print(f"⚠️ 本地 Schema 驗證失敗: {e}")
+                            
+                            return revision_data
+                        except json.JSONDecodeError as e:
+                            print(f"❌ JSON解析失敗: {e}")
+                            print(f"🔍 原始輸出: {output_text}")
+                            return {}
+                    else:
+                        print(f"❌ 無法提取 output_text")
+                        return {}
+                        
+                except Exception as e:
+                    print(f"❌ 提取JSON內容失敗: {e}")
+                    retry_count += 1
+                    if retry_count < max_retries:
+                        import time
+                        time.sleep(2)
+                        continue
+                    else:
+                        print(f"❌ 達到最大重試次數")
+                        return {}
+            
+            print(f"❌ 所有重試都失敗")
+            return {}
+            
+        else:
+            # GPT-4系列使用Chat Completions API (LangChain)
+            from langchain_openai import ChatOpenAI
+            llm = ChatOpenAI(**llm_params)
+            
+            # 構建提示詞
+            system_prompt = """
+            You are a research proposal revision expert. Your task is to analyze the user's feedback and the original proposal, then provide a detailed explanation of the revision approach.
+            """
+            
+            full_prompt = f"{system_prompt}\n\n--- Original Proposal ---\n{proposal}\n\n--- User Feedback ---\n{user_feedback}\n\nPlease provide a detailed revision explanation."
+            
+            response = llm.invoke(full_prompt)
+            print(f"✅ 傳統LLM調用成功，回應長度：{len(response.content)} 字符")
+            
+            # 返回文本格式
+            return {
+                'revision_explain': response.content
+            }
+            
+    except Exception as e:
+        print(f"❌ 結構化修訂說明LLM調用失敗：{e}")
+        return {}
+
+def generate_structured_experimental_detail(chunks: List[Document], proposal: str) -> Dict[str, Any]:
+    """
+    生成結構化實驗細節的便捷函數
+    
+    Args:
+        chunks: 文獻片段
+        proposal: 研究提案
+    
+    Returns:
+        Dict[str, Any]: 結構化實驗細節
+    """
+    return call_llm_structured_experimental_detail(chunks, proposal)
+
+def generate_structured_revision_explain(user_feedback: str, proposal: str) -> Dict[str, Any]:
+    """
+    生成結構化修訂說明的便捷函數
+    
+    Args:
+        user_feedback: 用戶反饋
+        proposal: 原始提案
+    
+    Returns:
+        Dict[str, Any]: 結構化修訂說明
+    """
+    return call_llm_structured_revision_explain(user_feedback, proposal)
+
+def structured_experimental_detail_to_text(experimental_data: Dict[str, Any]) -> str:
+    """
+    將結構化實驗細節轉換為傳統文本格式
+    
+    Args:
+        experimental_data: 結構化實驗細節數據
+    
+    Returns:
+        str: 格式化的文本實驗細節
+    """
+    if not experimental_data:
+        return ""
+    
+    text_parts = []
+    
+    
+    # Synthesis Process
+    if experimental_data.get('synthesis_process'):
+        text_parts.append("## Synthesis Process")
+        text_parts.append(f"{experimental_data['synthesis_process']}\n")
+    
+    # Materials and Conditions
+    if experimental_data.get('materials_and_conditions'):
+        text_parts.append("## Materials and Conditions")
+        text_parts.append(f"{experimental_data['materials_and_conditions']}\n")
+    
+    # Analytical Methods
+    if experimental_data.get('analytical_methods'):
+        text_parts.append("## Analytical Methods")
+        text_parts.append(f"{experimental_data['analytical_methods']}\n")
+    
+    # Precautions
+    if experimental_data.get('precautions'):
+        text_parts.append("## Precautions")
+        text_parts.append(f"{experimental_data['precautions']}\n")
+    
+    return "\n".join(text_parts)
 
 def build_inference_prompt(chunks: List[Document], question: str) -> Tuple[str, List[Dict]]:
     context_text = ""
@@ -704,72 +1657,34 @@ def build_proposal_prompt(chunks: List[Document], question: str) -> Tuple[str, L
 
     system_prompt = f"""
     You are a scientific research expert who excels at proposing innovative and feasible research proposals based on literature summaries and research objectives.
-Your expertise covers materials science, chemistry, physics, and engineering, and you are capable of deriving new ideas grounded in experimental evidence and theoretical principles.
+    Your expertise covers materials science, chemistry, physics, and engineering, and you are capable of deriving new ideas grounded in experimental evidence and theoretical principles.
 
-If possible, propose new components, structures, or mechanisms (e.g., new ligands, frameworks, catalysts, processing techniques) based on the literature, and clearly explain their structural or functional advantages and potential reactivity/performance.
+    Your task is to generate a structured research proposal based on the provided literature excerpts and research objectives. The proposal should be innovative, scientifically rigorous, and feasible.
 
-Write a structured proposal based on the provided literature excerpts and research objectives in the following format (complete each section):
+    IMPORTANT: You must respond in valid JSON format only. Do not include any text before or after the JSON object.
 
-Proposal: (Automatically generate a proposal title summarizing research objectives and innovation points)
+    The JSON must have the following structure:
+    {{
+        "proposal_title": "Title of the research proposal",
+        "need": "Research need and current limitations",
+        "solution": "Proposed design and development strategies",
+        "differentiation": "Comparison with existing technologies",
+        "benefit": "Expected improvements and benefits",
+        "experimental_overview": "Experimental approach and methodology",
+        "materials_list": ["material1", "material2", "material3"]
+    }}
 
-Need:
+    Key requirements:
+    1. Propose new components, structures, or mechanisms (e.g., new ligands, frameworks, catalysts, processing techniques) based on the literature
+    2. Clearly explain structural or functional advantages and potential reactivity/performance
+    3. All proposed designs must have a logical basis — avoid inventing unreasonable structures without justification
+    4. Maintain scientific rigor, clarity, and avoid vague descriptions
+    5. Use only the provided literature labels ([1], [2], etc.) for citations, and do not fabricate sources
+    6. Ensure every claim is supported by a cited source or reasonable extension from the literature
+    7. For materials_list, include ONLY IUPAC chemical names without any descriptions, notes, or parenthetical explanations. Each item must be a single chemical name only.
 
-Briefly describe the research objectives and current limitations in existing solutions
-
-Clearly identify the pain points or technical bottlenecks that need to be addressed at industry, academic, or global level
-
-Solution:
-
-Propose specific design and development strategies
-
-Suggest new structures, compositions, or methods, clearly naming the proposed elements (e.g., chemical names, material systems, fabrication methods)
-
-Explain the logic behind the proposed design (e.g., structure-property relationship, mechanism of action, processing advantages)
-
-Differentiation:
-
-Compare with existing literature or technologies
-
-Emphasize breakthroughs in structure, performance, or implementation
-
-Benefit:
-
-Expected improvements in performance or application scope
-
-Provide quantitative estimates if possible (e.g., % improvement, target metrics)
-
-Based Literature:
-
-Use paragraph labels to cite sources, with labels from [1] to [{len(chunks)}] (total {len(chunks)} excerpts)
-
-Ensure every claim is supported by a cited source or reasonable extension from the literature
-
-Experimental overview:
-
-Starting materials/components and conditions (e.g., temperature, duration, environment)
-
-Instruments/equipment description and list
-
-Step-by-step description of the procedure (highlighting key logic and rationale)
-
-Finally, list all materials/chemicals used in this proposal (including metals, ligands, solvents, or other relevant reagents) in JSON format at the end of your answer. Use IUPAC names where applicable.
-Example:
-
-```json
-["formic acid", "N,N-dimethylformamide", "copper;dinitrate;trihydrate"]
-Notes:
-
-All proposed designs must have a logical basis — avoid inventing unreasonable structures without justification
-
-Maintain scientific rigor, clarity, and avoid vague descriptions
-
-Use only the provided literature labels ([1], [2], etc.) for citations, and do not fabricate sources
-
-    --- Literature Excerpts ---
-    {paper_context_text}
-
-    --- Research Objectives ---
-    {question}"""
+    Literature excerpts are provided below with labels from [1] to [{len(chunks)}] (total {len(chunks)} excerpts).
+    """
     
     return system_prompt.strip(), citations
 
@@ -844,11 +1759,11 @@ def build_detail_experimental_plan_prompt(chunks: List[Document], proposal_text:
 
 
 def build_iterative_proposal_prompt(
-    question: str,
-    new_chunks: List[Document],
-    old_chunks: List[Document],
-    past_proposal: str
-) -> Tuple[str, List[Dict]]:
+        question: str,
+        new_chunks: List[Document],
+        old_chunks: List[Document],
+        past_proposal: str
+    ) -> Tuple[str, List[Dict]]:
     """
     Build a new research proposal prompt that combines user feedback, newly retrieved literature, old literature, and the original proposal.
     Also returns citation list.
@@ -885,23 +1800,33 @@ def build_iterative_proposal_prompt(
     system_prompt = f"""
     You are an experienced materials experiment design consultant. Please help modify parts of the research proposal based on user feedback, original proposal, and literature content.
 
-    Please follow these guidelines:
-    1. Prioritize the areas that the user wants to modify and look for possible improvement directions from the literature.
-    2. Except for the areas that the user is dissatisfied with, other parts (NSDB) should maintain the original proposal content without changes, output directly.
-    3. Maintain the proposal format consistent with the original proposal content, and please briefly explain the direction of changes in the first paragraph, including the following sections:
-    - revision explanation: Briefly explain the differences between this proposal and the previous proposal
-    - Need
-    - Solution
-    - Differentiation
-    - Benefit
-    - Based Literature
-    - Experimental overview
-    Important: You can only cite the provided literature excerpts. The current literature excerpt numbers are [1] to [{len(old_chunks) + len(new_chunks)}] (total {len(old_chunks) + len(new_chunks)} excerpts)
+    Your task is to generate a modified research proposal based on user feedback, original proposal, and literature content. The proposal should be innovative, scientifically rigorous, and feasible.
 
-    Finally, please list all chemicals used in this proposal (including metal salts, organic ligands, solvents, etc.) in JSON format at the end of your answer. Answer with IUPAC names, format and example as follows:
+    IMPORTANT: You must respond in valid JSON format only. Do not include any text before or after the JSON object.
 
-    ```json
-    ["formic acid", "N,N-dimethylformamide", "copper;dinitrate;trihydrate"]
+    The JSON must have the following structure:
+    {{
+        "proposal_title": "Title of the research proposal",
+        "need": "Research need and current limitations",
+        "solution": "Proposed design and development strategies",
+        "differentiation": "Comparison with existing technologies",
+        "benefit": "Expected improvements and benefits",
+        "experimental_overview": "Experimental approach and methodology",
+        "materials_list": ["material1", "material2", "material3"]
+    }}
+
+    Key requirements:
+    1. Prioritize the areas that the user wants to modify and look for possible improvement directions from the literature
+    2. Except for the areas that the user is dissatisfied with, other parts should maintain the original proposal content without changes
+    3. Maintain scientific rigor, clarity, and avoid vague descriptions
+    4. Use only the provided literature labels ([1], [2], etc.) for citations, and do not fabricate sources
+    5. Ensure every claim is supported by a cited source or reasonable extension from the literature
+    6. For materials_list, include ONLY IUPAC chemical names without any descriptions, notes, or parenthetical explanations. Each item must be a single chemical name only.
+
+    Literature excerpts are provided below with labels from [1] to [{len(old_chunks) + len(new_chunks)}] (total {len(old_chunks) + len(new_chunks)} excerpts).
+    """
+    
+    user_prompt = f"""
     --- User Feedback ---
     {question}
 
@@ -914,5 +1839,199 @@ def build_iterative_proposal_prompt(
     --- New Retrieved Excerpts Based on Feedback ---
     {new_text}
     """
-    return system_prompt.strip(), citations
+    
+    return system_prompt.strip(), user_prompt, citations
+
+
+def generate_structured_proposal(chunks: List[Document], question: str) -> Dict[str, Any]:
+    """
+    生成結構化研究提案
+    
+    Args:
+        chunks: 檢索到的文獻片段
+        question: 用戶的研究問題
+    
+    Returns:
+        Dict[str, Any]: 結構化的研究提案
+    """
+    system_prompt, citations = build_proposal_prompt(chunks, question)
+    
+    # 構建用戶提示詞（包含文獻摘要）
+    paper_context_text = ""
+    for i, doc in enumerate(chunks):
+        metadata = doc.metadata
+        title = metadata.get("title", "Untitled")
+        filename = metadata.get("filename") or metadata.get("source", "Unknown")
+        page = metadata.get("page_number") or metadata.get("page", "?")
+        
+        paper_context_text += f"[{i+1}] {title} | Page {page}\n{doc.page_content}\n\n"
+    
+    user_prompt = f"""
+    --- Literature Excerpts ---
+    {paper_context_text}
+
+    --- Research Objectives ---
+    {question}
+    """
+    
+    # 調用結構化LLM
+    proposal_data = call_llm_structured_proposal(system_prompt, user_prompt)
+    
+    # 添加引用信息到返回結果
+    if proposal_data:
+        proposal_data['citations'] = citations
+    
+    return proposal_data
+
+
+def generate_iterative_structured_proposal(
+        question: str,
+        new_chunks: List[Document],
+        old_chunks: List[Document],
+        past_proposal: str
+    ) -> Dict[str, Any]:
+    """
+    生成迭代式結構化研究提案
+    
+    Args:
+        question: 用戶反饋
+        new_chunks: 新檢索到的文獻片段
+        old_chunks: 原有的文獻片段
+        past_proposal: 之前的提案內容
+    
+    Returns:
+        Dict[str, Any]: 修改後的結構化研究提案
+    """
+    system_prompt, user_prompt, citations = build_iterative_proposal_prompt(
+        question, new_chunks, old_chunks, past_proposal
+    )
+    
+    # 調用結構化LLM
+    proposal_data = call_llm_structured_proposal(system_prompt, user_prompt)
+    
+    # 添加引用信息到返回結果
+    if proposal_data:
+        proposal_data['citations'] = citations
+    
+    return proposal_data
+
+
+def structured_proposal_to_text(proposal_data: Dict[str, Any]) -> str:
+    """
+    將結構化提案轉換為傳統文本格式
+    
+    Args:
+        proposal_data: 結構化提案數據
+    
+    Returns:
+        str: 格式化的文本提案
+    """
+    if not proposal_data:
+        return ""
+    
+    text_parts = []
+    
+    # 標題
+    if proposal_data.get('proposal_title'):
+        text_parts.append(f"Proposal: {proposal_data['proposal_title']}\n")
+    
+    # Need
+    if proposal_data.get('need'):
+        text_parts.append("Need:\n")
+        text_parts.append(f"{proposal_data['need']}\n")
+    
+    # Solution
+    if proposal_data.get('solution'):
+        text_parts.append("Solution:\n")
+        text_parts.append(f"{proposal_data['solution']}\n")
+    
+    # Differentiation
+    if proposal_data.get('differentiation'):
+        text_parts.append("Differentiation:\n")
+        text_parts.append(f"{proposal_data['differentiation']}\n")
+    
+    # Benefit
+    if proposal_data.get('benefit'):
+        text_parts.append("Benefit:\n")
+        text_parts.append(f"{proposal_data['benefit']}\n")
+    
+
+    
+    # Experimental overview
+    if proposal_data.get('experimental_overview'):
+        text_parts.append("Experimental overview:\n")
+        text_parts.append(f"{proposal_data['experimental_overview']}\n")
+    
+    # Materials list
+    if proposal_data.get('materials_list'):
+        materials_json = json.dumps(proposal_data['materials_list'], ensure_ascii=False, indent=2)
+        text_parts.append(f"```json\n{materials_json}\n```\n")
+    
+    return "\n".join(text_parts)
+
+
+def generate_proposal_with_fallback(chunks: List[Document], question: str) -> Tuple[str, Dict[str, Any]]:
+    """
+    生成研究提案，優先使用結構化輸出，失敗時回退到傳統文本格式
+    
+    Args:
+        chunks: 檢索到的文獻片段
+        question: 用戶的研究問題
+    
+    Returns:
+        Tuple[str, Dict[str, Any]]: (文本格式提案, 結構化提案數據)
+    """
+    # 首先嘗試結構化輸出
+    try:
+        print("🔧 嘗試使用結構化輸出生成提案...")
+        structured_proposal = generate_structured_proposal(chunks, question)
+        
+        if structured_proposal and all(key in structured_proposal for key in ['proposal_title', 'need', 'solution']):
+            print("✅ 結構化提案生成成功")
+            text_proposal = structured_proposal_to_text(structured_proposal)
+            return text_proposal, structured_proposal
+        else:
+            print("⚠️ 結構化提案生成失敗或格式不完整，回退到傳統格式")
+    except Exception as e:
+        print(f"❌ 結構化提案生成失敗: {e}，回退到傳統格式")
+    
+    # 回退到傳統文本格式
+    try:
+        print("🔧 使用傳統文本格式生成提案...")
+        system_prompt, citations = build_proposal_prompt(chunks, question)
+        
+        # 構建完整的提示詞
+        paper_context_text = ""
+        for i, doc in enumerate(chunks):
+            metadata = doc.metadata
+            title = metadata.get("title", "Untitled")
+            filename = metadata.get("filename") or metadata.get("source", "Unknown")
+            page = metadata.get("page_number") or metadata.get("page", "?")
+            
+            paper_context_text += f"[{i+1}] {title} | Page {page}\n{doc.page_content}\n\n"
+        
+        full_prompt = f"{system_prompt}\n\n--- Literature Excerpts ---\n{paper_context_text}\n--- Research Objectives ---\n{question}"
+        
+        # 調用傳統LLM
+        text_proposal = call_llm(full_prompt)
+        
+        # 創建一個基本的結構化數據（用於向後兼容）
+        basic_structured = {
+            'proposal_title': 'Generated from text format',
+            'need': '',
+            'solution': '',
+            'differentiation': '',
+            'benefit': '',
+            'experimental_overview': '',
+            'materials_list': [],
+            'citations': citations,
+            'text_format': text_proposal
+        }
+        
+        print("✅ 傳統文本提案生成成功")
+        return text_proposal, basic_structured
+        
+    except Exception as e:
+        print(f"❌ 傳統提案生成也失敗: {e}")
+        return "", {}
 

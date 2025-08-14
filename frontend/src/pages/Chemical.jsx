@@ -80,22 +80,47 @@ const Chemical = () => {
 
     return (
       <div>
-        <Card title="Chemical Properties" style={{ marginBottom: 16 }}>
+        <Card 
+          title="Chemical Properties" 
+          style={{ 
+            marginBottom: 16,
+            fontSize: '16px'
+          }}
+          headStyle={{
+            fontSize: '18px',
+            fontWeight: 'bold',
+            color: '#1890ff'
+          }}
+        >
           <Table
             columns={columns}
             dataSource={propertiesData}
             pagination={false}
             size="small"
+            style={{
+              fontSize: '16px'
+            }}
           />
         </Card>
 
-        <Card title="Safety Information" style={{ marginBottom: 16 }}>
+        <Card 
+          title="Safety Information" 
+          style={{ 
+            marginBottom: 16,
+            fontSize: '16px'
+          }}
+          headStyle={{
+            fontSize: '18px',
+            fontWeight: 'bold',
+            color: '#1890ff'
+          }}
+        >
           <Space direction="vertical" style={{ width: '100%' }}>
-            <div>
+            <div style={{ fontSize: '16px' }}>
               <strong>Hazards:</strong>
               <Space style={{ marginLeft: 8 }}>
                 {chemicalData.safety.hazards.map((hazard, index) => (
-                  <Tag key={index} color="red">{hazard}</Tag>
+                  <Tag key={index} color="red" style={{ fontSize: '14px' }}>{hazard}</Tag>
                 ))}
               </Space>
             </div>

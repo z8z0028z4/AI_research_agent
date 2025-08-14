@@ -65,15 +65,14 @@ class SettingsManager:
     
     def get_current_model(self) -> str:
         """獲取當前LLM模型"""
-        return self.get_setting('llm_model', 'gpt-4-1106-preview')
+        return self.get_setting('llm_model', 'gpt-5-mini')
     
     def set_current_model(self, model: str):
         """設定當前LLM模型"""
         valid_models = [
             "gpt-5",
             "gpt-5-nano",
-            "gpt-5-mini",
-            "gpt-4-1106-preview"
+            "gpt-5-mini"
         ]
         
         if model not in valid_models:
@@ -84,22 +83,16 @@ class SettingsManager:
     def get_llm_parameters(self) -> Dict[str, Any]:
         """獲取LLM參數設定"""
         return {
-            "temperature": self.get_setting('llm_temperature', 0.3),
             "max_tokens": self.get_setting('llm_max_tokens', 4000),
             "timeout": self.get_setting('llm_timeout', 120),
             "reasoning_effort": self.get_setting('llm_reasoning_effort', 'medium'),
             "verbosity": self.get_setting('llm_verbosity', 'medium'),
         }
     
-    def set_llm_parameters(self, temperature: float = None, max_tokens: int = None, 
+    def set_llm_parameters(self, max_tokens: int = None, 
                           timeout: int = None, reasoning_effort: str = None, 
                           verbosity: str = None):
         """設定LLM參數"""
-        if temperature is not None:
-            if not (0.0 <= temperature <= 2.0):
-                raise ValueError("temperature 必須在 0.0 到 2.0 之間")
-            self.set_setting('llm_temperature', temperature)
-        
         if max_tokens is not None:
             if not (1 <= max_tokens <= 32000):
                 raise ValueError("max_tokens 必須在 1 到 32000 之間")
@@ -127,14 +120,8 @@ class SettingsManager:
         if model_name is None:
             model_name = self.get_current_model()
         
-        # 基礎參數（所有模型都支援）
-        base_params = {
-            "temperature": {
-                "type": "float",
-                "range": [0.0, 2.0],
-                "default": 0.3,
-                "description": "控制回應的創造性，0.0為最確定，2.0為最創造"
-            },
+        # GPT-5系列參數
+        gpt5_params = {
             "max_tokens": {
                 "type": "int",
                 "range": [1, 32000],
@@ -146,11 +133,7 @@ class SettingsManager:
                 "range": [10, 600],
                 "default": 120,
                 "description": "API調用的超時時間（秒）"
-            }
-        }
-        
-        # GPT-5系列專屬參數
-        gpt5_params = {
+            },
             "reasoning_effort": {
                 "type": "select",
                 "options": ["minimal", "low", "medium", "high"],
@@ -165,11 +148,44 @@ class SettingsManager:
             }
         }
         
-        # 根據模型返回支援的參數
-        if model_name.startswith('gpt-5'):
-            return {**base_params, **gpt5_params}
-        else:
-            return base_params
+        # 所有模型都是GPT-5系列
+        return gpt5_params
+    
+    def get_json_schema_parameters(self) -> Dict[str, Any]:
+        """獲取JSON Schema參數設定"""
+        return {
+            "min_length": self.get_setting('llm_min_length', 5),
+            "max_length": self.get_setting('llm_max_length', 100),
+        }
+    
+    def set_json_schema_parameters(self, min_length: int = None, max_length: int = None):
+        """設定JSON Schema參數"""
+        if min_length is not None:
+            if not (1 <= min_length <= 50):
+                raise ValueError("min_length 必須在 1 到 50 之間")
+            self.set_setting('llm_min_length', min_length)
+        
+        if max_length is not None:
+            if not (10 <= max_length <= 200):
+                raise ValueError("max_length 必須在 10 到 200 之間")
+            self.set_setting('llm_max_length', max_length)
+    
+    def get_json_schema_supported_parameters(self) -> Dict[str, Any]:
+        """獲取JSON Schema支援的參數"""
+        return {
+            "min_length": {
+                "type": "int",
+                "range": [1, 50],
+                "default": 5,
+                "description": "JSON Schema 欄位最小長度約束"
+            },
+            "max_length": {
+                "type": "int",
+                "range": [10, 200],
+                "default": 100,
+                "description": "JSON Schema 欄位最大長度約束"
+            }
+        }
     
     def get_all_settings(self) -> Dict[str, Any]:
         """獲取所有設定"""

@@ -8,6 +8,7 @@ import {
   ExperimentOutlined,
   UploadOutlined,
   SettingOutlined,
+  BookOutlined,
 } from '@ant-design/icons'
 
 const { Sider } = Layout
@@ -27,6 +28,11 @@ const menuItems = [
     key: '/search',
     icon: <SearchOutlined />,
     label: '文獻搜尋',
+  },
+  {
+    key: '/knowledge',
+    icon: <BookOutlined />,
+    label: '知識庫查詢',
   },
   {
     key: '/chemical',

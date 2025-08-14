@@ -21,7 +21,9 @@ from rag_core import (
     load_paper_vectorstore, build_proposal_prompt, build_detail_experimental_plan_prompt, 
     build_iterative_proposal_prompt, load_experiment_vectorstore, preview_chunks, 
     retrieve_chunks_multi_query, build_prompt, call_llm, build_inference_prompt, 
-    build_dual_inference_prompt, expand_query
+    build_dual_inference_prompt, expand_query, generate_proposal_with_fallback,
+    generate_iterative_structured_proposal, generate_structured_experimental_detail,
+    generate_structured_revision_explain
 )
 from config import EXPERIMENT_DIR
 import os
@@ -108,12 +110,23 @@ def agent_answer(question: str, mode: str = "make proposal", **kwargs):
         - 基於文獻生成研究提案
         - 使用較多的檢索結果（k=10）
         - 專注於提案結構化生成
+        - 優先使用結構化輸出，失敗時回退到傳統格式
         """
-        print("📝 啟用模式：make proposal")
+        print("📝 啟用模式：make proposal (結構化輸出)")
         paper_vectorstore = load_paper_vectorstore()
         print("📦 Paper 向量庫：", paper_vectorstore._collection.count())
         chunks = retrieve_chunks_multi_query(paper_vectorstore, [question], k=k, fetch_k=fetch_k)
-        prompt, citations = build_proposal_prompt(chunks, question)
+        
+        # 使用新的結構化提案生成功能
+        text_proposal, structured_data = generate_proposal_with_fallback(chunks, question)
+        
+        # 返回結構化結果
+        return {
+            "answer": text_proposal,
+            "citations": structured_data.get('citations', []),
+            "chunks": chunks,
+            "structured_proposal": structured_data
+        }
 
     # ==================== 模式3：允許延伸與推論 ====================
     elif mode == "允許延伸與推論":
@@ -157,11 +170,26 @@ def agent_answer(question: str, mode: str = "make proposal", **kwargs):
         - 基於提案和文獻塊生成詳細實驗計劃
         - 需要外部提供chunks和proposal
         - 專注於實驗設計細節
+        - 使用結構化輸出
         """
-        print("🔬 啟用模式：expand to experiment detail")
+        print("🔬 啟用模式：expand to experiment detail (結構化輸出)")
         chunks = kwargs.get("chunks", [])
         proposal = kwargs.get("proposal", "")
-        prompt, citations = build_detail_experimental_plan_prompt(chunks, proposal)
+        
+        # 使用新的結構化實驗細節生成功能
+        structured_data = generate_structured_experimental_detail(chunks, proposal)
+        
+        # 轉換為文本格式
+        from rag_core import structured_experimental_detail_to_text
+        text_experiment = structured_experimental_detail_to_text(structured_data)
+        
+        # 返回結構化結果
+        return {
+            "answer": text_experiment,
+            "citations": structured_data.get('citations', []),
+            "chunks": chunks,
+            "structured_experiment": structured_data
+        }
 
     # ==================== 模式6：生成新想法 ====================
     elif mode == "generate new idea":
@@ -172,15 +200,35 @@ def agent_answer(question: str, mode: str = "make proposal", **kwargs):
         - 基於現有提案生成新的研究想法
         - 使用迭代式提案生成
         - 需要外部提供old_chunks和proposal
+        - 使用結構化輸出
+        - 新增：包含修訂說明
         """
-        print("💡 啟用模式：generate new idea")
+        print("💡 啟用模式：generate new idea (結構化輸出)")
         paper_vectorstore = load_paper_vectorstore()
         print("📦 Paper 向量庫：", paper_vectorstore._collection.count())
         query_list = expand_query(question)  # 語義擴展
-        chunks = retrieve_chunks_multi_query(paper_vectorstore, query_list, k=5)
+        new_chunks = retrieve_chunks_multi_query(paper_vectorstore, query_list, k=5)
         old_chunks = kwargs.get("old_chunks", [])
         proposal = kwargs.get("proposal", "")
-        prompt, citations = build_iterative_proposal_prompt(question, chunks, old_chunks, proposal)
+        
+        # 使用新的結構化迭代提案生成功能
+        structured_data = generate_iterative_structured_proposal(question, new_chunks, old_chunks, proposal)
+        
+        # 生成修訂說明
+        revision_explain_data = generate_structured_revision_explain(question, proposal)
+        
+        # 轉換為文本格式
+        from rag_core import structured_proposal_to_text
+        text_proposal = structured_proposal_to_text(structured_data)
+        
+        # 返回結構化結果
+        return {
+            "answer": text_proposal,
+            "citations": structured_data.get('citations', []),
+            "chunks": new_chunks + old_chunks,
+            "structured_proposal": structured_data,
+            "structured_revision_explain": revision_explain_data
+        }
 
     # ==================== 錯誤處理 ====================
     else:
@@ -189,6 +237,11 @@ def agent_answer(question: str, mode: str = "make proposal", **kwargs):
         raise ValueError(f"❌ 未知的模式：{mode}")
 
     # ==================== 調用LLM生成回答 ====================
+    # 檢查是否已經有直接返回的結果（結構化模式）
+    if 'prompt' not in locals():
+        print("🔍 DEBUG: 檢測到結構化模式，已直接返回結果")
+        return locals().get('result', {})
+    
     print(f"🔍 DEBUG: 準備調用 call_llm")
     print(f"🔍 DEBUG: prompt 長度: {len(prompt)}")
     print(f"🔍 DEBUG: prompt 前200字符: {prompt[:200]}...")

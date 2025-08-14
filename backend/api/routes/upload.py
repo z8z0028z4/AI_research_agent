@@ -260,4 +260,102 @@ async def cancel_processing(task_id: str):
     processing_tasks[task_id]["status"] = "cancelled"
     processing_tasks[task_id]["message"] = "任務已取消"
     
-    return {"message": "任務已取消", "task_id": task_id} 
+    return {"message": "任務已取消", "task_id": task_id}
+
+@router.get("/documents/{filename:path}")
+async def download_document(filename: str):
+    """
+    下載文檔文件
+    
+    Args:
+        filename: 文件名（支持子目錄路徑）
+        
+    Returns:
+        文件內容
+    """
+    try:
+        import os
+        # 獲取項目根目錄（從backend目錄向上兩級到項目根目錄）
+        current_file_dir = os.path.dirname(__file__)  # backend/api/routes/
+        backend_dir = os.path.dirname(os.path.dirname(current_file_dir))  # backend/
+        project_root = os.path.dirname(backend_dir)  # 項目根目錄
+        print(f"🔍 DEBUG: current_file_dir = {current_file_dir}")
+        print(f"🔍 DEBUG: backend_dir = {backend_dir}")
+        print(f"🔍 DEBUG: project_root = {project_root}")
+        print(f"🔍 DEBUG: filename = {filename}")
+        
+        # 檢查是否為直接文件名（不包含路徑）
+        if not os.path.dirname(filename):
+            # 如果是直接文件名，則假設在papers目錄中
+            file_path = os.path.join(project_root, "experiment_data", "papers", filename)
+        else:
+            # 如果包含路徑，則使用完整路徑
+            file_path = os.path.join(project_root, filename)
+        
+        # 安全檢查：確保文件路徑在允許的目錄內
+        allowed_dirs = [
+            os.path.join(project_root, "experiment_data", "papers"),
+            os.path.join(project_root, "uploads")
+        ]
+        
+        file_path_abs = os.path.abspath(file_path)
+        is_allowed = any(file_path_abs.startswith(allowed_dir) for allowed_dir in allowed_dirs)
+        
+        if not is_allowed:
+            print(f"❌ 訪問被拒絕: {file_path_abs}")
+            print(f"❌ 允許的目錄: {allowed_dirs}")
+            raise HTTPException(status_code=403, detail="訪問被拒絕")
+        
+        if not os.path.exists(file_path):
+            print(f"❌ 文件不存在: {file_path}")
+            raise HTTPException(status_code=404, detail="文件不存在")
+        
+        print(f"✅ 提供文件: {file_path}")
+        
+        # 設置MIME類型映射
+        mime_types = {
+            '.pdf': 'application/pdf',
+            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            '.doc': 'application/msword',
+            '.txt': 'text/plain',
+            '.html': 'text/html',
+            '.htm': 'text/html'
+        }
+        
+        # 根據文件類型設置正確的MIME類型和響應頭
+        # 特殊處理：檢查文件名是否以_SI.pdf結尾，也應該識別為PDF
+        if filename.lower().endswith('_si.pdf'):
+            file_extension = '.pdf'
+        else:
+            file_extension = os.path.splitext(filename)[1].lower()
+        
+        media_type = mime_types.get(file_extension, 'application/octet-stream')
+        
+        # 對於PDF文件，設置響應頭讓瀏覽器直接顯示而不是下載
+        headers = {}
+        if file_extension == '.pdf':
+            # 強制設置 PDF 文件的響應頭
+            headers['Content-Disposition'] = 'inline'
+            headers['Content-Type'] = 'application/pdf'
+            # 添加額外的頭來確保瀏覽器正確處理
+            headers['X-Content-Type-Options'] = 'nosniff'
+            headers['Cache-Control'] = 'public, max-age=3600'
+            # 對於 SI 文件，添加特殊標識
+            if filename.lower().endswith('_si.pdf'):
+                headers['X-File-Type'] = 'supplementary-information'
+        else:
+            headers['Content-Disposition'] = f'inline; filename="{os.path.basename(filename)}"'
+        
+        # 返回文件
+        return FileResponse(
+            path=file_path,
+            filename=os.path.basename(filename),
+            media_type=media_type,
+            headers=headers
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ 文件下載失敗: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"文件下載失敗: {str(e)}") 

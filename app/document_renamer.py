@@ -41,7 +41,8 @@ def rename_and_copy_file(original_path: str, metadata: dict) -> dict:
     # 更新 metadata
     metadata["tracing_number"] = tracing_number
     metadata["new_filename"] = new_filename
-    metadata["new_path"] = new_path
+    # 使用相對路徑而不是絕對路徑
+    metadata["new_path"] = os.path.join("experiment_data", "papers", new_filename)
 
     return metadata
 

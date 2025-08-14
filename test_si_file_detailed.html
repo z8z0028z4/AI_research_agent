@@ -1,0 +1,60 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SI 文件測試</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .success { background-color: #d4edda; }
+        .error { background-color: #f8d7da; }
+        a { display: inline-block; margin: 5px; padding: 10px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; }
+        a:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>SI 文件打開測試</h1>
+    
+    <div class="test-section">
+        <h2>測試 1: 直接 URL 訪問</h2>
+        <p>點擊下面的連結測試 SI 文件是否直接打開：</p>
+        <a href="http://localhost:8000/api/v1/documents/107_Welding_Metallophthalocyanines_into_Bimetallic_Molecular_Meshes_for_Ultrasensiti_SI.pdf" target="_blank">
+            測試 SI 文件 (直接 URL)
+        </a>
+    </div>
+    
+    <div class="test-section">
+        <h2>測試 2: URL 編碼版本</h2>
+        <p>使用 URL 編碼的版本：</p>
+        <a href="http://localhost:8000/api/v1/documents/107_Welding_Metallophthalocyanines_into_Bimetallic_Molecular_Meshes_for_Ultrasensiti_SI.pdf" target="_blank">
+            測試 SI 文件 (編碼 URL)
+        </a>
+    </div>
+    
+    <div class="test-section">
+        <h2>測試 3: 對比普通 PDF</h2>
+        <p>對比：點擊下面的連結測試普通 PDF 文件：</p>
+        <a href="http://localhost:8000/api/v1/documents/097_Selective_reduction_of_CO2_by_conductive_MOF_nanosheets_as_an_efficient_co-catal_PAPER.pdf" target="_blank">
+            測試普通 PDF 文件
+        </a>
+    </div>
+    
+    <div class="test-section">
+        <h2>測試 4: 其他 SI 文件</h2>
+        <p>測試其他 SI 文件：</p>
+        <a href="http://localhost:8000/api/v1/documents/104_Three-Dimensional_Phthalocyanine_Metal-Catecholates_for_High_Electrochemical_Car_SI.pdf" target="_blank">
+            測試另一個 SI 文件
+        </a>
+    </div>
+    
+    <div class="test-section">
+        <h2>瀏覽器檢查</h2>
+        <p>請打開瀏覽器的開發者工具 (F12)，然後點擊上面的連結，觀察：</p>
+        <ul>
+            <li>Network 標籤中的請求狀態</li>
+            <li>Response Headers 中的 Content-Disposition</li>
+            <li>是否觸發下載或直接打開</li>
+        </ul>
+    </div>
+</body>
+</html>

@@ -41,7 +41,6 @@ try:
             # 如果適配失敗，使用基礎參數
             return {
                 "model": model_name,
-                "temperature": llm_params.get("temperature", 0.7),
                 "max_tokens": llm_params.get("max_tokens", 2000),
                 "timeout": llm_params.get("timeout", 60),
             }
@@ -67,7 +66,6 @@ try:
             print(f"⚠️ 無法檢測模型參數，使用預設配置: {e}")
             # 如果檢測失敗，使用預設配置
             base_params = {
-                'temperature': {'type': 'float', 'range': [0.0, 2.0], 'default': 0.7},
                 'max_tokens': {'type': 'int', 'range': [1, 32000], 'default': 2000},
                 'timeout': {'type': 'int', 'range': [10, 600], 'default': 60}
             }
@@ -93,8 +91,7 @@ try:
         valid_models = [
             "gpt-5",
             "gpt-5-nano",
-            "gpt-5-mini",
-            "gpt-4-1106-preview"
+            "gpt-5-mini"
         ]
         return model_name in valid_models
 
@@ -102,14 +99,13 @@ except ImportError as e:
     print(f"警告：無法導入backend設定模組: {e}")
     # 提供fallback配置
     def get_current_model():
-        return "gpt-4-1106-preview"
+        return "gpt-5-mini"
     
     def get_model_params(model_name=None):
         if model_name is None:
             model_name = get_current_model()
         return {
             "model": model_name,
-            "temperature": 0.3,
             "max_tokens": 4000,
             "timeout": 120,
         }
@@ -120,7 +116,6 @@ except ImportError as e:
             model_name = get_current_model()
         
         base_params = {
-            'temperature': {'type': 'float', 'range': [0.0, 2.0], 'default': 0.7},
             'max_tokens': {'type': 'int', 'range': [1, 32000], 'default': 2000},
             'timeout': {'type': 'int', 'range': [10, 600], 'default': 60}
         }
@@ -145,8 +140,7 @@ except ImportError as e:
         valid_models = [
             "gpt-5",
             "gpt-5-nano",
-            "gpt-5-mini",
-            "gpt-4-1106-preview"
+            "gpt-5-mini"
         ]
         return model_name in valid_models
 

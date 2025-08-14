@@ -22,8 +22,9 @@ from io import BytesIO
 # 添加原項目路徑到 sys.path
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../app'))
 
-from knowledge_agent import agent_answer
-from rag_core import build_detail_experimental_plan_prompt
+# 延遲導入以避免循環導入問題
+# from knowledge_agent import agent_answer
+# from rag_core import build_detail_experimental_plan_prompt
 from pubchem_handler import chemical_metadata_extractor
 from langchain_core.documents import Document
 
@@ -32,19 +33,15 @@ try:
     from svglib.svglib import svg2rlg
     from reportlab.graphics import renderPDF
     SVGLIB_AVAILABLE = True
-    print("✅ svglib 導入成功")
 except ImportError as e:
     SVGLIB_AVAILABLE = False
-    print(f"❌ svglib 導入失敗: {e}")
 
 # PyMuPDF 用於 PDF 到 PNG 轉換
 try:
     import fitz
     PYMUPDF_AVAILABLE = True
-    print("✅ PyMuPDF 導入成功")
 except ImportError as e:
     PYMUPDF_AVAILABLE = False
-    print(f"⚠️ PyMuPDF 導入失敗: {e}")
 
 import time
 from selenium import webdriver
@@ -70,6 +67,8 @@ class ProposalResponse(BaseModel):
     # 以可序列化的結構回傳 chunks：[{ page_content, metadata }]
     chunks: List[Dict[str, Any]]
     used_model: Optional[str] = None
+    structured_proposal: Optional[Dict[str, Any]] = None
+    structured_revision_explain: Optional[Dict[str, Any]] = None
 
 class ProposalRevisionRequest(BaseModel):
     """提案修訂請求模型"""
@@ -117,6 +116,9 @@ async def generate_proposal(request: ProposalRequest):
         print(f"🔍 BACKEND DEBUG: 收到請求 research_goal = '{request.research_goal}'")
         print(f"🔍 BACKEND DEBUG: 準備調用 agent_answer with mode='make proposal'")
         print(f"🔍 BACKEND DEBUG: retrieval_count = {request.retrieval_count}")
+        
+        # 延遲導入以避免循環導入問題
+        from knowledge_agent import agent_answer
         
         # 與 Streamlit Tab1 對齊：使用模式 make proposal 生成提案
         result = agent_answer(request.research_goal, mode="make proposal", k=request.retrieval_count)
@@ -174,6 +176,9 @@ async def revise_proposal(request: ProposalRevisionRequest):
         修訂後的提案內容
     """
     try:
+        # 延遲導入以避免循環導入問題
+        from knowledge_agent import agent_answer
+        
         # 與 Streamlit Tab1 對齊：採用 generate new idea 模式，並帶入原始提案與 chunks
         result = agent_answer(
             request.user_feedback,
@@ -200,7 +205,9 @@ async def revise_proposal(request: ProposalRevisionRequest):
             chemicals=chemical_metadata_list,
             citations=fixed_citations,
             not_found=not_found_list,
-            chunks=_serialize_chunks(result.get("chunks", []))
+            chunks=_serialize_chunks(result.get("chunks", [])),
+            structured_proposal=result.get("structured_proposal"),
+            structured_revision_explain=result.get("structured_revision_explain")
         )
         
     except Exception as e:
@@ -225,6 +232,9 @@ async def generate_experiment_detail(request: ExperimentDetailRequest):
         實驗細節內容
     """
     try:
+        # 延遲導入以避免循環導入問題
+        from knowledge_agent import agent_answer
+        
         # 與 Streamlit Tab1 對齊：由 agent 以指定模式展開實驗細節
         result = agent_answer(
             "",
@@ -235,7 +245,12 @@ async def generate_experiment_detail(request: ExperimentDetailRequest):
 
         return {
             "experiment_detail": result.get("answer", ""),
-            "success": True
+            "structured_experiment": result.get("structured_experiment", {}),
+            "success": True,
+            "retry_info": {
+                "retry_count": getattr(result, 'retry_count', 0),
+                "final_tokens": getattr(result, 'final_tokens', 0)
+            }
         }
         
     except Exception as e:

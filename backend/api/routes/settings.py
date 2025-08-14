@@ -32,7 +32,6 @@ class ModelSettings(BaseModel):
 
 class LLMParameters(BaseModel):
     """LLM參數設定模型"""
-    temperature: Optional[float] = None
     max_tokens: Optional[int] = None
     timeout: Optional[int] = None
     reasoning_effort: Optional[str] = None
@@ -45,11 +44,20 @@ class ModelSettingsResponse(BaseModel):
 
 class LLMParametersResponse(BaseModel):
     """LLM參數回應模型"""
-    temperature: float
     max_tokens: int
     timeout: int
     reasoning_effort: Optional[str] = None
     verbosity: Optional[str] = None
+
+class JSONSchemaParameters(BaseModel):
+    """JSON Schema參數設定模型"""
+    min_length: Optional[int] = None
+    max_length: Optional[int] = None
+
+class JSONSchemaParametersResponse(BaseModel):
+    """JSON Schema參數回應模型"""
+    min_length: int
+    max_length: int
 
 class ModelParametersInfo(BaseModel):
     """模型參數資訊回應模型"""
@@ -79,11 +87,6 @@ async def get_model_settings():
                 "value": "gpt-5-mini",
                 "label": "GPT-5 Mini",
                 "description": "GPT-5的平衡版本，速度與功能兼具，支援推理控制"
-            },
-            {
-                "value": "gpt-4-1106-preview",
-                "label": "GPT-4 Turbo Preview (1106)",
-                "description": "穩定可靠的GPT-4模型，使用傳統API介面"
             }
         ]
         
@@ -125,7 +128,6 @@ async def update_llm_parameters(parameters: LLMParameters):
     try:
         # 使用設定管理器更新參數
         settings_manager.set_llm_parameters(
-            temperature=parameters.temperature,
             max_tokens=parameters.max_tokens,
             timeout=parameters.timeout,
             reasoning_effort=parameters.reasoning_effort,
@@ -163,6 +165,54 @@ async def get_model_parameters_info(model_name: Optional[str] = None):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"獲取模型參數資訊失敗: {str(e)}")
+
+@router.get("/json-schema-parameters", response_model=JSONSchemaParametersResponse)
+async def get_json_schema_parameters():
+    """獲取當前JSON Schema參數設定"""
+    try:
+        params = settings_manager.get_json_schema_parameters()
+        return JSONSchemaParametersResponse(**params)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"獲取JSON Schema參數失敗: {str(e)}")
+
+@router.post("/json-schema-parameters")
+async def update_json_schema_parameters(parameters: JSONSchemaParameters):
+    """更新JSON Schema參數設定"""
+    try:
+        # 使用設定管理器更新參數
+        settings_manager.set_json_schema_parameters(
+            min_length=parameters.min_length,
+            max_length=parameters.max_length
+        )
+        
+        # 獲取更新後的參數
+        updated_params = settings_manager.get_json_schema_parameters()
+        
+        return {
+            "message": "JSON Schema參數已成功更新",
+            "parameters": updated_params
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"更新JSON Schema參數失敗: {str(e)}")
+
+@router.get("/json-schema-parameters-info")
+async def get_json_schema_parameters_info():
+    """獲取JSON Schema參數資訊"""
+    try:
+        # 獲取支援的參數
+        supported_params = settings_manager.get_json_schema_supported_parameters()
+        
+        # 獲取當前參數
+        current_params = settings_manager.get_json_schema_parameters()
+        
+        return {
+            "supported_parameters": supported_params,
+            "current_parameters": current_params
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"獲取JSON Schema參數資訊失敗: {str(e)}")
 
 @router.get("/system")
 async def get_system_settings():

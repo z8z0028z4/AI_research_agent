@@ -77,7 +77,7 @@ PARSED_CHEMICAL_DIR = os.path.join(BASE_DIR, "experiment_data", "parsed_chemical
 EMBEDDING_MODEL_NAME = "nomic-ai/nomic-embed-text-v1.5"
 
 # 大語言模型：用於生成回答和文本處理
-LLM_MODEL_NAME = "gpt-4-1106-preview"
+LLM_MODEL_NAME = "gpt-5-mini"
 
 # ==================== LLM參數配置 ====================
 # 修復 LLM 參數配置，移除有問題的參數
@@ -85,10 +85,24 @@ LLM_MODEL_NAME = "gpt-4-1106-preview"
 # LLM調用參數（適用於所有LLM調用）
 LLM_PARAMS = {
     "model": LLM_MODEL_NAME,  # 使用 "model" 而不是 "model_name"
-    "temperature": 0.3,  # 溫度參數
     "max_tokens": 4000,  # 使用 max_tokens 而不是 max_completion_tokens
     "timeout": 120,  # 超時時間（秒）
 }
+
+# ==================== 文本處理參數配置 ====================
+# 用於文檔分塊和向量化的參數
+
+# 最大 token 數量：控制 AI 模型回應的最大長度
+# 這個參數用於限制模型輸出的 token 數量，避免回應過長
+MAX_TOKENS = 4000
+
+# 文檔分塊大小：將長文檔分割成較小的塊進行處理
+# 較大的塊可以保留更多上下文，但會增加處理時間
+CHUNK_SIZE = 1000
+
+# 文檔分塊重疊：相鄰塊之間的重疊 token 數量
+# 重疊可以幫助保持上下文連貫性，避免重要信息被分割
+CHUNK_OVERLAP = 200
 
 
 # ==================== 配置驗證函數 ====================

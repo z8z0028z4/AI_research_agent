@@ -43,7 +43,7 @@ if os.path.exists("static"):
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # 導入路由
-from api.routes import proposal, search, chemical, upload, experiment, settings
+from api.routes import proposal, search, chemical, upload, experiment, settings, knowledge
 
 # 註冊路由
 app.include_router(proposal.router, prefix="/api/v1", tags=["proposal"])
@@ -52,6 +52,7 @@ app.include_router(chemical.router, prefix="/api/v1", tags=["chemical"])
 app.include_router(upload.router, prefix="/api/v1", tags=["upload"])
 app.include_router(experiment.router, prefix="/api/v1", tags=["experiment"])
 app.include_router(settings.router, prefix="/api/v1", tags=["settings"])
+app.include_router(knowledge.router, prefix="/api/v1", tags=["knowledge"])
 
 @app.get("/")
 async def root():

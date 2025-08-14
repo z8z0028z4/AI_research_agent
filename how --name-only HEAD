@@ -1,0 +1,26 @@
+* [33m066910c[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmodel-selector[m[33m, [m[1;31morigin/model-selector[m[33m)[m feat: Add Model Selector System v1.0 with comprehensive model support and settings management
+* [33m8e61958[m[33m ([m[1;31morigin/react-interface[m[33m, [m[1;32mreact-interface[m[33m)[m 修復前端安裝問題和 gitignore 配置
+* [33mce20e77[m docs: 更新 README.md 反映 React 版本變更
+* [33m72a710f[m feat: 從 Streamlit 遷移到 React 前端 - 完成核心功能恢復
+* [33m888fd2d[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m revisions of readme, install.bat and run.bat for ease of using
+* [33mddc0e2d[m[33m ([m[1;31morigin/feature/proposal_mode[m[33m)[m feat: Add comprehensive project structure and documentation
+* [33mfdf488b[m addition of downloading proposal feature
+* [33m8602dd6[m adding the chemical table, expanding experimental detail, generate new idea button
+* [33medbb65c[m accomplishment of proposal mode, chemical searching, and experiment detial expanding
+*   [33mb06ecf3[m Merge branch 'main' of https://github.com/z8z0028z4/AI_research_agent
+[32m|[m[33m\[m  
+[32m|[m * [33m02f84dd[m Update README.md
+* [33m|[m [33ma47e0c9[m update requirements.txt
+* [33m|[m [33mae57e90[m update requirements.txt
+[33m|[m[33m/[m  
+* [33md4a5d80[m update readme and requirement.txt
+*   [33mb0741f4[m Merge branch 'main' of https://github.com/z8z0028z4/AI_research_agent
+[34m|[m[35m\[m  
+[34m|[m *   [33mac4cb3d[m Merge pull request #1 from z8z0028z4/feature/experiment-embedding
+[34m|[m [36m|[m[1;31m\[m  
+* [36m|[m [1;31m|[m [33mc6a0786[m[33m ([m[1;31morigin/feature/experiment-embedding[m[33m)[m update readme.md and requirement.txt
+[1;31m|[m [36m|[m[1;31m/[m  
+[1;31m|[m[1;31m/[m[36m|[m   
+* [36m|[m [33mdb253e2[m complete the inference mode and experiment advisor mode, build the dual retreiver for advisor mode
+* [36m|[m [33ma20ef3a[m[33m ([m[1;31morigin/feature/Search-agent[m[33m)[m version 1.2, with search agent
+* [36m|[m [33mf802543[m addition of search agent based on the open acess database europePMC

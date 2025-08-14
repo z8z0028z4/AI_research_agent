@@ -2,8 +2,7 @@
 setlocal enabledelayedexpansion
 
 echo ========================================
-echo    AI Research Assistant Backend
-echo    後端服務重啟腳本
+echo AI Research Assistant - React Version
 echo ========================================
 echo.
 
@@ -36,27 +35,23 @@ if not exist "%VENV_PATH%" (
     )
 )
 
-REM Stop existing Python processes
-echo Stopping existing processes...
-taskkill /f /im python.exe >nul 2>&1
-timeout /t 2 /nobreak >nul
-
 REM Activate virtual environment
 call "%VENV_ACTIVATE%" >nul 2>&1
 
-echo Starting backend service...
-echo Backend: http://localhost:8000
-echo API Docs: http://localhost:8000/api/docs
+echo Starting AI Research Assistant...
 echo.
 
-REM Start backend service
-if exist "backend\main.py" (
-    cd backend
-    uvicorn main:app --host 0.0.0.0 --port 8000 --reload --log-level info
-) else if exist "main.py" (
-    uvicorn main:app --host 0.0.0.0 --port 8000 --reload --log-level info
-) else (
-    echo ERROR: Backend main.py not found
-    pause
-    exit /b 1
-) 
+REM Start backend in a new window
+start "AI Research Assistant Backend" cmd /k "cd /d "%SCRIPT_DIR%backend" && uvicorn main:app --host 0.0.0.0 --port 8000 --reload --log-level info"
+
+REM Start frontend in a new window
+start "AI Research Assistant Frontend" cmd /k "cd /d "%SCRIPT_DIR%frontend" && run_frontend.bat"
+
+echo.
+echo Services starting...
+echo Backend API: http://localhost:8000
+echo Frontend App: http://localhost:3000
+echo API Docs: http://localhost:8000/api/docs
+echo.
+echo Press any key to close this window...
+pause >nul

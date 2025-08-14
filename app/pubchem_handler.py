@@ -57,12 +57,37 @@ def download_and_store(result: Dict, storage_dir: str) -> str:
     return ""
 
 def extract_json_chemical_list_from_llm(text: str) -> list:
-    match = re.search(r"```json\s*(\[[^\]]+\])\s*```", text, re.DOTALL)
-    if match:
+    # 首先嘗試提取完整的 JSON 物件
+    json_match = re.search(r"```json\s*(\{.*?\})\s*```", text, re.DOTALL)
+    if json_match:
         try:
-            return json.loads(match.group(1))
+            json_obj = json.loads(json_match.group(1))
+            if 'materials_list' in json_obj and isinstance(json_obj['materials_list'], list):
+                print(f"✅ 從完整 JSON 物件中提取到 materials_list: {json_obj['materials_list']}")
+                return json_obj['materials_list']
+        except Exception as e:
+            print(f"❌ 完整 JSON 物件解析失敗：{e}")
+    
+    # 如果沒有找到完整 JSON 物件，嘗試提取單獨的陣列
+    array_match = re.search(r"```json\s*(\[[^\]]+\])\s*```", text, re.DOTALL)
+    if array_match:
+        try:
+            return json.loads(array_match.group(1))
         except Exception as e:
             print("❌ JSON chemical list 解析失敗：", e)
+    
+    # 如果都沒有找到，嘗試直接解析整個文本為 JSON
+    try:
+        # 移除可能的 markdown 格式
+        cleaned_text = re.sub(r"```json\s*", "", text)
+        cleaned_text = re.sub(r"\s*```", "", cleaned_text)
+        json_obj = json.loads(cleaned_text)
+        if 'materials_list' in json_obj and isinstance(json_obj['materials_list'], list):
+            print(f"✅ 從清理後的文本中提取到 materials_list: {json_obj['materials_list']}")
+            return json_obj['materials_list']
+    except Exception as e:
+        print(f"❌ 直接 JSON 解析失敗：{e}")
+    
     return []
 
 def parse_pubchem_json(json_data: dict) -> dict:
@@ -98,9 +123,16 @@ def parse_pubchem_json(json_data: dict) -> dict:
         cleaned = cleaned.replace('\x0f', '')  # SI
         return cleaned
 
+    # 優先使用IUPAC名稱，如果沒有則使用其他名稱
+    iupac_name = find_prop("IUPAC Name", "Preferred") or find_prop("IUPAC Name", "Traditional")
+    if not iupac_name:
+        # 如果沒有IUPAC名稱，嘗試其他名稱
+        iupac_name = find_prop("IUPAC Name") or find_prop("Title") or "Unknown"
+    
     return {
         "cid": cid,
-        "name": clean_text_for_xml(find_prop("IUPAC Name", "Preferred") or find_prop("IUPAC Name", "Traditional")),
+        "name": clean_text_for_xml(iupac_name),
+        "iupac_name": clean_text_for_xml(iupac_name),  # 明確標記IUPAC名稱
         "formula": clean_text_for_xml(find_prop("Molecular Formula")),
         "weight": clean_text_for_xml(find_prop("Molecular Weight")),
         "smiles": clean_text_for_xml(find_prop("SMILES", "Absolute") or find_prop("SMILES", "Connectivity")),

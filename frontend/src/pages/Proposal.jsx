@@ -23,6 +23,10 @@ const Proposal = () => {
   const [isTextareaFocused, setIsTextareaFocused] = useState(false); // 追蹤輸入框是否被聚焦
   const [isReviseInputFocused, setIsReviseInputFocused] = useState(false); // 追蹤修訂輸入框是否被聚焦
   const reviseInputRef = useRef(null); // 修訂輸入框的 ref
+  
+  // 結構化數據狀態
+  const [structuredProposal, setStructuredProposal] = useState(null); // 結構化提案數據
+  const [structuredRevisionExplain, setStructuredRevisionExplain] = useState(null); // 結構化修訂說明
 
   const hasResult = useMemo(
     () => Boolean(proposal) || chemicals.length > 0 || citations.length > 0,
@@ -68,6 +72,20 @@ const Proposal = () => {
       setChunks(data.chunks || []);
       setExperimentDetail('');
       setHasGeneratedContent(true); // 設置為已生成內容
+      
+             // 新增：處理結構化提案數據
+       if (data.structured_proposal) {
+         setStructuredProposal(data.structured_proposal);
+       } else {
+         setStructuredProposal(null);
+       }
+       
+       // 新增：處理結構化修訂說明數據
+       if (data.structured_revision_explain) {
+         setStructuredRevisionExplain(data.structured_revision_explain);
+       } else {
+         setStructuredRevisionExplain(null);
+       }
     } catch (e) {
       showError(e, '生成提案失敗');
       // eslint-disable-next-line no-console
@@ -107,6 +125,20 @@ const Proposal = () => {
       setReviseFeedback(''); // 清空修訂意見
       setHasGeneratedContent(true); // 設置為已生成內容
       
+             // 新增：處理結構化提案數據
+       if (data.structured_proposal) {
+         setStructuredProposal(data.structured_proposal);
+       } else {
+         setStructuredProposal(null);
+       }
+       
+       // 新增：處理結構化修訂說明數據
+       if (data.structured_revision_explain) {
+         setStructuredRevisionExplain(data.structured_revision_explain);
+       } else {
+         setStructuredRevisionExplain(null);
+       }
+      
       message.success('提案修訂成功！');
     } catch (e) {
       console.error('❌ FRONTEND DEBUG: Revise failed:', e);
@@ -140,6 +172,19 @@ const Proposal = () => {
         body: JSON.stringify({ proposal, chunks }),
       });
       setExperimentDetail(data.experiment_detail || '');
+      
+      // 處理結構化實驗細節數據
+      if (data.structured_experiment) {
+        console.log('🔍 收到結構化實驗細節:', data.structured_experiment);
+      }
+      
+      // 顯示重試信息
+      if (data.retry_info) {
+        console.log('🔄 重試信息:', data.retry_info);
+        if (data.retry_info.retry_count > 0) {
+          message.info(`重試 ${data.retry_info.retry_count} 次，最終使用 ${data.retry_info.final_tokens} tokens`);
+        }
+      }
     } catch (e) {
       showError(e, '生成實驗細節失敗');
       // eslint-disable-next-line no-console
@@ -276,71 +321,153 @@ const Proposal = () => {
 
       {hasResult && (
         <>
+          {/* 修訂說明視圖 */}
+          {structuredRevisionExplain && (
+            <Card title="修訂說明" style={{ marginBottom: 16 }}>
+              <div style={{ 
+                padding: '20px', 
+                border: '1px solid #e8e8e8', 
+                borderRadius: '8px',
+                backgroundColor: '#fafafa'
+              }}>
+                <Title level={3} style={{ 
+                  marginBottom: 12, 
+                  color: '#1890ff', 
+                  fontWeight: 'bold',
+                  fontSize: '27px',
+                  borderBottom: '2px solid #1890ff',
+                  paddingBottom: '8px'
+                }}>
+                  修訂說明
+                </Title>
+                <Paragraph style={{ 
+                  marginBottom: 0, 
+                  whiteSpace: 'pre-wrap',
+                  fontSize: '16px',
+                  lineHeight: '1.6',
+                  color: '#262626'
+                }}>
+                  {structuredRevisionExplain.revision_explain}
+                </Paragraph>
+              </div>
+            </Card>
+          )}
+
+          {/* 文本視圖 */}
           <Collapse
             defaultActiveKey={['proposal']}
             style={{ marginBottom: 16 }}
             items={[
               {
                 key: 'proposal',
-                label: <span style={{ fontWeight: 600, fontSize: 18 }}>🤖 Generated proposal</span>,
+                label: <span style={{ fontWeight: 700, fontSize: 27 }}>🤖 Generated proposal</span>,
                 children: (
-                                     <Paragraph style={{ 
-                     whiteSpace: 'pre-wrap', 
-                     fontSize: '16px', 
-                     lineHeight: '1.6',
-                     wordBreak: 'break-word',
-                     overflowWrap: 'break-word',
-                     maxWidth: '100%',
-                     width: '100%'
-                   }}>
-                     {proposal
-                       .replace(/\*\*(.*?)\*\*/g, '$1') // 移除粗體標記
-                       .replace(/\*(.*?)\*/g, '$1') // 移除斜體標記
-                       .replace(/`(.*?)`/g, '$1') // 移除代碼標記
-                       .replace(/^#+\s*(.*)$/gm, '$1') // 移除標題標記
-                       .replace(/^\s*[-*+]\s+/gm, '- ') // 統一項目符號
-                       .replace(/^\s*\d+\.\s+/gm, (match) => match.replace(/^\s*\d+\.\s+/, '')) // 移除編號
-                       .replace(/\n\s*\n\s*\n/g, '\n\n') // 移除多餘空行
-                       .replace(/\n\s*\*\*/g, '\n') // 移除粗體前的換行
-                       .replace(/\*\*\s*\n/g, '\n') // 移除粗體後的換行
-                     }
-                   </Paragraph>
+                  <div style={{ 
+                    whiteSpace: 'pre-wrap', 
+                    fontSize: '16px', 
+                    lineHeight: '1.6',
+                    wordBreak: 'break-word',
+                    overflowWrap: 'break-word',
+                    maxWidth: '100%',
+                    width: '100%'
+                  }}>
+                    {proposal
+                      .replace(/\*\*(.*?)\*\*/g, '$1') // 移除粗體標記
+                      .replace(/\*(.*?)\*/g, '$1') // 移除斜體標記
+                      .replace(/`(.*?)`/g, '$1') // 移除代碼標記
+                      .replace(/^#+\s*(.*)$/gm, '$1') // 移除標題標記
+                      .replace(/^\s*[-*+]\s+/gm, '- ') // 統一項目符號
+                      .replace(/^\s*\d+\.\s+/gm, (match) => match.replace(/^\s*\d+\.\s+/, '')) // 移除編號
+                      .replace(/\n\s*\n\s*\n/g, '\n\n') // 移除多餘空行
+                      .replace(/\n\s*\*\*/g, '\n') // 移除粗體前的換行
+                      .replace(/\*\*\s*\n/g, '\n') // 移除粗體後的換行
+                      .split('\n')
+                      .map((line, index) => {
+                        if (line.match(/^(Proposal:|Need:|Solution:|Differentiation:|Benefit:|Experimental overview:)/)) {
+                          return (
+                            <div key={index} style={{
+                              fontSize: '24px',
+                              fontWeight: 'bold',
+                              color: '#1890ff',
+                              marginTop: '16px',
+                              marginBottom: '8px'
+                            }}>
+                              {line}
+                            </div>
+                          );
+                        }
+                        return <div key={index}>{line}</div>;
+                      })
+                    }
+                  </div>
                 ),
               },
             ]}
           />
 
-          {experimentDetail && (
+                    {experimentDetail && (
             <Collapse
               defaultActiveKey={['experiment']}
               style={{ marginBottom: 16 }}
               items={[
                 {
                   key: 'experiment',
-                  label: <span style={{ fontWeight: 600, fontSize: 18 }}>🔬 Suggested experiment details</span>,
+                   label: <span style={{ fontWeight: 700, fontSize: 27 }}>🔬 Suggested experiment details</span>,
                   children: (
-                                         <div style={{ 
-                       fontSize: '16px', 
-                       lineHeight: '1.6',
-                       wordBreak: 'break-word',
-                       overflowWrap: 'break-word',
-                       whiteSpace: 'pre-wrap',
-                       maxWidth: '100%',
-                       width: '100%',
-                       overflowX: 'auto'
-                     }}>
-                       {experimentDetail
-                         .replace(/\*\*(.*?)\*\*/g, '$1') // 移除粗體標記
-                         .replace(/\*(.*?)\*/g, '$1') // 移除斜體標記
-                         .replace(/`(.*?)`/g, '$1') // 移除代碼標記
-                         .replace(/^#+\s*(.*)$/gm, '$1') // 移除標題標記
-                         .replace(/^\s*[-*+]\s+/gm, '- ') // 統一項目符號
-                         .replace(/^\s*\d+\.\s+/gm, (match) => match.replace(/^\s*\d+\.\s+/, '')) // 移除編號
-                         .replace(/\n\s*\n\s*\n/g, '\n\n') // 移除多餘空行
-                         .replace(/\n\s*\*\*/g, '\n') // 移除粗體前的換行
-                         .replace(/\*\*\s*\n/g, '\n') // 移除粗體後的換行
-                       }
-                     </div>
+                    <div style={{ 
+                      whiteSpace: 'pre-wrap', 
+                      fontSize: '16px', 
+                      lineHeight: '1.6',
+                      wordBreak: 'break-word',
+                      overflowWrap: 'break-word',
+                      maxWidth: '100%',
+                      width: '100%',
+                      fontWeight: 'normal'
+                    }}>
+                      {experimentDetail
+                        .replace(/\*\*(.*?)\*\*/g, '$1') // 移除粗體標記
+                        .replace(/\*(.*?)\*/g, '$1') // 移除斜體標記
+                        .replace(/`(.*?)`/g, '$1') // 移除代碼標記
+                        .replace(/^#{3,}\s*(.*)$/gm, '$1') // 只移除 ### 及以上的標題標記，保留 ##
+                        .replace(/^\s*[-*+]\s+/gm, '- ') // 統一項目符號
+                        .replace(/^\s*\d+\.\s+/gm, (match) => match.replace(/^\s*\d+\.\s+/, '')) // 移除編號
+                        .replace(/\n\s*\n\s*\n/g, '\n\n') // 移除多餘空行
+                        .replace(/\n\s*\*\*/g, '\n') // 移除粗體前的換行
+                        .replace(/\*\*\s*\n/g, '\n') // 移除粗體後的換行
+                        .split('\n')
+                        .map((line, index) => {
+                          // 檢查是否為實驗細節的主要標題行（與提案區域相同的樣式）
+                          if (line.match(/^(##\s*)?(合成過程|材料和條件|分析方法|注意事項|Synthesis Process|Materials and Conditions|Analytical Methods|Precautions|實驗細節|Experimental Details)/)) {
+                            return (
+                              <div key={index} style={{
+                                fontSize: '24px',
+                                fontWeight: 'bold',
+                                color: '#1890ff',
+                                marginTop: '16px',
+                                marginBottom: '8px'
+                              }}>
+                                {line.replace(/^##\s*/, '')}
+                              </div>
+                            );
+                          }
+                          // 檢查是否為子標題行（保持原有的樣式）
+                          if (line.match(/^(\d+\)\s*)?(前處理與配方計算|微波輔助骨架合成|活化|微波促進的後合成接枝|Pre-treatment and Formulation Calculation|Microwave-assisted Framework Synthesis|Activation|Microwave-promoted Post-synthesis Grafting|材料\(IUPAC 名稱以便辨識\)|Materials \(IUPAC names for identification\))/)) {
+                            return (
+                              <div key={index} style={{
+                                fontSize: '20px',
+                                fontWeight: 'bold',
+                                color: '#262626',
+                                marginTop: '12px',
+                                marginBottom: '6px'
+                              }}>
+                                {line}
+                              </div>
+                            );
+                          }
+                          return <div key={index} style={{ fontWeight: 'normal' }}>{line}</div>;
+                        })
+                      }
+                    </div>
                   ),
                 },
               ]}
@@ -353,7 +480,7 @@ const Proposal = () => {
             items={[
               {
                 key: 'chemicals',
-                label: <span style={{ fontWeight: 600, fontSize: 18 }}>🧪 Chemical Summary</span>,
+                label: <span style={{ fontWeight: 700, fontSize: 27 }}>🧪 Chemical Summary</span>,
                 children: (
                   <>
                     <List
@@ -377,13 +504,13 @@ const Proposal = () => {
                               <div style={{ flex: '1', display: 'flex', gap: '24px' }}>
                                 {/* Properties */}
                                 <div style={{ flex: '1' }}>
-                                  <Text strong style={{ fontSize: '16px', marginBottom: '8px', display: 'block' }}>
+                                  <Text strong style={{ fontSize: '24px', marginBottom: '8px', display: 'block' }}>
                                     {c.pubchem_url ? (
-                                      <a href={c.pubchem_url} target="_blank" rel="noopener noreferrer">
+                                      <a href={c.pubchem_url} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff', fontSize: '24px', fontWeight: 'bold' }}>
                                         {c.name}
                                       </a>
                                     ) : (
-                                      c.name
+                                      <span style={{ color: '#1890ff', fontSize: '24px', fontWeight: 'bold' }}>{c.name}</span>
                                     )}
                                   </Text>
                                   <div style={{ 
@@ -517,7 +644,7 @@ const Proposal = () => {
               items={[
                 {
                   key: 'citations',
-                  label: <span style={{ fontWeight: 600, fontSize: 18 }}>📚 Citations</span>,
+                  label: <span style={{ fontWeight: 700, fontSize: 27 }}>📚 Citations</span>,
                   children: (
                     <List
                       dataSource={citations}
@@ -531,7 +658,14 @@ const Proposal = () => {
                             maxWidth: '100%',
                             width: '100%'
                           }}>
-                            [{i + 1}] {c.title || ''} | Page {c.page || ''} | Snippet: {c.snippet || ''}
+                            [{i + 1}] <a 
+                              href={`${API_BASE}/documents/${encodeURIComponent(c.source)}`} 
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: '#1890ff', textDecoration: 'underline' }}
+                            >
+                              {c.title || c.source || 'Unknown Title'}
+                            </a> | Page {c.page || ''} | Snippet: {c.snippet || ''}
                           </Text>
                         </List.Item>
                       )}

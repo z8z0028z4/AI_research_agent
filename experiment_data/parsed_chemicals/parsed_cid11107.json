@@ -6,10 +6,6 @@
   "smiles": "C1=CN=CC=C1C2=CC=NC=C2",
   "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=11107&t=l",
   "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/11107",
-  "boiling_point": "",
-  "melting_point": "",
-  "boiling_point_c": "",
-  "melting_point_c": "",
   "safety_icons": {
     "ghs_icons": [
       "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS05.svg",

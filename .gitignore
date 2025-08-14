@@ -27,13 +27,17 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Virtual environments
+# Virtual environments (exclude from version control)
 venv/
 env/
 ENV/
 env.bak/
 venv.bak/
-venv_company/**
+venv_company/
+.venv/
+.venv_*/
+venv_*/
+env_*/
 
 # IDE and editor files
 .vscode/
@@ -177,4 +181,7 @@ docker-compose.yml
 
 # Local configuration
 config.local.py
-settings.local.py 
+settings.local.py
+
+# Virtual environment configuration
+.venv_config 
