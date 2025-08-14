@@ -61,3 +61,13 @@ lxml>=4.9.0
 
 # Additional dependencies for sentence-transformers
 scipy>=1.11.0
+
+# Additional dependencies for better compatibility
+setuptools>=68.0.0
+wheel>=0.41.0
+pip>=23.0.0
+
+# Optional dependencies for enhanced functionality
+aiofiles>=23.0.0
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
