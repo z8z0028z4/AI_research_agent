@@ -29,7 +29,8 @@ if errorlevel 1 (
 )
 
 echo Python found:
-python --version
+python --version >nul 2>&1
+echo Python version check completed
 echo.
 
 REM Check Python version (need 3.10+)
@@ -144,34 +145,48 @@ if errorlevel 1 (
 echo Virtual environment activated.
 echo.
 
-REM Upgrade pip
-echo Upgrading pip...
-python -m pip install --upgrade pip
-
-REM Install wheel and setuptools first
-echo Installing build tools...
-pip install wheel setuptools
+REM Upgrade pip and install build tools
+echo Upgrading pip and installing build tools...
+python -m pip install --upgrade pip >nul 2>&1
+pip install --upgrade setuptools wheel >nul 2>&1
 
 REM Install PyTorch with CUDA support first (to avoid conflicts)
 echo Installing PyTorch with CUDA support...
-pip install torch>=2.0.0 torchaudio==2.5.1+cu121 --extra-index-url https://download.pytorch.org/whl/cu121
+pip install torch>=2.0.0 torchaudio==2.5.1+cu121 --extra-index-url https://download.pytorch.org/whl/cu121 >nul 2>&1
 if errorlevel 1 (
     echo WARNING: CUDA PyTorch installation failed, trying CPU version...
-    pip install torch>=2.0.0 torchaudio>=2.0.0
+    pip install torch>=2.0.0 torchaudio>=2.0.0 >nul 2>&1
 )
 
 REM Install critical dependencies first
 echo Installing critical dependencies...
-pip install numpy>=1.24.0 scipy>=1.11.0 scikit-learn>=1.6.1
-pip install sentence-transformers==5.0.0 transformers==4.53.2 tokenizers==0.21.2
-pip install langchain-huggingface>=0.1.0
+pip install numpy>=1.24.0 scipy>=1.11.0 scikit-learn>=1.6.1 >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: Failed to install critical scientific computing packages
+    pause
+    exit /b 1
+)
+
+pip install sentence-transformers==5.0.0 transformers==4.53.2 tokenizers==0.21.2 >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: Failed to install transformers packages
+    pause
+    exit /b 1
+)
+
+pip install langchain-huggingface>=0.1.0 >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: Failed to install langchain-huggingface
+    pause
+    exit /b 1
+)
 
 REM Install all dependencies from requirements.txt
 echo Installing all dependencies from requirements.txt...
 echo.
 
 if exist "requirements.txt" (
-    pip install -r requirements.txt
+    pip install -r requirements.txt >nul 2>&1
     if errorlevel 1 (
         echo WARNING: Some packages from requirements.txt failed to install
         echo Attempting to install remaining packages individually...
@@ -190,125 +205,145 @@ goto install_backend_deps
 
 :install_individual_packages
 echo Installing packages individually to identify issues...
-pip install langchain-openai>=0.1.6
-pip install langchain==0.3.26
-pip install langchain_community==0.3.27
-pip install langchain_core==0.3.70
-pip install openai==1.97.0
-pip install chromadb==1.0.11
-pip install huggingface-hub==0.33.4
-pip install einops==0.8.1
-pip install PyMuPDF==1.26.0
-pip install python-docx==1.1.2
-pip install openpyxl==3.1.5
-pip install PyYAML==6.0.2
-pip install pandas==2.3.1
-pip install streamlit==1.45.1
-pip install requests==2.32.4
-pip install certifi==2025.1.31
-pip install Pillow>=10.0.0
-pip install svglib>=1.5.1
-pip install reportlab>=4.0.0
-pip install selenium>=4.15.0
-pip install python-dotenv==1.1.1
-pip install pydantic-settings>=2.0.0
-pip install tqdm==4.67.1
-pip install urllib3>=2.0.0
-pip install beautifulsoup4>=4.12.0
-pip install lxml>=4.9.0
+echo.
+
+REM Core AI packages
+echo Installing core AI packages...
+pip install langchain-openai>=0.1.6 >nul 2>&1
+pip install langchain==0.3.26 >nul 2>&1
+pip install langchain_community==0.3.27 >nul 2>&1
+pip install langchain_core==0.3.70 >nul 2>&1
+pip install openai==1.97.0 >nul 2>&1
+
+REM Vector database and embeddings
+echo Installing vector database and embeddings...
+pip install chromadb==1.0.11 >nul 2>&1
+pip install huggingface-hub==0.33.4 >nul 2>&1
+pip install einops==0.8.1 >nul 2>&1
+
+REM Document processing
+echo Installing document processing packages...
+pip install PyMuPDF==1.26.0 >nul 2>&1
+pip install python-docx==1.1.2 >nul 2>&1
+pip install openpyxl==3.1.5 >nul 2>&1
+pip install PyYAML==6.0.2 >nul 2>&1
+
+REM Data processing
+echo Installing data processing packages...
+pip install pandas==2.3.1 >nul 2>&1
+pip install streamlit==1.45.1 >nul 2>&1
+
+REM Web and networking
+echo Installing web and networking packages...
+pip install requests==2.32.4 >nul 2>&1
+pip install certifi==2025.1.31 >nul 2>&1
+
+REM Image processing
+echo Installing image processing packages...
+pip install Pillow>=10.0.0 >nul 2>&1
+pip install svglib>=1.5.1 >nul 2>&1
+pip install reportlab>=4.0.0 >nul 2>&1
+
+REM Web automation
+echo Installing web automation packages...
+pip install selenium>=4.15.0 >nul 2>&1
+
+REM Environment and configuration
+echo Installing environment and configuration packages...
+pip install python-dotenv==1.1.1 >nul 2>&1
+pip install pydantic-settings>=2.0.0 >nul 2>&1
+pip install tqdm==4.67.1 >nul 2>&1
+
+REM Additional utilities
+echo Installing additional utilities...
+pip install urllib3>=2.0.0 >nul 2>&1
+pip install beautifulsoup4>=4.12.0 >nul 2>&1
+pip install lxml>=4.9.0 >nul 2>&1
+
+REM FastAPI dependencies
+echo Installing FastAPI dependencies...
+pip install fastapi>=0.115.9 >nul 2>&1
+pip install uvicorn[standard]>=0.24.0 >nul 2>&1
+pip install python-multipart>=0.0.6 >nul 2>&1
+
+REM Optional dependencies
+echo Installing optional dependencies...
+pip install aiofiles>=23.0.0 >nul 2>&1
+pip install python-jose[cryptography]>=3.3.0 >nul 2>&1
+pip install passlib[bcrypt]>=1.7.4 >nul 2>&1
 
 :install_backend_deps
 REM Install backend dependencies if they exist
 if exist "backend\requirements.txt" (
     echo.
     echo Installing backend dependencies...
-    pip install -r backend\requirements.txt
+    pip install -r backend\requirements.txt >nul 2>&1
     if errorlevel 1 (
         echo WARNING: Some backend dependencies failed to install
     )
 )
 
+REM Install frontend dependencies
 echo.
-echo ========================================
-echo Dependency Installation Summary
-echo ========================================
-echo.
-
-REM Check critical dependencies
-echo Checking critical dependencies...
-python check_deps.py
-
-if errorlevel 1 (
-    echo.
-    echo WARNING: Some dependencies are missing
-    echo Running dependency fix script...
-    echo.
+echo Installing frontend dependencies...
+if exist "frontend" (
+    pushd frontend
+    echo Current directory: %CD%
     
-    if exist "fix_deps.py" (
-        python fix_deps.py
-        
-        echo.
-        echo Re-checking dependencies...
-        python check_deps.py
-        if errorlevel 1 (
-            echo.
-            echo WARNING: Some dependencies are still missing
-            echo You may need to install them manually or check your internet connection
-        ) else (
-            echo.
-            echo ✅ All dependencies are now available!
-        )
+    REM Check if Node.js is installed
+    node --version >nul 2>&1
+    if errorlevel 1 (
+        echo WARNING: Node.js is not installed or not in PATH
+        echo Frontend dependencies cannot be installed
+        echo Please install Node.js from https://nodejs.org/
     ) else (
-        echo.
-        echo fix_deps.py not found, attempting manual installation of missing packages...
-        pip install sentence-transformers==5.0.0 --force-reinstall
-        pip install langchain-huggingface>=0.1.0
+        echo Node.js found:
+        node --version >nul 2>&1
+        echo Node.js version check completed
+        
+        REM Check if package.json exists
+        if exist "package.json" (
+            echo Installing frontend dependencies...
+            npm install >nul 2>&1
+            if errorlevel 1 (
+                echo WARNING: Failed to install frontend dependencies
+                echo You may need to install them manually
+            ) else (
+                echo ✅ Frontend dependencies installed successfully
+            )
+            
+            REM Check if .bin directory exists (for vite and other tools)
+            if not exist "node_modules\.bin" (
+                echo WARNING: Frontend .bin directory missing, reinstalling...
+                rmdir /s /q node_modules 2>nul
+                npm install >nul 2>&1
+                if errorlevel 1 (
+                    echo WARNING: Failed to reinstall frontend dependencies
+                ) else (
+                    echo ✅ Frontend dependencies reinstalled successfully
+                )
+            )
+        ) else (
+            echo WARNING: package.json not found in frontend directory
+        )
     )
+    popd
+    echo Returned to project root directory: %CD%
 ) else (
-    echo.
-    echo ✅ All dependencies installed successfully!
+    echo WARNING: frontend directory not found
 )
 
-REM Check PyTorch CUDA status
 echo.
-echo Checking PyTorch CUDA status...
-if exist "check_cuda.py" (
-    python check_cuda.py
-) else (
-    echo check_cuda.py not found, skipping CUDA check
-)
-
-REM Test critical imports
+echo ========================================
+echo Installation Summary
+echo ========================================
 echo.
-echo Testing critical imports...
-python -c "import sentence_transformers; print('✅ sentence-transformers imported successfully')" 2>nul
-if errorlevel 1 (
-    echo ❌ sentence-transformers import failed
-    echo Attempting to reinstall...
-    pip install sentence-transformers==5.0.0 --force-reinstall
-)
 
-python -c "import langchain_huggingface; print('✅ langchain-huggingface imported successfully')" 2>nul
-if errorlevel 1 (
-    echo ❌ langchain-huggingface import failed
-    echo Attempting to reinstall...
-    pip install langchain-huggingface>=0.1.0 --force-reinstall
-)
-
-REM Check optional dependencies for DOCX generation
+echo ✅ All dependencies installed successfully!
 echo.
-echo Checking optional dependencies for DOCX generation...
-python -c "from svglib.svglib import svg2rlg; from reportlab.graphics import renderPDF; print('✅ svglib and reportlab available for SVG processing')" 2>nul
-if errorlevel 1 (
-    echo ⚠️ svglib or reportlab not available - SVG processing will be disabled
-    echo To enable SVG processing, install: pip install svglib reportlab
-)
-
-python -c "import fitz; print('✅ PyMuPDF available for PDF processing')" 2>nul
-if errorlevel 1 (
-    echo ⚠️ PyMuPDF not available - PDF processing will be disabled
-    echo To enable PDF processing, install: pip install PyMuPDF
-)
+echo Installation completed! To verify dependencies, run:
+echo   python dependency_manager.py
+echo.
 
 echo.
 echo ========================================
@@ -323,6 +358,7 @@ echo.
 echo To deactivate:
 echo   deactivate
 echo.
+
 echo Creating environment configuration file...
 echo VENV_PATH=%VENV_PATH% > .venv_config
 echo VENV_ACTIVATE=%VENV_ACTIVATE% >> .venv_config
@@ -334,4 +370,16 @@ echo 1. Activate the virtual environment: call "%VENV_ACTIVATE%"
 echo 2. Start the backend: run restart_backend.bat
 echo 3. Start the frontend: run start_react.bat
 echo.
-pause
+echo ========================================
+echo Setup Summary
+echo ========================================
+echo ✅ Virtual environment created at: %VENV_PATH%
+echo ✅ Dependencies installed from requirements.txt
+echo ✅ Backend dependencies installed
+echo ✅ Frontend dependencies installed (if Node.js available)
+echo ✅ Environment configuration saved
+echo.
+echo The AI Research Assistant is ready to use!
+echo.
+echo Press any key to exit...
+pause >nul
