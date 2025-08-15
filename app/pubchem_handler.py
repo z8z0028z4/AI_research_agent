@@ -393,6 +393,6 @@ def chemical_metadata_extractor(proposal_text: str):
         else:
             print("❌ 沒有找到 JSON 格式的化學品列表")
     
-    metadata_list, not_found_list = extract_and_fetch_chemicals(name_list)
+    summaries, not_found = extract_and_fetch_chemicals(name_list)
     cleaned_proposal_text = remove_json_chemical_block(proposal_text)
-    return metadata_list, not_found_list, cleaned_proposal_text
+    return summaries, not_found, cleaned_proposal_text

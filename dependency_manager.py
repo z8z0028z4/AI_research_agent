@@ -226,6 +226,21 @@ def check_python_dependencies() -> Tuple[bool, List[str]]:
         if success:
             version = get_package_version(package_name)
             print(f"{message} (v{version})")
+            
+            # 特殊檢查 ChromaDB 版本
+            if package_name == "chromadb":
+                if version == "1.0.11":
+                    print(f"  ✅ ChromaDB 版本 {version} 符合要求 (固定版本)")
+                elif version.startswith("1."):
+                    print(f"  ⚠️ ChromaDB 版本 {version} 不是固定版本")
+                    print(f"  💡 建議安裝固定版本: pip install chromadb==1.0.11")
+                elif version.startswith("0.4."):
+                    print(f"  ⚠️ ChromaDB 版本 {version} 是舊版本")
+                    print(f"  💡 建議升級: pip install chromadb==1.0.11")
+                else:
+                    print(f"  ⚠️ ChromaDB 版本 {version} 未知")
+                    print(f"  💡 建議安裝固定版本: pip install chromadb==1.0.11")
+            
             installed_deps.append(package_name)
         else:
             print(message)

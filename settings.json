@@ -1,9 +1,9 @@
 {
   "llm_model": "gpt-5-nano",
-  "llm_max_tokens": 5000,
+  "llm_max_tokens": 7000,
   "llm_timeout": 75,
   "llm_reasoning_effort": "medium",
-  "llm_verbosity": "medium",
+  "llm_verbosity": "low",
   "llm_min_length": 10,
   "llm_max_length": 150
 }

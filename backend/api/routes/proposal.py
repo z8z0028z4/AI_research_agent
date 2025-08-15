@@ -112,10 +112,21 @@ async def generate_proposal(request: ProposalRequest):
     Returns:
         生成的提案內容，包括化學品信息和實驗細節
     """
+    import time
+    import uuid
+    
+    # 生成唯一的請求 ID
+    request_id = str(uuid.uuid4())[:8]
+    start_time = time.time()
+    
+    print(f"🚀 [DEBUG-{request_id}] ========== 開始處理提案生成請求 ==========")
+    print(f"🚀 [DEBUG-{request_id}] 時間戳: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"🚀 [DEBUG-{request_id}] 收到請求 research_goal = '{request.research_goal}'")
+    print(f"🚀 [DEBUG-{request_id}] retrieval_count = {request.retrieval_count}")
+    print(f"🚀 [DEBUG-{request_id}] 請求來源: {request}")
+    
     try:
-        print(f"🔍 BACKEND DEBUG: 收到請求 research_goal = '{request.research_goal}'")
-        print(f"🔍 BACKEND DEBUG: 準備調用 agent_answer with mode='make proposal'")
-        print(f"🔍 BACKEND DEBUG: retrieval_count = {request.retrieval_count}")
+        print(f"🔍 [DEBUG-{request_id}] 準備調用 agent_answer with mode='make proposal'")
         
         # 延遲導入以避免循環導入問題
         from knowledge_agent import agent_answer
@@ -123,20 +134,20 @@ async def generate_proposal(request: ProposalRequest):
         # 與 Streamlit Tab1 對齊：使用模式 make proposal 生成提案
         result = agent_answer(request.research_goal, mode="make proposal", k=request.retrieval_count)
         
-        print(f"🔍 BACKEND DEBUG: agent_answer 調用成功")
-        print(f"🔍 BACKEND DEBUG: result 類型: {type(result)}")
-        print(f"🔍 BACKEND DEBUG: result 鍵: {list(result.keys())}")
-        print(f"🔍 BACKEND DEBUG: result['answer'] 長度: {len(result.get('answer', ''))}")
-        print(f"🔍 BACKEND DEBUG: result['answer'] 內容: {result.get('answer', '')[:200]}...")
+        print(f"🔍 [DEBUG-{request_id}] agent_answer 調用成功")
+        print(f"🔍 [DEBUG-{request_id}] result 類型: {type(result)}")
+        print(f"🔍 [DEBUG-{request_id}] result 鍵: {list(result.keys())}")
+        print(f"🔍 [DEBUG-{request_id}] result['answer'] 長度: {len(result.get('answer', ''))}")
+        print(f"🔍 [DEBUG-{request_id}] result['answer'] 內容: {result.get('answer', '')[:200]}...")
 
         # 從回答中抽取化學品資訊與提案正文
-        print(f"🔍 BACKEND DEBUG: 準備調用 chemical_metadata_extractor")
+        print(f"🔍 [DEBUG-{request_id}] 準備調用 chemical_metadata_extractor")
         chemical_metadata_list, not_found_list, proposal_answer = chemical_metadata_extractor(
             result.get("answer", "")
         )
-        print(f"🔍 BACKEND DEBUG: chemical_metadata_extractor 完成")
-        print(f"🔍 BACKEND DEBUG: proposal_answer 長度: {len(proposal_answer)}")
-        print(f"🔍 BACKEND DEBUG: chemical_metadata_list 數量: {len(chemical_metadata_list)}")
+        print(f"🔍 [DEBUG-{request_id}] chemical_metadata_extractor 完成")
+        print(f"🔍 [DEBUG-{request_id}] proposal_answer 長度: {len(proposal_answer)}")
+        print(f"🔍 [DEBUG-{request_id}] chemical_metadata_list 數量: {len(chemical_metadata_list)}")
 
         citations = result.get("citations", [])
         chunks = result.get("chunks", [])
@@ -151,6 +162,15 @@ async def generate_proposal(request: ProposalRequest):
                 fixed_citation["page"] = str(fixed_citation["page"])
             fixed_citations.append(fixed_citation)
 
+        end_time = time.time()
+        duration = end_time - start_time
+        
+        print(f"✅ [DEBUG-{request_id}] ========== 提案生成完成 ==========")
+        print(f"✅ [DEBUG-{request_id}] 總耗時: {duration:.2f} 秒")
+        print(f"✅ [DEBUG-{request_id}] 檢索到的文檔數量: {len(chunks)}")
+        print(f"✅ [DEBUG-{request_id}] 引用數量: {len(fixed_citations)}")
+        print(f"✅ [DEBUG-{request_id}] 化學品數量: {len(chemical_metadata_list)}")
+
         return ProposalResponse(
             proposal=proposal_answer,
             chemicals=chemical_metadata_list,
@@ -161,7 +181,13 @@ async def generate_proposal(request: ProposalRequest):
         )
         
     except Exception as e:
-        print(f"❌ BACKEND DEBUG: 提案生成失敗: {str(e)}")
+        end_time = time.time()
+        duration = end_time - start_time
+        print(f"❌ [DEBUG-{request_id}] ========== 提案生成失敗 ==========")
+        print(f"❌ [DEBUG-{request_id}] 總耗時: {duration:.2f} 秒")
+        print(f"❌ [DEBUG-{request_id}] 錯誤: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"提案生成失敗: {str(e)}")
 
 @router.post("/proposal/revise", response_model=ProposalResponse)
@@ -187,9 +213,20 @@ async def revise_proposal(request: ProposalRevisionRequest):
             proposal=request.original_proposal,
         )
 
-        chemical_metadata_list, not_found_list, proposal_answer = chemical_metadata_extractor(
-            result.get("answer", "")
-        )
+        # 檢查是否有直接的材料列表（來自結構化輸出）
+        if result.get("materials_list"):
+            print(f"🔍 [DEBUG] 使用結構化數據中的材料列表: {result['materials_list']}")
+            # 直接使用結構化數據中的材料列表
+            from pubchem_handler import extract_and_fetch_chemicals, remove_json_chemical_block
+            chemical_metadata_list, not_found_list = extract_and_fetch_chemicals(result["materials_list"])
+            # 清理文本中的 JSON 化學品塊
+            proposal_answer = remove_json_chemical_block(result.get("answer", ""))
+        else:
+            # 回退到從文本中提取
+            print(f"🔍 [DEBUG] 回退到從文本中提取材料列表")
+            chemical_metadata_list, not_found_list, proposal_answer = chemical_metadata_extractor(
+                result.get("answer", "")
+            )
 
         # 修復 citations 中的 page 欄位類型問題
         fixed_citations = []
@@ -206,8 +243,7 @@ async def revise_proposal(request: ProposalRevisionRequest):
             citations=fixed_citations,
             not_found=not_found_list,
             chunks=_serialize_chunks(result.get("chunks", [])),
-            structured_proposal=result.get("structured_proposal"),
-            structured_revision_explain=result.get("structured_revision_explain")
+            structured_proposal=result.get("structured_proposal")
         )
         
     except Exception as e:

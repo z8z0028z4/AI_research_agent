@@ -15,6 +15,7 @@ import tempfile
 import shutil
 import time
 import logging
+import re
 from pathlib import Path
 from datetime import datetime
 
@@ -161,8 +162,8 @@ async def process_files_background(task_id: str, file_paths: List[str], temp_dir
     try:
         # 更新狀態為處理中
         processing_tasks[task_id]["status"] = "processing"
-        processing_tasks[task_id]["progress"] = 5
-        processing_tasks[task_id]["message"] = "分析文件類型..."
+        processing_tasks[task_id]["progress"] = 0
+        processing_tasks[task_id]["message"] = "開始處理..."
         
         # 分析文件類型（依副檔名分類）
         logger.info("🔍 開始分析文件類型...")
@@ -203,39 +204,71 @@ async def process_files_background(task_id: str, file_paths: List[str], temp_dir
         processing_tasks[task_id]["progress"] = 10
         processing_tasks[task_id]["message"] = "開始處理論文資料..."
         
+        # 定義進度回調函數
+        def update_progress(message: str, progress_percent: int = None):
+            if progress_percent is not None:
+                processing_tasks[task_id]["progress"] = progress_percent
+            processing_tasks[task_id]["message"] = message
+            logger.info(f"📈 進度更新: {processing_tasks[task_id]['progress']}% - {message}")
+        
         # 處理論文資料（提取 metadata 並嵌入向量）
         paper_results: List[Dict[str, Any]] = []
+        
+        # 初始化進度變量
+        current_progress = 10
+        
         if has_papers:
             logger.info("📚 開始處理論文資料...")
-            paper_start_time = time.time()
             
-            # 定義進度回調函數
-            def update_progress(message: str, progress_percent: int = None):
-                if progress_percent is not None:
-                    processing_tasks[task_id]["progress"] = progress_percent
-                processing_tasks[task_id]["message"] = message
-                logger.info(f"📈 進度更新: {processing_tasks[task_id]['progress']}% - {message}")
+            # 計算論文處理的進度分配（總共100%，分為4個關鍵節點）
+            # 節點1: 文件上傳開始 (10%)
+            # 節點2: 元數據提取開始 (25%)
+            # 節點3: 向量嵌入開始 (50%)
+            # 節點4: 處理完成 (100%)
             
-            # 計算論文處理的進度分配（總共95%）
-            # 步驟1-6: 5%, 5%, 10%, 10%, 65%, 5%
-            step1_progress = 5   # 文件分析
-            step2_progress = 5   # 元數據提取
-            step3_progress = 10  # 去重檢查
-            step4_progress = 10  # 文件處理
-            step5_progress = 65  # 向量嵌入
-            step6_progress = 5   # 完成處理
-            
-            # 步驟1: 文件分析已完成 (5%)
+            # 節點1: 文件上傳已完成 (10%)
             current_progress = 10
             
-            # 步驟2: 元數據提取
+            # 節點2: 元數據提取開始 (25%)
             logger.info("📄 開始元數據提取...")
             metadata_start_time = time.time()
-            update_progress("📄 提取文件元數據...", current_progress)
-            
+            current_progress = 25  # 進入元數據提取階段，設置為25%
+            update_progress("📄 開始元數據提取...", current_progress)
+        
+        # 創建一個進度追蹤變量
+        extraction_progress = current_progress
+        
+        # 初始化時間變量
+        metadata_start_time = time.time()
+        metadata_end_time = time.time()
+        
+        def extraction_progress_callback(msg: str):
+                nonlocal extraction_progress
+                # 根據消息內容更新進度
+                if "提取第" in msg and "個文件元數據" in msg:
+                    try:
+                        # 匹配 "提取第 X/Y 個文件元數據：{filename}" 格式
+                        match = re.search(r'提取第 (\d+)/(\d+) 個文件元數據', msg)
+                        if match:
+                            current_file = int(match.group(1))
+                            total_files = int(match.group(2))
+                            # 計算進度：25% 到 50% 之間
+                            progress = 25 + int((current_file / total_files) * 25)
+                            extraction_progress = progress
+                            update_progress(msg, progress)
+                            logger.info(f"📈 元數據提取進度: {current_file}/{total_files} ({progress}%)")
+                        else:
+                            update_progress(msg, extraction_progress)
+                    except Exception as e:
+                        logger.warning(f"⚠️ 進度解析失敗: {e}")
+                        update_progress(msg, extraction_progress)
+                else:
+                    update_progress(msg, extraction_progress)
+        
+        if has_papers:
             metadata_list: List[Dict[str, Any]] = process_uploaded_files(
                 file_info["papers"], 
-                status_callback=lambda msg: update_progress(msg, current_progress)  # 保持當前進度
+                status_callback=extraction_progress_callback
             )
             
             metadata_end_time = time.time()
@@ -247,79 +280,76 @@ async def process_files_background(task_id: str, file_paths: List[str], temp_dir
                 logger.info(f"   📄 {i+1}. {metadata.get('title', '未知標題')} - DOI: {metadata.get('doi', '無')}")
             
             paper_results.extend(metadata_list)
-            current_progress += step2_progress
             update_progress("✅ 元數據提取完成", current_progress)
-            
-            # 步驟3: 去重檢查 (已完成，進度已包含在process_uploaded_files中)
-            current_progress += step3_progress
-            update_progress("✅ 去重檢查完成", current_progress)
-            
-            # 步驟4: 文件處理 (已完成，進度已包含在process_uploaded_files中)
-            current_progress += step4_progress
-            update_progress("✅ 文件處理完成", current_progress)
-            
-            # 步驟5: 向量嵌入 (65%)
-            logger.info("🔢 開始向量嵌入...")
-            embedding_start_time = time.time()
-            update_progress("📚 開始向量嵌入...", current_progress)
-            
-            # 計算每個文件的嵌入進度
-            def embedding_progress_callback(msg: str):
-                nonlocal current_progress  # 聲明使用外部變量
-                # 從消息中提取當前處理的文件索引
-                if "處理第" in msg and "個文件" in msg:
-                    try:
-                        # 提取 "處理第 X/Y 個文件" 中的 X
-                        import re
-                        match = re.search(r'處理第 (\d+)/(\d+) 個文件', msg)
-                        if match:
-                            current_file = int(match.group(1))
-                            total_files = int(match.group(2))
-                            # 計算進度：current_progress + (當前文件/總文件數) * step5_progress
-                            progress = current_progress + int((current_file / total_files) * step5_progress)
-                            update_progress(msg, progress)
-                            logger.info(f"🔢 向量嵌入進度: {current_file}/{total_files} ({progress}%)")
-                        else:
-                            update_progress(msg, current_progress)  # 使用當前進度
-                    except:
+        else:
+            metadata_list = []
+        
+        # 節點3: 向量嵌入開始 (50%)
+        current_progress = 50  # 進入向量嵌入階段，設置為50%
+        update_progress("✅ 開始向量嵌入", current_progress)
+        
+        # 初始化時間變量
+        embedding_start_time = time.time()
+        paper_start_time = time.time()
+        
+        logger.info("🔢 開始向量嵌入...")
+        update_progress("📚 開始向量嵌入...", current_progress)
+        
+        # 計算每個文件的嵌入進度
+        def embedding_progress_callback(msg: str):
+            nonlocal current_progress  # 聲明使用外部變量
+            # 從消息中提取當前處理的文件索引
+            if "處理第" in msg and "個文件" in msg:
+                try:
+                    # 提取 "處理第 X/Y 個文件" 中的 X
+                    match = re.search(r'處理第 (\d+)/(\d+) 個文件', msg)
+                    if match:
+                        current_file = int(match.group(1))
+                        total_files = int(match.group(2))
+                        # 計算進度：50% 到 90% 之間
+                        progress = 50 + int((current_file / total_files) * 40)
+                        update_progress(msg, progress)
+                        logger.info(f"🔢 向量嵌入進度: {current_file}/{total_files} ({progress}%)")
+                    else:
                         update_progress(msg, current_progress)  # 使用當前進度
-                elif "向量嵌入批次" in msg:
-                    try:
-                        # 提取 "向量嵌入批次 X/Y" 中的進度信息
-                        import re
-                        match = re.search(r'向量嵌入批次 (\d+)/(\d+)', msg)
-                        if match:
-                            current_batch = int(match.group(1))
-                            total_batches = int(match.group(2))
-                            # 向量嵌入階段：current_progress 到 current_progress + step5_progress
-                            progress = current_progress + int((current_batch / total_batches) * step5_progress)
-                            update_progress(msg, progress)
-                            logger.info(f"🔢 向量嵌入批次: {current_batch}/{total_batches} ({progress}%)")
-                        else:
-                            update_progress(msg, current_progress)  # 使用當前進度
-                    except:
-                        update_progress(msg, current_progress)  # 使用當前進度
-                elif "開始向量嵌入" in msg:
-                    # 向量嵌入開始，設置進度為當前進度
-                    update_progress(msg, current_progress)
-                    logger.info("🔢 向量嵌入開始")
-                elif "向量嵌入完成" in msg:
-                    # 向量嵌入完成，設置進度為 current_progress + step5_progress
-                    update_progress(msg, current_progress + step5_progress)
-                    embedding_end_time = time.time()
-                    logger.info(f"✅ 向量嵌入完成，耗時: {embedding_end_time - embedding_start_time:.2f}秒")
-                else:
+                except:
                     update_progress(msg, current_progress)  # 使用當前進度
-                    logger.info(f"📝 嵌入進度: {msg}")
-            
-            logger.info(f"🔢 開始對 {len(metadata_list)} 個文件進行向量嵌入...")
-            embed_documents_from_metadata(
-                metadata_list, 
-                status_callback=embedding_progress_callback
-            )
-            
-            paper_end_time = time.time()
-            logger.info(f"✅ 論文處理完成，總耗時: {paper_end_time - paper_start_time:.2f}秒")
+            elif "向量嵌入批次" in msg:
+                try:
+                    # 提取 "向量嵌入批次 X/Y" 中的進度信息
+                    match = re.search(r'向量嵌入批次 (\d+)/(\d+)', msg)
+                    if match:
+                        current_batch = int(match.group(1))
+                        total_batches = int(match.group(2))
+                        # 向量嵌入階段：90% 到 95% 之間
+                        progress = 90 + int((current_batch / total_batches) * 5)
+                        update_progress(msg, progress)
+                        logger.info(f"🔢 向量嵌入批次: {current_batch}/{total_batches} ({progress}%)")
+                    else:
+                        update_progress(msg, current_progress)  # 使用當前進度
+                except:
+                    update_progress(msg, current_progress)  # 使用當前進度
+            elif "開始向量嵌入" in msg:
+                # 向量嵌入開始，設置進度為50%
+                update_progress(msg, 50)
+                logger.info("🔢 向量嵌入開始")
+            elif "向量嵌入完成" in msg:
+                # 向量嵌入完成，設置進度為95%
+                update_progress(msg, 95)
+                embedding_end_time = time.time()
+                logger.info(f"✅ 向量嵌入完成，耗時: {embedding_end_time - embedding_start_time:.2f}秒")
+            else:
+                update_progress(msg, current_progress)  # 使用當前進度
+                logger.info(f"📝 嵌入進度: {msg}")
+        
+        logger.info(f"🔢 開始對 {len(metadata_list)} 個文件進行向量嵌入...")
+        embed_documents_from_metadata(
+            metadata_list, 
+            status_callback=embedding_progress_callback
+        )
+        
+        paper_end_time = time.time()
+        logger.info(f"✅ 論文處理完成，總耗時: {paper_end_time - paper_start_time:.2f}秒")
         
         # 處理實驗資料（Excel -> txt -> 向量嵌入）
         experiment_results: List[Dict[str, Any]] = []
@@ -328,7 +358,7 @@ async def process_files_background(task_id: str, file_paths: List[str], temp_dir
             experiment_start_time = time.time()
             
             # 設置實驗處理的起始進度
-            experiment_start_progress = 10 + paper_progress_range
+            experiment_start_progress = 50  # 實驗處理從50%開始
             processing_tasks[task_id]["progress"] = experiment_start_progress
             processing_tasks[task_id]["message"] = "處理實驗資料..."
             
@@ -375,8 +405,19 @@ async def process_files_background(task_id: str, file_paths: List[str], temp_dir
             experiment_end_time = time.time()
             logger.info(f"✅ 實驗處理完成，總耗時: {experiment_end_time - experiment_start_time:.2f}秒")
         
-        processing_tasks[task_id]["progress"] = 95
-        processing_tasks[task_id]["message"] = "完成處理..."
+        # 節點4: 處理完成 (100%)
+        # 添加短暫延遲，讓前端有機會看到95%的進度
+        time.sleep(0.5)  # 延遲0.5秒
+        
+        # 更新進度到98%，表示正在完成最後的統計更新
+        processing_tasks[task_id]["progress"] = 98
+        processing_tasks[task_id]["message"] = "正在完成處理..."
+        
+        # 再延遲一下，讓前端看到98%的進度
+        time.sleep(0.3)
+        
+        processing_tasks[task_id]["progress"] = 100
+        processing_tasks[task_id]["message"] = "處理完成"
         
         # 更新向量統計緩存
         logger.info("📊 開始更新向量統計緩存...")
@@ -403,7 +444,7 @@ async def process_files_background(task_id: str, file_paths: List[str], temp_dir
         logger.info(f"🎉 任務 {task_id} 處理完成，總耗時: {total_time:.2f}秒")
         
         processing_tasks[task_id]["status"] = "completed"
-        processing_tasks[task_id]["progress"] = 100
+        # 進度已經在之前設置為100%，這裡不需要重複設置
         processing_tasks[task_id]["message"] = "處理完成"
         processing_tasks[task_id]["results"] = {
             "paper_results": paper_results,

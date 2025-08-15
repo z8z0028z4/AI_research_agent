@@ -24,8 +24,10 @@ import time
 import logging
 from typing import List, Dict, Any, Optional
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_chroma import Chroma
+import chromadb
+from chromadb.config import Settings
 from pdf_read_and_chunk_page_get import load_and_parse_file, get_page_number_for_chunk
 import torch
 
@@ -46,7 +48,7 @@ _chroma_instances = {}
 
 def get_chroma_instance(vectorstore_type: str = "paper"):
     """
-    獲取或創建 Chroma 實例（使用緩存避免重複創建）
+    獲取或創建 Chroma 實例（使用新的 ChromaDB 架構）
     
     參數：
         vectorstore_type (str): 向量數據庫類型（"paper" 或 "experiment"）
@@ -67,11 +69,19 @@ def get_chroma_instance(vectorstore_type: str = "paper"):
             else:
                 vector_dir = os.path.join(VECTOR_INDEX_DIR, "experiment_vector")
                 collection_name = "experiment"
-                
+            
+            # 確保目錄存在
+            os.makedirs(vector_dir, exist_ok=True)
+            
+            # 使用新的 ChromaDB 1.0+ 客戶端配置
+            client = chromadb.PersistentClient(
+                path=vector_dir
+            )
+            
             _chroma_instances[vectorstore_type] = Chroma(
-                persist_directory=vector_dir,
-                embedding_function=embedding_model,
-                collection_name=collection_name
+                client=client,
+                collection_name=collection_name,
+                embedding_function=embedding_model
             )
             
         except Exception as e:

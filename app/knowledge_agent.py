@@ -23,7 +23,7 @@ from rag_core import (
     retrieve_chunks_multi_query, build_prompt, call_llm, build_inference_prompt, 
     build_dual_inference_prompt, expand_query, generate_proposal_with_fallback,
     generate_iterative_structured_proposal, generate_structured_experimental_detail,
-    generate_structured_revision_explain
+    generate_structured_revision_explain, generate_structured_revision_proposal
 )
 from config import EXPERIMENT_DIR
 import os
@@ -55,19 +55,34 @@ def agent_answer(question: str, mode: str = "make proposal", **kwargs):
     - "generate new idea": 生成新想法
     """
     
+    import time
+    import uuid
+    import traceback
+    
+    # 生成唯一的請求 ID
+    request_id = str(uuid.uuid4())[:8]
+    start_time = time.time()
+    
+    # 獲取調用堆疊信息
+    stack_info = traceback.extract_stack()
+    caller_info = stack_info[-2] if len(stack_info) > 1 else stack_info[-1]
+    
+    print(f"🧠 [AGENT-{request_id}] ========== agent_answer 被調用 ==========")
+    print(f"🧠 [AGENT-{request_id}] 時間戳: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"🧠 [AGENT-{request_id}] 調用位置: {caller_info.filename}:{caller_info.lineno}")
+    print(f"🧠 [AGENT-{request_id}] 調用函數: {caller_info.name}")
+    print(f"🧠 [AGENT-{request_id}] question = '{question}'")
+    print(f"🧠 [AGENT-{request_id}] mode = '{mode}'")
+    print(f"🧠 [AGENT-{request_id}] kwargs = {kwargs}")
+    
     # 獲取檢索參數
     k = kwargs.get("k", 10)  # 預設檢索 10 個文檔
     fetch_k = k * 2  # fetch_k 自動設為 k 的 2 倍
     
-    # ==================== DEBUG 日誌 ====================
-    print(f"🔍 DEBUG: agent_answer 被調用")
-    print(f"🔍 DEBUG: question = '{question}'")
-    print(f"🔍 DEBUG: mode = '{mode}'")
-    print(f"🔍 DEBUG: k = {k}, fetch_k = {fetch_k}")
-    print(f"🔍 DEBUG: kwargs = {kwargs}")
-    print(f"🔍 DEBUG: mode type = {type(mode)}")
-    print(f"🔍 DEBUG: mode == 'make proposal' = {mode == 'make proposal'}")
-    print(f"🔍 DEBUG: mode == 'default' = {mode == 'default'}")
+    print(f"🧠 [AGENT-{request_id}] k = {k}, fetch_k = {fetch_k}")
+    print(f"🧠 [AGENT-{request_id}] mode type = {type(mode)}")
+    print(f"🧠 [AGENT-{request_id}] mode == 'make proposal' = {mode == 'make proposal'}")
+    print(f"🧠 [AGENT-{request_id}] mode == 'default' = {mode == 'default'}")
     
     # ==================== 模式1：納入實驗資料，進行推論與建議 ====================
     if mode == "納入實驗資料，進行推論與建議":
@@ -112,13 +127,22 @@ def agent_answer(question: str, mode: str = "make proposal", **kwargs):
         - 專注於提案結構化生成
         - 優先使用結構化輸出，失敗時回退到傳統格式
         """
-        print("📝 啟用模式：make proposal (結構化輸出)")
+        print(f"📝 [AGENT-{request_id}] 啟用模式：make proposal (結構化輸出)")
         paper_vectorstore = load_paper_vectorstore()
-        print("📦 Paper 向量庫：", paper_vectorstore._collection.count())
+        print(f"📦 [AGENT-{request_id}] Paper 向量庫：{paper_vectorstore._collection.count()}")
         chunks = retrieve_chunks_multi_query(paper_vectorstore, [question], k=k, fetch_k=fetch_k)
+        print(f"📄 [AGENT-{request_id}] 檢索到 {len(chunks)} 個文檔塊")
         
         # 使用新的結構化提案生成功能
         text_proposal, structured_data = generate_proposal_with_fallback(chunks, question)
+        
+        end_time = time.time()
+        duration = end_time - start_time
+        
+        print(f"✅ [AGENT-{request_id}] ========== make proposal 完成 ==========")
+        print(f"✅ [AGENT-{request_id}] 總耗時: {duration:.2f} 秒")
+        print(f"✅ [AGENT-{request_id}] 文本提案長度: {len(text_proposal)}")
+        print(f"✅ [AGENT-{request_id}] 結構化數據鍵: {list(structured_data.keys()) if structured_data else 'None'}")
         
         # 返回結構化結果
         return {
@@ -211,15 +235,12 @@ def agent_answer(question: str, mode: str = "make proposal", **kwargs):
         old_chunks = kwargs.get("old_chunks", [])
         proposal = kwargs.get("proposal", "")
         
-        # 使用新的結構化迭代提案生成功能
-        structured_data = generate_iterative_structured_proposal(question, new_chunks, old_chunks, proposal)
-        
-        # 生成修訂說明
-        revision_explain_data = generate_structured_revision_explain(question, proposal)
+        # 使用新的單次 LLM 調用生成修訂提案 (包含修訂說明)
+        structured_data = generate_structured_revision_proposal(question, new_chunks, old_chunks, proposal)
         
         # 轉換為文本格式
-        from rag_core import structured_proposal_to_text
-        text_proposal = structured_proposal_to_text(structured_data)
+        from rag_core import structured_revision_proposal_to_text
+        text_proposal = structured_revision_proposal_to_text(structured_data)
         
         # 返回結構化結果
         return {
@@ -227,7 +248,7 @@ def agent_answer(question: str, mode: str = "make proposal", **kwargs):
             "citations": structured_data.get('citations', []),
             "chunks": new_chunks + old_chunks,
             "structured_proposal": structured_data,
-            "structured_revision_explain": revision_explain_data
+            "materials_list": structured_data.get('materials_list', [])  # 直接傳遞材料列表
         }
 
     # ==================== 錯誤處理 ====================
@@ -239,27 +260,33 @@ def agent_answer(question: str, mode: str = "make proposal", **kwargs):
     # ==================== 調用LLM生成回答 ====================
     # 檢查是否已經有直接返回的結果（結構化模式）
     if 'prompt' not in locals():
-        print("🔍 DEBUG: 檢測到結構化模式，已直接返回結果")
-        return locals().get('result', {})
+        print(f"🔍 [AGENT-{request_id}] 檢測到結構化模式，已直接返回結果")
+        result = locals().get('result', {})
+        
+        end_time = time.time()
+        duration = end_time - start_time
+        print(f"✅ [AGENT-{request_id}] ========== agent_answer 完成 (結構化模式) ==========")
+        print(f"✅ [AGENT-{request_id}] 總耗時: {duration:.2f} 秒")
+        return result
     
-    print(f"🔍 DEBUG: 準備調用 call_llm")
-    print(f"🔍 DEBUG: prompt 長度: {len(prompt)}")
-    print(f"🔍 DEBUG: prompt 前200字符: {prompt[:200]}...")
+    print(f"🔍 [AGENT-{request_id}] 準備調用 call_llm")
+    print(f"🔍 [AGENT-{request_id}] prompt 長度: {len(prompt)}")
+    print(f"🔍 [AGENT-{request_id}] prompt 前200字符: {prompt[:200]}...")
     
     response = call_llm(prompt)
     
-    print(f"🔍 DEBUG: call_llm 返回結果")
-    print(f"🔍 DEBUG: response 類型: {type(response)}")
-    print(f"🔍 DEBUG: response 長度: {len(response) if response else 0}")
-    print(f"🔍 DEBUG: response 內容: {response[:500] if response else 'None'}...")
+    print(f"🔍 [AGENT-{request_id}] call_llm 返回結果")
+    print(f"🔍 [AGENT-{request_id}] response 類型: {type(response)}")
+    print(f"🔍 [AGENT-{request_id}] response 長度: {len(response) if response else 0}")
+    print(f"🔍 [AGENT-{request_id}] response 內容: {response[:500] if response else 'None'}...")
     
     # ==================== 獲取使用的模型信息 ====================
     try:
         from model_config_bridge import get_current_model
         used_model = get_current_model()
-        print(f"🔍 DEBUG: 使用的模型: {used_model}")
+        print(f"🔍 [AGENT-{request_id}] 使用的模型: {used_model}")
     except Exception as e:
-        print(f"❌ DEBUG: 獲取模型信息失敗: {e}")
+        print(f"❌ [AGENT-{request_id}] 獲取模型信息失敗: {e}")
         used_model = "unknown"
 
     # ==================== 返回結果 ====================
@@ -270,10 +297,14 @@ def agent_answer(question: str, mode: str = "make proposal", **kwargs):
         "used_model": used_model  # 使用的模型信息
     }
     
-    print(f"🔍 DEBUG: 返回結果")
-    print(f"🔍 DEBUG: answer 長度: {len(result['answer'])}")
-    print(f"🔍 DEBUG: citations 數量: {len(result['citations'])}")
-    print(f"🔍 DEBUG: chunks 數量: {len(result['chunks'])}")
+    end_time = time.time()
+    duration = end_time - start_time
+    
+    print(f"✅ [AGENT-{request_id}] ========== agent_answer 完成 (傳統模式) ==========")
+    print(f"✅ [AGENT-{request_id}] 總耗時: {duration:.2f} 秒")
+    print(f"✅ [AGENT-{request_id}] answer 長度: {len(result['answer'])}")
+    print(f"✅ [AGENT-{request_id}] citations 數量: {len(result['citations'])}")
+    print(f"✅ [AGENT-{request_id}] chunks 數量: {len(result['chunks'])}")
     
     return result
 

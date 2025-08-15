@@ -67,21 +67,20 @@ echo Installing PyTorch...
 pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
 echo.
 
-REM Install requirements
+REM Install requirements (prioritize backend requirements for ChromaDB fixed version)
 echo Installing requirements...
-if exist "requirements.txt" (
-    pip install -r requirements.txt
-    echo Requirements installed.
-) else (
-    echo WARNING: requirements.txt not found
-)
-echo.
-
-REM Install backend requirements
 if exist "backend\requirements.txt" (
-    echo Installing backend requirements...
+    echo Installing backend requirements first (for ChromaDB fixed version 1.0.11)...
     pip install -r backend\requirements.txt
     echo Backend requirements installed.
+)
+
+if exist "requirements.txt" (
+    echo Installing additional requirements...
+    pip install -r requirements.txt
+    echo Additional requirements installed.
+) else (
+    echo WARNING: requirements.txt not found
 )
 echo.
 

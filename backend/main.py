@@ -21,6 +21,14 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../app'))
 # 載入環境變量
 load_dotenv()
 
+# 過濾警告
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", message=".*LangChainDeprecationWarning.*")
+warnings.filterwarnings("ignore", message=".*chromadb.telemetry.*")
+warnings.filterwarnings("ignore", message=".*Failed to send telemetry event.*")
+warnings.filterwarnings("ignore", message=".*capture.*takes 1 positional argument.*")
+
 # 配置日誌
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -143,16 +151,11 @@ if os.path.exists("static"):
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # 導入路由
-from api.routes import proposal, search, chemical, upload, experiment, settings, knowledge
+from api.routes import routers
 
 # 註冊路由
-app.include_router(proposal.router, prefix="/api/v1", tags=["proposal"])
-app.include_router(search.router, prefix="/api/v1", tags=["search"])
-app.include_router(chemical.router, prefix="/api/v1", tags=["chemical"])
-app.include_router(upload.router, prefix="/api/v1", tags=["upload"])
-app.include_router(experiment.router, prefix="/api/v1", tags=["experiment"])
-app.include_router(settings.router, prefix="/api/v1", tags=["settings"])
-app.include_router(knowledge.router, prefix="/api/v1", tags=["knowledge"])
+for router in routers:
+    app.include_router(router, prefix="/api/v1")
 
 @app.on_event("startup")
 async def startup_event():

@@ -2,8 +2,13 @@
 setlocal enabledelayedexpansion
 
 echo ========================================
-echo AI Research Assistant - React Version
+echo AI Research Assistant - React Version (修復版)
 echo ========================================
+echo 修復內容：
+echo - 修復 ChromaDB 配置問題
+echo - 排除數據庫文件監控
+echo - 異步初始化向量統計
+echo.
 echo.
 
 REM Get the directory where this batch file is located
@@ -41,8 +46,8 @@ call "%VENV_ACTIVATE%" >nul 2>&1
 echo Starting AI Research Assistant...
 echo.
 
-REM Start backend in a new window
-start "AI Research Assistant Backend" cmd /k "cd /d "%SCRIPT_DIR%backend" && uvicorn main:app --host 0.0.0.0 --port 8000 --reload --log-level info"
+REM Start backend in a new window (修復 ChromaDB 配置問題)
+start "AI Research Assistant Backend" cmd /k "cd /d "%SCRIPT_DIR%backend" && set ENVIRONMENT=development && set TOKENIZERS_PARALLELISM=false && uvicorn main:app --host 0.0.0.0 --port 8000 --reload --reload-exclude "*.pyc" --reload-exclude "*.log" --reload-exclude "test_*.py" --reload-exclude "__pycache__" --reload-exclude "experiment_data/**" --reload-exclude "*.sqlite3" --reload-exclude "*.db" --reload-delay 2.0 --log-level info"
 
 REM Start frontend in a new window
 start "AI Research Assistant Frontend" cmd /k "cd /d "%SCRIPT_DIR%frontend" && run_frontend.bat"

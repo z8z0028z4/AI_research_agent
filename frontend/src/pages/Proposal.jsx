@@ -26,7 +26,6 @@ const Proposal = () => {
   
   // 結構化數據狀態
   const [structuredProposal, setStructuredProposal] = useState(null); // 結構化提案數據
-  const [structuredRevisionExplain, setStructuredRevisionExplain] = useState(null); // 結構化修訂說明
 
   const hasResult = useMemo(
     () => Boolean(proposal) || chemicals.length > 0 || citations.length > 0,
@@ -57,14 +56,37 @@ const Proposal = () => {
   const onGenerate = async () => {
     const goal = form.getFieldValue('goal');
     if (!goal) return message.warning('請輸入研究目標');
+    
+    // 生成唯一的請求 ID
+    const requestId = Math.random().toString(36).substr(2, 8);
+    const startTime = Date.now();
+    
+    console.log(`🚀 [FRONTEND-${requestId}] ========== 開始生成提案 ==========`);
+    console.log(`🚀 [FRONTEND-${requestId}] 時間戳: ${new Date().toLocaleString()}`);
+    console.log(`🚀 [FRONTEND-${requestId}] 研究目標: ${goal}`);
+    console.log(`🚀 [FRONTEND-${requestId}] 檢索數量: ${retrievalCount}`);
+    console.log(`🚀 [FRONTEND-${requestId}] loading 狀態: ${loading}`);
+    
     setLoading(true);
     try {
+      console.log(`🔍 [FRONTEND-${requestId}] 發送 API 請求...`);
       const data = await callApi('/proposal/generate', {
         body: JSON.stringify({ 
           research_goal: goal,
           retrieval_count: retrievalCount
         }),
       });
+      
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+      
+      console.log(`✅ [FRONTEND-${requestId}] ========== API 響應成功 ==========`);
+      console.log(`✅ [FRONTEND-${requestId}] 總耗時: ${duration}ms`);
+      console.log(`✅ [FRONTEND-${requestId}] 提案長度: ${data.proposal?.length || 0}`);
+      console.log(`✅ [FRONTEND-${requestId}] 化學品數量: ${data.chemicals?.length || 0}`);
+      console.log(`✅ [FRONTEND-${requestId}] 引用數量: ${data.citations?.length || 0}`);
+      console.log(`✅ [FRONTEND-${requestId}] 文檔塊數量: ${data.chunks?.length || 0}`);
+      
       setProposal(data.proposal || '');
       setChemicals(data.chemicals || []);
       setNotFound(data.not_found || []);
@@ -73,25 +95,29 @@ const Proposal = () => {
       setExperimentDetail('');
       setHasGeneratedContent(true); // 設置為已生成內容
       
-             // 新增：處理結構化提案數據
-       if (data.structured_proposal) {
-         setStructuredProposal(data.structured_proposal);
-       } else {
-         setStructuredProposal(null);
-       }
-       
-       // 新增：處理結構化修訂說明數據
-       if (data.structured_revision_explain) {
-         setStructuredRevisionExplain(data.structured_revision_explain);
-       } else {
-         setStructuredRevisionExplain(null);
-       }
+      // 新增：處理結構化提案數據
+      if (data.structured_proposal) {
+        setStructuredProposal(data.structured_proposal);
+      } else {
+        setStructuredProposal(null);
+      }
+      
+
+      
+      console.log(`✅ [FRONTEND-${requestId}] 狀態更新完成`);
+      
     } catch (e) {
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+      
+      console.error(`❌ [FRONTEND-${requestId}] ========== 生成失敗 ==========`);
+      console.error(`❌ [FRONTEND-${requestId}] 總耗時: ${duration}ms`);
+      console.error(`❌ [FRONTEND-${requestId}] 錯誤:`, e);
+      
       showError(e, '生成提案失敗');
-      // eslint-disable-next-line no-console
-      console.error(e);
     } finally {
       setLoading(false);
+      console.log(`🔚 [FRONTEND-${requestId}] loading 狀態設為 false`);
     }
   };
 
@@ -132,12 +158,7 @@ const Proposal = () => {
          setStructuredProposal(null);
        }
        
-       // 新增：處理結構化修訂說明數據
-       if (data.structured_revision_explain) {
-         setStructuredRevisionExplain(data.structured_revision_explain);
-       } else {
-         setStructuredRevisionExplain(null);
-       }
+
       
       message.success('提案修訂成功！');
     } catch (e) {
@@ -321,38 +342,6 @@ const Proposal = () => {
 
       {hasResult && (
         <>
-          {/* 修訂說明視圖 */}
-          {structuredRevisionExplain && (
-            <Card title="修訂說明" style={{ marginBottom: 16 }}>
-              <div style={{ 
-                padding: '20px', 
-                border: '1px solid #e8e8e8', 
-                borderRadius: '8px',
-                backgroundColor: '#fafafa'
-              }}>
-                <Title level={3} style={{ 
-                  marginBottom: 12, 
-                  color: '#1890ff', 
-                  fontWeight: 'bold',
-                  fontSize: '27px',
-                  borderBottom: '2px solid #1890ff',
-                  paddingBottom: '8px'
-                }}>
-                  修訂說明
-                </Title>
-                <Paragraph style={{ 
-                  marginBottom: 0, 
-                  whiteSpace: 'pre-wrap',
-                  fontSize: '16px',
-                  lineHeight: '1.6',
-                  color: '#262626'
-                }}>
-                  {structuredRevisionExplain.revision_explain}
-                </Paragraph>
-              </div>
-            </Card>
-          )}
-
           {/* 文本視圖 */}
           <Collapse
             defaultActiveKey={['proposal']}
@@ -383,7 +372,7 @@ const Proposal = () => {
                       .replace(/\*\*\s*\n/g, '\n') // 移除粗體後的換行
                       .split('\n')
                       .map((line, index) => {
-                        if (line.match(/^(Proposal:|Need:|Solution:|Differentiation:|Benefit:|Experimental overview:)/)) {
+                        if (line.match(/^(Revision Explanation:|Proposal:|Need:|Solution:|Differentiation:|Benefit:|Experimental overview:)/)) {
                           return (
                             <div key={index} style={{
                               fontSize: '24px',

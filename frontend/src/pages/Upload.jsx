@@ -87,13 +87,8 @@ const UploadPage = () => {
       const resp = await axios.post('/api/v1/upload/files', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (evt) => {
-          if (evt.total) {
-            const percent = Math.round((evt.loaded * 100) / evt.total);
-            // 文件上傳只佔總進度的10%，後端處理佔90%
-            const uploadProgress = Math.round((percent * 10) / 100);
-            console.log('📤 文件上傳進度:', percent + '%', '轉換後:', uploadProgress + '%');
-            setUploadProgress(uploadProgress);
-          }
+          // 移除文件上傳進度顯示，只顯示工作流程進度
+          // 文件上傳完成後，進度條會從後端更新
         },
       });
 
@@ -118,19 +113,26 @@ const UploadPage = () => {
             hasResults: !!r
           });
           
-          // 修復進度條邏輯：後端進度是0-100，需要轉換為10-100的範圍
-          // 確保進度不會低於10%（文件上傳階段）
+          // 直接同步後端進度：後端進度就是前端進度
           // 處理progress可能為null或undefined的情況
           const safeProgress = progress !== null && progress !== undefined ? progress : 0;
-          const backendProgress = Math.max(10, 10 + Math.round((safeProgress * 90) / 100));
-          console.log('📈 進度轉換:', {
-            原始進度: progress,
+          // 直接使用後端進度，不再轉換
+          const backendProgress = safeProgress;
+          console.log('📈 進度同步:', {
+            後端進度: progress,
             安全進度: safeProgress,
-            轉換後進度: backendProgress,
-            計算公式: `Math.max(10, 10 + Math.round((${safeProgress} * 90) / 100))`
+            前端進度: backendProgress,
+            說明: '直接同步後端進度'
           });
           
-          setUploadProgress(backendProgress);
+          // 確保進度不會倒退，只會向前更新
+          setUploadProgress(prevProgress => {
+            const newProgress = Math.max(prevProgress, backendProgress);
+            if (newProgress !== prevProgress) {
+              console.log(`📈 進度更新: ${prevProgress}% → ${newProgress}%`);
+            }
+            return newProgress;
+          });
           setServerMessage(msg || '');
           
           if (status === 'completed') {
@@ -156,8 +158,8 @@ const UploadPage = () => {
           }
           
           console.log('⏳ 任務進行中，繼續輪詢...');
-          // 繼續輪詢
-          pollingRef.current = setTimeout(poll, 1000);
+          // 繼續輪詢，縮短輪詢間隔以更頻繁地更新進度
+          pollingRef.current = setTimeout(poll, 500);
         } catch (e) {
           console.error('❌ 輪詢狀態失敗:', e);
           pollingRef.current && clearTimeout(pollingRef.current);
@@ -308,13 +310,35 @@ const UploadPage = () => {
                 '0%': '#108ee9',
                 '100%': '#87d068',
               }}
+              format={(percent) => `${percent}%`}
             />
             {serverMessage && (
               <div style={{ marginTop: 8 }}>
                 <Paragraph style={{ margin: 0, color: '#1890ff' }}>
                   {serverMessage}
                 </Paragraph>
-                {/* 根據消息內容智能顯示處理階段 */}
+                {/* 根據進度顯示處理階段 */}
+                <div style={{ marginTop: 4 }}>
+                  {uploadProgress >= 0 && uploadProgress < 25 && (
+                    <Tag color="blue">🔍 文件分析階段</Tag>
+                  )}
+                  {uploadProgress >= 25 && uploadProgress < 50 && (
+                    <Tag color="orange">📄 元數據提取階段</Tag>
+                  )}
+                  {uploadProgress >= 50 && uploadProgress < 95 && (
+                    <Tag color="green">🔢 向量嵌入階段</Tag>
+                  )}
+                  {uploadProgress >= 95 && uploadProgress < 98 && (
+                    <Tag color="cyan">📊 統計更新階段</Tag>
+                  )}
+                  {uploadProgress >= 98 && uploadProgress < 100 && (
+                    <Tag color="purple">🎯 完成處理階段</Tag>
+                  )}
+                  {uploadProgress === 100 && (
+                    <Tag color="success">✅ 處理完成</Tag>
+                  )}
+                </div>
+                {/* 根據消息內容顯示詳細狀態 */}
                 {uploadProgress > 0 && uploadProgress < 100 && (
                   <div style={{ marginTop: 4 }}>
                     {(serverMessage.includes('分析文件類型') || serverMessage.includes('開始處理論文資料')) && (
