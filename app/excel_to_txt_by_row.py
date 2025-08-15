@@ -16,6 +16,28 @@ def export_new_experiments_to_txt(
     - output_dir: 輸出 txt 的資料夾路徑
     - id_column_count: 用來產生唯一 ID 的前幾個欄位數（預設為前 3 欄）
     """
+    # 確保輸出目錄使用絕對路徑
+    if not os.path.isabs(output_dir):
+        current_dir = os.getcwd()
+        if os.path.basename(current_dir) == "backend":
+            # 如果在 backend 目錄，向上兩級到項目根目錄
+            project_root = os.path.dirname(os.path.dirname(current_dir))
+            if os.path.basename(project_root) == "AI_research_agent":
+                output_dir = os.path.join(project_root, output_dir)
+            else:
+                # 如果不在正確的項目結構中，嘗試其他方法
+                parent_dir = os.path.dirname(current_dir)
+                if os.path.exists(os.path.join(parent_dir, "experiment_data")):
+                    output_dir = os.path.join(parent_dir, output_dir)
+                else:
+                    output_dir = os.path.abspath(output_dir)
+        else:
+            output_dir = os.path.abspath(output_dir)
+    
+    # 確保 Excel 文件路徑使用絕對路徑
+    if not os.path.isabs(excel_path):
+        excel_path = os.path.abspath(excel_path)
+    
     os.makedirs(output_dir, exist_ok=True)
     df = pd.read_excel(excel_path)
 

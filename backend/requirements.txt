@@ -9,6 +9,7 @@ langchain>=0.3.26
 langchain_community>=0.3.27
 langchain_core>=0.3.70
 langchain-huggingface>=0.1.0
+langchain-chroma>=0.1.0
 openai>=1.97.0
 
 # Vector database and embeddings
@@ -71,3 +72,6 @@ pip>=23.0.0
 aiofiles>=23.0.0
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
+
+# Logging and debugging
+colorlog>=6.8.0

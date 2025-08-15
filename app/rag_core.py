@@ -16,8 +16,9 @@ from collections import defaultdict
 
 # 導入必要的模組
 from langchain_openai import ChatOpenAI
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
+from chunk_embedding import get_chroma_instance
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import openai
@@ -222,38 +223,18 @@ def load_paper_vectorstore():
     載入文獻向量數據庫
     
     功能：
-    1. 初始化嵌入模型
-    2. 連接文獻向量存儲
-    3. 返回可用的向量數據庫對象
+    1. 獲取或創建文獻向量數據庫實例
+    2. 使用緩存避免重複創建
     
     返回：
         Chroma: 文獻向量數據庫對象
     
     技術細節：
-    - 使用HuggingFace嵌入模型
+    - 使用緩存的 Chroma 實例
     - 持久化存儲在paper_vector目錄
     - 集合名稱為"paper"
     """
-    # Load Nomic embedding model
-    try:
-        print(f"🔧 Loading Nomic embedding model: {EMBEDDING_MODEL_NAME}")
-        embedding_model = HuggingFaceEmbeddings(
-            model_name=EMBEDDING_MODEL_NAME,
-            model_kwargs={"trust_remote_code": True},
-            encode_kwargs={"normalize_embeddings": True}
-        )
-        print("✅ Nomic embedding model loaded successfully")
-    except Exception as e:
-        print(f"❌ Nomic embedding failed: {e}")
-        raise e
-    
-    paper_vector_dir = os.path.join(VECTOR_INDEX_DIR, "paper_vector")
-    vectorstore = Chroma(
-        persist_directory=paper_vector_dir,
-        embedding_function=embedding_model, 
-        collection_name="paper"
-        )
-    return vectorstore
+    return get_chroma_instance("paper")
 
 
 def load_experiment_vectorstore():
@@ -261,37 +242,18 @@ def load_experiment_vectorstore():
     載入實驗數據向量數據庫
     
     功能：
-    1. 初始化嵌入模型
-    2. 連接實驗數據向量存儲
-    3. 返回可用的向量數據庫對象
+    1. 獲取或創建實驗數據向量數據庫實例
+    2. 使用緩存避免重複創建
     
     返回：
         Chroma: 實驗數據向量數據庫對象
     
     技術細節：
-    - 使用相同的嵌入模型確保一致性
+    - 使用緩存的 Chroma 實例
     - 持久化存儲在experiment_vector目錄
     - 集合名稱為"experiment"
     """
-    # Load Nomic embedding model
-    try:
-        print(f"🔧 Loading Nomic embedding model: {EMBEDDING_MODEL_NAME}")
-        embedding_model = HuggingFaceEmbeddings(
-            model_name=EMBEDDING_MODEL_NAME,
-            model_kwargs={"trust_remote_code": True},
-            encode_kwargs={"normalize_embeddings": True}
-        )
-        print("✅ Nomic embedding model loaded successfully")
-    except Exception as e:
-        print(f"❌ Nomic embedding failed: {e}")
-        raise e
-    experiment_vector_dir = os.path.join(VECTOR_INDEX_DIR, "experiment_vector")
-    vectorstore = Chroma(
-        persist_directory=experiment_vector_dir, 
-        embedding_function=embedding_model, 
-        collection_name="experiment"
-        )
-    return vectorstore
+    return get_chroma_instance("experiment")
 
 
 # ==================== 文檔檢索功能 ====================

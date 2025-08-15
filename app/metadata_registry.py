@@ -8,6 +8,21 @@ METADATA_COLUMNS = [
     "authors", "year", "venue", "url", "new_path"
 ]
 
+def get_existing_metadata() -> pd.DataFrame:
+    """
+    獲取現有的元數據註冊表
+    
+    Returns:
+        pd.DataFrame: 現有的元數據表格，如果文件不存在則返回None
+    """
+    try:
+        if not os.path.exists(REGISTRY_PATH):
+            return None
+        return pd.read_excel(REGISTRY_PATH)
+    except Exception as e:
+        print(f"⚠️ 讀取元數據註冊表失敗: {e}")
+        return None
+
 def append_metadata_to_registry(metadata: dict):
     # 若檔案不存在，先建立空表格
     if not os.path.exists(REGISTRY_PATH):

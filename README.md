@@ -28,10 +28,11 @@ This tool combines document ingestion, vector embedding, GPT-based QA with sourc
 
 ### 🔍 **Literature Search** *(Recovered)*
 - **Academic Search Integration**: Real-time academic source retrieval with proper citations
-- **Europe PMC**: Direct access to biomedical literature
-- **Perplexity API**: Enhanced search capabilities with academic focus
 - **Reference Management**: Automatic citation formatting and source tracking
-- **Search History**: Track and manage your search queries
+- **Improved Metadata Extracting system**:with higher catching rate, and de-duplication workflow
+- **Search History**: Track and manage your search queries (Coming Soon)
+- **Europe PMC**: Direct access to biomedical literature (Coming Soon)
+- **Perplexity API**: Enhanced search capabilities with academic focus (pending)
 
 ### 🖥️ **Enhanced User Interface** *(Updated)*
 - **React Frontend**: Modern, responsive web interface built with React 18 + Ant Design
@@ -318,7 +319,6 @@ app/                     # Legacy Streamlit components
 ### 🤖 **Local LLM Integration**
 - **OSS-20B Local Model**: Update and integrate OSS-20B for local LLM running
 - **Offline Capabilities**: Enable full offline operation with local models
-- **Model Comparison**: Side-by-side comparison of different LLM outputs
 
 ### 🎯 **Interactive Features**
 - **Text Highlighting**: Select text for LLM explanation and modification
@@ -329,6 +329,7 @@ app/                     # Legacy Streamlit components
 - **History Tracking**: Maintain conversation history across sessions
 - **Context Preservation**: Keep context for long research sessions
 - **Export Conversations**: Save and share research conversations
+- **Proposal-based project switch**: manage undergoing projects with all the past info saved
 
 ### 🧪 **Research Advisor**
 - **Data Reception**: Accept and process experimental data
@@ -383,6 +384,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **FastAPI** for the backend API framework
 - **PubChem** for chemical safety data
 - **Europe PMC** for biomedical literature access
+- **ITRI AI team** 宗霖、偉倫、素結 for brainstorming and suggestions
 
 ---
 
@@ -395,4 +397,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-*Last updated: January 2025 - Model Selector Edition v3.1*
+*Last updated: 15, Augest, 2025 - Model Selector Edition v3.1*

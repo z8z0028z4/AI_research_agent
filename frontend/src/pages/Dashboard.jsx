@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Row, Col, Card, Statistic, Typography, Space, Button } from 'antd'
 import {
   FileTextOutlined,
@@ -6,13 +6,37 @@ import {
   ExperimentOutlined,
   UploadOutlined,
   RocketOutlined,
+  DatabaseOutlined,
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
+import axios from 'axios'
 
 const { Title, Paragraph } = Typography
 
 const Dashboard = () => {
   const navigate = useNavigate()
+  const [vectorStats, setVectorStats] = useState({ paper_vectors: 0, experiment_vectors: 0, total_vectors: 0 })
+
+  // 獲取向量統計信息
+  const fetchVectorStats = async () => {
+    try {
+      const response = await axios.get('/api/v1/upload/stats', {
+        timeout: 5000,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+      setVectorStats(response.data)
+    } catch (error) {
+      console.error('獲取向量統計失敗:', error)
+      setVectorStats({ paper_vectors: 0, experiment_vectors: 0, total_vectors: 0 })
+    }
+  }
+
+  // 頁面加載時獲取統計信息
+  useEffect(() => {
+    fetchVectorStats()
+  }, [])
 
   const quickActions = [
     {
@@ -56,27 +80,30 @@ const Dashboard = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="已處理文件"
-              value={42}
+              title="總向量塊數"
+              value={vectorStats.total_vectors}
+              prefix={<DatabaseOutlined />}
+              valueStyle={{ color: '#1890ff' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="論文向量"
+              value={vectorStats.paper_vectors}
               prefix={<FileTextOutlined />}
+              valueStyle={{ color: '#52c41a' }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="下載文獻"
-              value={156}
-              prefix={<SearchOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="查詢化學品"
-              value={89}
+              title="實驗向量"
+              value={vectorStats.experiment_vectors}
               prefix={<ExperimentOutlined />}
+              valueStyle={{ color: '#faad14' }}
             />
           </Card>
         </Col>
@@ -86,6 +113,7 @@ const Dashboard = () => {
               title="生成提案"
               value={23}
               prefix={<RocketOutlined />}
+              valueStyle={{ color: '#722ed1' }}
             />
           </Card>
         </Col>
@@ -172,6 +200,9 @@ const Dashboard = () => {
             </Paragraph>
             <Paragraph>
               ✅ 文件處理服務正常
+            </Paragraph>
+            <Paragraph>
+              📊 向量數據庫已緩存 {vectorStats.total_vectors} 個向量塊
             </Paragraph>
           </Card>
         </Col>

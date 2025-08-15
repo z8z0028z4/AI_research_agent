@@ -13,15 +13,22 @@ import os
 import sys
 import tempfile
 import shutil
+import time
+import logging
 from pathlib import Path
+from datetime import datetime
 
 # 添加原項目路徑到 sys.path
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../app'))
 
 from file_upload import process_uploaded_files
-from chunk_embedding import embed_documents_from_metadata, embed_experiment_txt_batch
+from chunk_embedding import embed_documents_from_metadata, embed_experiment_txt_batch, get_vectorstore_stats
 from excel_to_txt_by_row import export_new_experiments_to_txt
 from config import EXPERIMENT_DIR
+
+# 配置日誌
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -39,6 +46,12 @@ class ProcessingStatus(BaseModel):
     progress: int
     message: str
     results: Optional[Dict[str, Any]] = None
+
+class VectorStatsResponse(BaseModel):
+    """向量統計響應模型"""
+    paper_vectors: int
+    experiment_vectors: int
+    total_vectors: int
 
 # 存儲處理任務狀態
 processing_tasks = {}
@@ -67,8 +80,18 @@ async def upload_files(
         for file in files:
             if file.filename:
                 file_path = os.path.join(temp_dir, file.filename)
+                # 重置文件指針到開始位置，確保能讀取完整內容
+                file.file.seek(0)
                 with open(file_path, "wb") as buffer:
                     shutil.copyfileobj(file.file, buffer)
+                
+                # 驗證文件是否成功保存
+                saved_size = os.path.getsize(file_path)
+                if saved_size == 0:
+                    logger.warning(f"⚠️ 文件 {file.filename} 保存後大小為 0 bytes")
+                else:
+                    logger.info(f"✅ 文件 {file.filename} 成功保存，大小: {saved_size} bytes")
+                
                 uploaded_files.append(file_path)
         
         # 生成任務 ID
@@ -131,72 +154,278 @@ async def process_files_background(task_id: str, file_paths: List[str], temp_dir
         file_paths: 文件路徑列表
         temp_dir: 臨時目錄
     """
+    start_time = time.time()
+    logger.info(f"🚀 開始處理任務 {task_id}，共 {len(file_paths)} 個文件")
+    logger.info(f"📁 臨時目錄: {temp_dir}")
+    
     try:
         # 更新狀態為處理中
         processing_tasks[task_id]["status"] = "processing"
-        processing_tasks[task_id]["progress"] = 10
+        processing_tasks[task_id]["progress"] = 5
         processing_tasks[task_id]["message"] = "分析文件類型..."
         
         # 分析文件類型（依副檔名分類）
+        logger.info("🔍 開始分析文件類型...")
         file_info = _classify_files_by_type(file_paths)
         
-        processing_tasks[task_id]["progress"] = 30
-        processing_tasks[task_id]["message"] = "處理論文資料..."
+        # 記錄文件分類結果
+        for file_type, files in file_info.items():
+            if files:
+                logger.info(f"📂 {file_type}: {len(files)} 個文件")
+                for f in files:
+                    file_size = os.path.getsize(f) if os.path.exists(f) else 0
+                    logger.info(f"   📄 {os.path.basename(f)} ({file_size} bytes)")
+        
+        # 計算進度分配
+        has_papers = bool(file_info.get("papers"))
+        has_experiments = bool(file_info.get("experiments"))
+        
+        logger.info(f"📊 文件類型分析完成 - 論文: {has_papers}, 實驗: {has_experiments}")
+        
+        # 根據文件類型調整進度分配
+        if has_papers and has_experiments:
+            # 混合文件：論文佔70%，實驗佔25%
+            paper_progress_range = 70
+            experiment_progress_range = 25
+        elif has_papers:
+            # 只有論文：論文佔95%
+            paper_progress_range = 95
+            experiment_progress_range = 0
+        elif has_experiments:
+            # 只有實驗：實驗佔95%
+            paper_progress_range = 0
+            experiment_progress_range = 95
+        else:
+            # 其他文件：直接完成
+            paper_progress_range = 0
+            experiment_progress_range = 0
+        
+        processing_tasks[task_id]["progress"] = 10
+        processing_tasks[task_id]["message"] = "開始處理論文資料..."
         
         # 處理論文資料（提取 metadata 並嵌入向量）
         paper_results: List[Dict[str, Any]] = []
-        if file_info.get("papers"):
-            # 先批次萃取 metadata
-            metadata_list: List[Dict[str, Any]] = process_uploaded_files(file_info["papers"])
+        if has_papers:
+            logger.info("📚 開始處理論文資料...")
+            paper_start_time = time.time()
+            
+            # 定義進度回調函數
+            def update_progress(message: str, progress_percent: int = None):
+                if progress_percent is not None:
+                    processing_tasks[task_id]["progress"] = progress_percent
+                processing_tasks[task_id]["message"] = message
+                logger.info(f"📈 進度更新: {processing_tasks[task_id]['progress']}% - {message}")
+            
+            # 計算論文處理的進度分配（總共95%）
+            # 步驟1-6: 5%, 5%, 10%, 10%, 65%, 5%
+            step1_progress = 5   # 文件分析
+            step2_progress = 5   # 元數據提取
+            step3_progress = 10  # 去重檢查
+            step4_progress = 10  # 文件處理
+            step5_progress = 65  # 向量嵌入
+            step6_progress = 5   # 完成處理
+            
+            # 步驟1: 文件分析已完成 (5%)
+            current_progress = 10
+            
+            # 步驟2: 元數據提取
+            logger.info("📄 開始元數據提取...")
+            metadata_start_time = time.time()
+            update_progress("📄 提取文件元數據...", current_progress)
+            
+            metadata_list: List[Dict[str, Any]] = process_uploaded_files(
+                file_info["papers"], 
+                status_callback=lambda msg: update_progress(msg, current_progress)  # 保持當前進度
+            )
+            
+            metadata_end_time = time.time()
+            logger.info(f"✅ 元數據提取完成，耗時: {metadata_end_time - metadata_start_time:.2f}秒")
+            logger.info(f"📊 成功提取 {len(metadata_list)} 個文件的元數據")
+            
+            # 記錄每個文件的元數據提取結果
+            for i, metadata in enumerate(metadata_list):
+                logger.info(f"   📄 {i+1}. {metadata.get('title', '未知標題')} - DOI: {metadata.get('doi', '無')}")
+            
             paper_results.extend(metadata_list)
-            # 進行嵌入
-            embed_documents_from_metadata(metadata_list)
-        
-        processing_tasks[task_id]["progress"] = 60
-        processing_tasks[task_id]["message"] = "處理實驗資料..."
+            current_progress += step2_progress
+            update_progress("✅ 元數據提取完成", current_progress)
+            
+            # 步驟3: 去重檢查 (已完成，進度已包含在process_uploaded_files中)
+            current_progress += step3_progress
+            update_progress("✅ 去重檢查完成", current_progress)
+            
+            # 步驟4: 文件處理 (已完成，進度已包含在process_uploaded_files中)
+            current_progress += step4_progress
+            update_progress("✅ 文件處理完成", current_progress)
+            
+            # 步驟5: 向量嵌入 (65%)
+            logger.info("🔢 開始向量嵌入...")
+            embedding_start_time = time.time()
+            update_progress("📚 開始向量嵌入...", current_progress)
+            
+            # 計算每個文件的嵌入進度
+            def embedding_progress_callback(msg: str):
+                nonlocal current_progress  # 聲明使用外部變量
+                # 從消息中提取當前處理的文件索引
+                if "處理第" in msg and "個文件" in msg:
+                    try:
+                        # 提取 "處理第 X/Y 個文件" 中的 X
+                        import re
+                        match = re.search(r'處理第 (\d+)/(\d+) 個文件', msg)
+                        if match:
+                            current_file = int(match.group(1))
+                            total_files = int(match.group(2))
+                            # 計算進度：current_progress + (當前文件/總文件數) * step5_progress
+                            progress = current_progress + int((current_file / total_files) * step5_progress)
+                            update_progress(msg, progress)
+                            logger.info(f"🔢 向量嵌入進度: {current_file}/{total_files} ({progress}%)")
+                        else:
+                            update_progress(msg, current_progress)  # 使用當前進度
+                    except:
+                        update_progress(msg, current_progress)  # 使用當前進度
+                elif "向量嵌入批次" in msg:
+                    try:
+                        # 提取 "向量嵌入批次 X/Y" 中的進度信息
+                        import re
+                        match = re.search(r'向量嵌入批次 (\d+)/(\d+)', msg)
+                        if match:
+                            current_batch = int(match.group(1))
+                            total_batches = int(match.group(2))
+                            # 向量嵌入階段：current_progress 到 current_progress + step5_progress
+                            progress = current_progress + int((current_batch / total_batches) * step5_progress)
+                            update_progress(msg, progress)
+                            logger.info(f"🔢 向量嵌入批次: {current_batch}/{total_batches} ({progress}%)")
+                        else:
+                            update_progress(msg, current_progress)  # 使用當前進度
+                    except:
+                        update_progress(msg, current_progress)  # 使用當前進度
+                elif "開始向量嵌入" in msg:
+                    # 向量嵌入開始，設置進度為當前進度
+                    update_progress(msg, current_progress)
+                    logger.info("🔢 向量嵌入開始")
+                elif "向量嵌入完成" in msg:
+                    # 向量嵌入完成，設置進度為 current_progress + step5_progress
+                    update_progress(msg, current_progress + step5_progress)
+                    embedding_end_time = time.time()
+                    logger.info(f"✅ 向量嵌入完成，耗時: {embedding_end_time - embedding_start_time:.2f}秒")
+                else:
+                    update_progress(msg, current_progress)  # 使用當前進度
+                    logger.info(f"📝 嵌入進度: {msg}")
+            
+            logger.info(f"🔢 開始對 {len(metadata_list)} 個文件進行向量嵌入...")
+            embed_documents_from_metadata(
+                metadata_list, 
+                status_callback=embedding_progress_callback
+            )
+            
+            paper_end_time = time.time()
+            logger.info(f"✅ 論文處理完成，總耗時: {paper_end_time - paper_start_time:.2f}秒")
         
         # 處理實驗資料（Excel -> txt -> 向量嵌入）
         experiment_results: List[Dict[str, Any]] = []
-        if file_info.get("experiments"):
-            for f in file_info["experiments"]:
+        if has_experiments:
+            logger.info("🧪 開始處理實驗資料...")
+            experiment_start_time = time.time()
+            
+            # 設置實驗處理的起始進度
+            experiment_start_progress = 10 + paper_progress_range
+            processing_tasks[task_id]["progress"] = experiment_start_progress
+            processing_tasks[task_id]["message"] = "處理實驗資料..."
+            
+            for i, f in enumerate(file_info["experiments"]):
                 try:
+                    logger.info(f"🧪 處理實驗文件 {i+1}/{len(file_info['experiments'])}: {os.path.basename(f)}")
+                    processing_tasks[task_id]["message"] = f"處理實驗文件 {i+1}/{len(file_info['experiments'])}..."
+                    processing_tasks[task_id]["progress"] = experiment_start_progress + int((i / len(file_info["experiments"])) * experiment_progress_range)
+                    
+                    # 記錄文件大小
+                    file_size = os.path.getsize(f) if os.path.exists(f) else 0
+                    logger.info(f"   📊 文件大小: {file_size} bytes")
+                    
+                    # 轉換Excel為TXT
+                    logger.info(f"   📄 開始轉換Excel為TXT...")
+                    excel_start_time = time.time()
                     df, txt_paths = export_new_experiments_to_txt(
                         excel_path=f,
                         output_dir=EXPERIMENT_DIR
                     )
+                    excel_end_time = time.time()
+                    logger.info(f"   ✅ Excel轉換完成，生成 {len(txt_paths)} 個TXT文件，耗時: {excel_end_time - excel_start_time:.2f}秒")
+                    
+                    # 向量嵌入
+                    logger.info(f"   🔢 開始實驗數據向量嵌入...")
+                    embed_start_time = time.time()
                     result = embed_experiment_txt_batch(txt_paths)
+                    embed_end_time = time.time()
+                    logger.info(f"   ✅ 實驗數據向量嵌入完成，耗時: {embed_end_time - embed_start_time:.2f}秒")
+                    
                     experiment_results.append({
                         "file": f,
                         "txt_paths": txt_paths,
                         "embedded_count": len(txt_paths)
                     })
+                    
                 except Exception as e:
+                    logger.error(f"❌ 實驗文件處理失敗 {os.path.basename(f)}: {e}")
                     experiment_results.append({
                         "file": f,
                         "error": str(e)
                     })
+            
+            experiment_end_time = time.time()
+            logger.info(f"✅ 實驗處理完成，總耗時: {experiment_end_time - experiment_start_time:.2f}秒")
         
-        processing_tasks[task_id]["progress"] = 90
+        processing_tasks[task_id]["progress"] = 95
         processing_tasks[task_id]["message"] = "完成處理..."
         
+        # 更新向量統計緩存
+        logger.info("📊 開始更新向量統計緩存...")
+        vector_stats = {}
+        try:
+            from main import update_vector_stats_cache, get_cached_vector_stats
+            update_vector_stats_cache()
+            cached_stats = get_cached_vector_stats()
+            vector_stats = {
+                "paper_vectors": cached_stats["paper_vectors"],
+                "experiment_vectors": cached_stats["experiment_vectors"],
+                "total_vectors": cached_stats["total_vectors"]
+            }
+            logger.info(f"📊 向量統計緩存更新 - 論文: {vector_stats['paper_vectors']}, 實驗: {vector_stats['experiment_vectors']}, 總計: {vector_stats['total_vectors']}")
+            print(f"📊 向量統計緩存更新 - 論文: {vector_stats['paper_vectors']}, 實驗: {vector_stats['experiment_vectors']}, 總計: {vector_stats['total_vectors']}")
+        except Exception as e:
+            logger.error(f"⚠️ 無法更新向量統計緩存: {e}")
+            print(f"⚠️ 無法更新向量統計緩存: {e}")
+            vector_stats = {"paper_vectors": 0, "experiment_vectors": 0, "total_vectors": 0}
+        
         # 更新最終結果
+        end_time = time.time()
+        total_time = end_time - start_time
+        logger.info(f"🎉 任務 {task_id} 處理完成，總耗時: {total_time:.2f}秒")
+        
         processing_tasks[task_id]["status"] = "completed"
         processing_tasks[task_id]["progress"] = 100
         processing_tasks[task_id]["message"] = "處理完成"
         processing_tasks[task_id]["results"] = {
             "paper_results": paper_results,
             "experiment_results": experiment_results,
-            "file_info": file_info
+            "file_info": file_info,
+            "vector_stats": vector_stats,
+            "processing_time": total_time
         }
         
     except Exception as e:
+        error_time = time.time()
+        total_time = error_time - start_time
+        logger.error(f"❌ 任務 {task_id} 處理失敗，耗時: {total_time:.2f}秒，錯誤: {e}")
         processing_tasks[task_id]["status"] = "failed"
         processing_tasks[task_id]["message"] = f"處理失敗: {str(e)}"
     finally:
         # 清理臨時目錄
         try:
             shutil.rmtree(temp_dir)
-        except:
+            logger.info(f"🧹 清理臨時目錄: {temp_dir}")
+        except Exception as e:
+            logger.warning(f"⚠️ 清理臨時目錄失敗: {e}")
             pass
 
 @router.get("/upload/status/{task_id}", response_model=ProcessingStatus)
@@ -261,6 +490,58 @@ async def cancel_processing(task_id: str):
     processing_tasks[task_id]["message"] = "任務已取消"
     
     return {"message": "任務已取消", "task_id": task_id}
+
+@router.get("/upload/stats", response_model=VectorStatsResponse)
+async def get_vector_stats():
+    """
+    獲取向量數據庫統計信息（使用緩存）
+    
+    Returns:
+        向量數據庫統計信息
+    """
+    try:
+        # 從主模塊獲取緩存的統計信息
+        from main import get_cached_vector_stats
+        cached_stats = get_cached_vector_stats()
+        
+        return VectorStatsResponse(
+            paper_vectors=cached_stats["paper_vectors"],
+            experiment_vectors=cached_stats["experiment_vectors"],
+            total_vectors=cached_stats["total_vectors"]
+        )
+    except Exception as e:
+        print(f"⚠️ 無法獲取緩存的向量統計信息: {e}")
+        return VectorStatsResponse(
+            paper_vectors=0,
+            experiment_vectors=0,
+            total_vectors=0
+        )
+
+@router.post("/upload/refresh-stats", response_model=VectorStatsResponse)
+async def refresh_vector_stats():
+    """
+    手動刷新向量統計緩存
+    
+    Returns:
+        更新後的向量數據庫統計信息
+    """
+    try:
+        from main import update_vector_stats_cache, get_cached_vector_stats
+        update_vector_stats_cache()
+        cached_stats = get_cached_vector_stats()
+        
+        return VectorStatsResponse(
+            paper_vectors=cached_stats["paper_vectors"],
+            experiment_vectors=cached_stats["experiment_vectors"],
+            total_vectors=cached_stats["total_vectors"]
+        )
+    except Exception as e:
+        print(f"⚠️ 無法刷新向量統計緩存: {e}")
+        return VectorStatsResponse(
+            paper_vectors=0,
+            experiment_vectors=0,
+            total_vectors=0
+        )
 
 @router.get("/documents/{filename:path}")
 async def download_document(filename: str):
