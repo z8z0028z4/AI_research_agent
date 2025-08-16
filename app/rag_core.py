@@ -65,7 +65,12 @@ def get_dynamic_schema_params():
         if backend_path not in sys.path:
             sys.path.insert(0, backend_path)
         
-        from core.settings_manager import settings_manager
+        # 兼容性導入：支持相對導入和絕對導入
+try:
+    from backend.core.settings_manager import settings_manager
+except ImportError:
+    # 當作為模組導入時使用絕對導入
+    from core.settings_manager import settings_manager
         json_schema_params = settings_manager.get_json_schema_parameters()
         
         return {
@@ -537,9 +542,9 @@ def call_llm(prompt: str) -> str:
                 'max_output_tokens': max_tokens
             }
             
-            # 添加其他參數（排除model、input和max_output_tokens）
+            # 添加其他參數（排除model、input、max_output_tokens和max_tokens）
             for key, value in llm_params.items():
-                if key not in ['model', 'input', 'max_output_tokens']:
+                if key not in ['model', 'input', 'max_output_tokens', 'max_tokens']:
                     responses_params[key] = value
             
             print(f"🔧 使用Responses API，參數：{responses_params}")

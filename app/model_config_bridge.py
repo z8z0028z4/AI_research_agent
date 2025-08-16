@@ -16,6 +16,11 @@ if backend_path not in sys.path:
     sys.path.insert(0, backend_path)
 
 try:
+    # 兼容性導入：支持相對導入和絕對導入
+try:
+    from backend.core.settings_manager import settings_manager
+except ImportError:
+    # 當作為模組導入時使用絕對導入
     from core.settings_manager import settings_manager
     from model_parameter_detector import adapt_parameters, detect_model_parameters
     

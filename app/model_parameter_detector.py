@@ -138,6 +138,11 @@ class ModelParameterDetector:
         adapted_params = {'model': model_name}
         
         for param_name, param_value in user_params.items():
+            # 特殊處理：將 max_tokens 映射到 max_output_tokens（GPT-5系列）
+            if param_name == 'max_tokens' and model_name.startswith('gpt-5'):
+                adapted_params['max_output_tokens'] = param_value
+                continue
+                
             if param_name not in supported_params:
                 logger.warning(f"跳過不支援的參數: {param_name}")
                 continue
