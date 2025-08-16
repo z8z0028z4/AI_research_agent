@@ -66,11 +66,12 @@ def get_dynamic_schema_params():
             sys.path.insert(0, backend_path)
         
         # 兼容性導入：支持相對導入和絕對導入
-try:
-    from backend.core.settings_manager import settings_manager
-except ImportError:
-    # 當作為模組導入時使用絕對導入
-    from core.settings_manager import settings_manager
+        try:
+            from backend.core.settings_manager import settings_manager
+        except ImportError:
+            # 當作為模組導入時使用絕對導入
+            from core.settings_manager import settings_manager
+        
         json_schema_params = settings_manager.get_json_schema_parameters()
         
         return {
