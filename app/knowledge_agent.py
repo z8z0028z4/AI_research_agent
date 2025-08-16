@@ -17,7 +17,7 @@ AI 研究助理 - 知識代理模塊
 """
 
 import pandas as pd
-from rag_core import (
+from .rag_core import (
     load_paper_vectorstore, build_proposal_prompt, build_detail_experimental_plan_prompt, 
     build_iterative_proposal_prompt, load_experiment_vectorstore, preview_chunks, 
     retrieve_chunks_multi_query, build_prompt, call_llm, build_inference_prompt, 
@@ -25,7 +25,7 @@ from rag_core import (
     generate_iterative_structured_proposal, generate_structured_experimental_detail,
     generate_structured_revision_explain, generate_structured_revision_proposal
 )
-from config import EXPERIMENT_DIR
+from .config import EXPERIMENT_DIR
 import os
 
 def agent_answer(question: str, mode: str = "make proposal", **kwargs):

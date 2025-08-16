@@ -4,7 +4,7 @@ import json
 from typing import List, Dict
 import re
 from typing import Optional
-from config import PARSED_CHEMICAL_DIR
+from .config import PARSED_CHEMICAL_DIR
 
 BASE_URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
 

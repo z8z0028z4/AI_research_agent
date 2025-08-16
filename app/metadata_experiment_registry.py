@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from config import REGISTRY_EXPERIMENT_PATH
+from .config import REGISTRY_EXPERIMENT_PATH
 
 # 欄位順序定義
 METADATA_EXPERIMENT_COLUMNS = [

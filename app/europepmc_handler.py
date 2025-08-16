@@ -22,7 +22,7 @@ import requests
 import warnings
 from typing import List, Dict
 import os
-from document_renamer import sanitize_filename
+from .document_renamer import sanitize_filename
 
 # ==================== 警告配置 ====================
 # 忽略未驗證HTTPS請求的警告

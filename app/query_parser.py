@@ -20,7 +20,7 @@ from typing import List, Literal, Dict, Optional
 import re
 from openai import OpenAI
 import os
-from config import LLM_MODEL_NAME
+from .config import LLM_MODEL_NAME
 import ast
 
 # ==================== OpenAI客戶端初始化 ====================

@@ -28,7 +28,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 import chromadb
 from chromadb.config import Settings
-from pdf_read_and_chunk_page_get import load_and_parse_file, get_page_number_for_chunk
+from .pdf_read_and_chunk_page_get import load_and_parse_file, get_page_number_for_chunk
 import torch
 
 # 配置日誌

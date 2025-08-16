@@ -25,7 +25,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import openai
 
 # 導入配置和橋接模組
-from config import (
+from .config import (
     OPENAI_API_KEY, 
     VECTOR_INDEX_DIR, 
     EMBEDDING_MODEL_NAME,
@@ -33,7 +33,7 @@ from config import (
     CHUNK_SIZE,
     CHUNK_OVERLAP
 )
-from model_config_bridge import get_model_params, get_current_model
+from .model_config_bridge import get_model_params, get_current_model
 
 # 設定OpenAI API Key
 openai.api_key = OPENAI_API_KEY

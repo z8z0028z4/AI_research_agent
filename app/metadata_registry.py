@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from config import REGISTRY_PATH
+from .config import REGISTRY_PATH
 
 # 欄位順序
 METADATA_COLUMNS = [

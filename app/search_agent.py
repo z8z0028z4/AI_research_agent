@@ -17,8 +17,8 @@ AI 研究助理 - 搜索代理模塊
 
 import os
 from typing import List, Dict, Optional
-from query_parser import extract_keywords
-from europepmc_handler import search_source, download_and_store
+from .query_parser import extract_keywords
+from .europepmc_handler import search_source, download_and_store
 
 def search_and_download_only(user_input: str, top_k: int = 5, storage_dir: str = "data/downloads") -> List[str]:
     """

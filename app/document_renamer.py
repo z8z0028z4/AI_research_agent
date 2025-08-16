@@ -2,7 +2,7 @@
 import os
 import re
 import shutil
-from config import PAPER_DIR
+from .config import PAPER_DIR
 from html import unescape
 
 def sanitize_filename(name, max_length=100):

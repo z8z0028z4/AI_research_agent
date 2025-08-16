@@ -19,10 +19,10 @@ import os
 import time
 import logging
 from typing import List, Dict, Optional, Callable
-from metadata_extractor import extract_metadata
-from semantic_lookup import lookup_semantic_scholar_metadata
-from document_renamer import rename_and_copy_file
-from metadata_registry import append_metadata_to_registry, get_existing_metadata
+from .metadata_extractor import extract_metadata
+from .semantic_lookup import lookup_semantic_scholar_metadata
+from .document_renamer import rename_and_copy_file
+from .metadata_registry import append_metadata_to_registry, get_existing_metadata
 
 # 配置日誌
 logging.basicConfig(level=logging.DEBUG)
