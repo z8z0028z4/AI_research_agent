@@ -2,7 +2,12 @@
 import os
 import re
 import shutil
-from .config import PAPER_DIR
+# 兼容性導入：支持相對導入和絕對導入
+try:
+    from .config import PAPER_DIR
+except ImportError:
+    # 當作為模組導入時使用絕對導入
+    from config import PAPER_DIR
 from html import unescape
 
 def sanitize_filename(name, max_length=100):

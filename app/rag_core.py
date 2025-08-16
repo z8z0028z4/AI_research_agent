@@ -25,15 +25,28 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import openai
 
 # 導入配置和橋接模組
-from .config import (
-    OPENAI_API_KEY, 
-    VECTOR_INDEX_DIR, 
-    EMBEDDING_MODEL_NAME,
-    MAX_TOKENS,
-    CHUNK_SIZE,
-    CHUNK_OVERLAP
-)
-from .model_config_bridge import get_model_params, get_current_model
+# 兼容性導入：支持相對導入和絕對導入
+try:
+    from .config import (
+        OPENAI_API_KEY, 
+        VECTOR_INDEX_DIR, 
+        EMBEDDING_MODEL_NAME,
+        MAX_TOKENS,
+        CHUNK_SIZE,
+        CHUNK_OVERLAP
+    )
+    from .model_config_bridge import get_model_params, get_current_model
+except ImportError:
+    # 當作為模組導入時使用絕對導入
+    from config import (
+        OPENAI_API_KEY, 
+        VECTOR_INDEX_DIR, 
+        EMBEDDING_MODEL_NAME,
+        MAX_TOKENS,
+        CHUNK_SIZE,
+        CHUNK_OVERLAP
+    )
+    from model_config_bridge import get_model_params, get_current_model
 
 # 設定OpenAI API Key
 openai.api_key = OPENAI_API_KEY

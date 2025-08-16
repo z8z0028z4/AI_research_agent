@@ -17,8 +17,14 @@ AI 研究助理 - 搜索代理模塊
 
 import os
 from typing import List, Dict, Optional
-from .query_parser import extract_keywords
-from .europepmc_handler import search_source, download_and_store
+# 兼容性導入：支持相對導入和絕對導入
+try:
+    from .query_parser import extract_keywords
+    from .europepmc_handler import search_source, download_and_store
+except ImportError:
+    # 當作為模組導入時使用絕對導入
+    from query_parser import extract_keywords
+    from europepmc_handler import search_source, download_and_store
 
 def search_and_download_only(user_input: str, top_k: int = 5, storage_dir: str = "data/downloads") -> List[str]:
     """

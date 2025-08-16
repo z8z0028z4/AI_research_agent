@@ -21,8 +21,8 @@ project_root = Path(__file__).parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from core.config import settings
-from core.settings_manager import settings_manager
+from backend.core.config import settings
+from backend.core.settings_manager import settings_manager
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 

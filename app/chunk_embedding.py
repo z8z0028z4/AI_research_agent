@@ -28,7 +28,12 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 import chromadb
 from chromadb.config import Settings
-from .pdf_read_and_chunk_page_get import load_and_parse_file, get_page_number_for_chunk
+# 兼容性導入：支持相對導入和絕對導入
+try:
+    from .pdf_read_and_chunk_page_get import load_and_parse_file, get_page_number_for_chunk
+except ImportError:
+    # 當作為模組導入時使用絕對導入
+    from pdf_read_and_chunk_page_get import load_and_parse_file, get_page_number_for_chunk
 import torch
 
 # 配置日誌

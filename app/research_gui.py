@@ -1,18 +1,33 @@
 import streamlit as st
-from .perplexity_search_fallback import ask_perplexity
-from .search_agent import search_and_download_only
+# 兼容性導入：支持相對導入和絕對導入
+try:
+    from .perplexity_search_fallback import ask_perplexity
+    from .search_agent import search_and_download_only
+    from .knowledge_agent import agent_answer
+    from .browser import select_files, select_files_paper_mode
+    from .file_upload import process_uploaded_files
+    from .chunk_embedding import embed_documents_from_metadata, embed_experiment_txt_batch
+    from .excel_to_txt_by_row import export_new_experiments_to_txt
+    from .config import EXPERIMENT_DIR
+    from .pubchem_handler import chemical_metadata_extractor
+    from .rag_core import build_detail_experimental_plan_prompt
+except ImportError:
+    # 當作為模組導入時使用絕對導入
+    from perplexity_search_fallback import ask_perplexity
+    from search_agent import search_and_download_only
+    from knowledge_agent import agent_answer
+    from browser import select_files, select_files_paper_mode
+    from file_upload import process_uploaded_files
+    from chunk_embedding import embed_documents_from_metadata, embed_experiment_txt_batch
+    from excel_to_txt_by_row import export_new_experiments_to_txt
+    from config import EXPERIMENT_DIR
+    from pubchem_handler import chemical_metadata_extractor
+    from rag_core import build_detail_experimental_plan_prompt
+
 import os
 import tempfile
 import re
-from .knowledge_agent import agent_answer
-from .browser import select_files, select_files_paper_mode
-from .file_upload import process_uploaded_files
-from .chunk_embedding import embed_documents_from_metadata, embed_experiment_txt_batch
 import pandas as pd
-from .excel_to_txt_by_row import export_new_experiments_to_txt
-from .config import EXPERIMENT_DIR
-from .pubchem_handler import chemical_metadata_extractor
-from .rag_core import build_detail_experimental_plan_prompt
 from docx import Document
 from docx.shared import Inches
 import io

@@ -22,6 +22,11 @@ from datetime import datetime
 # 添加原項目路徑到 sys.path
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../app'))
 
+# 使用絕對導入來避免相對導入問題
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../app'))
+
 from file_upload import process_uploaded_files
 from chunk_embedding import embed_documents_from_metadata, embed_experiment_txt_batch, get_vectorstore_stats
 from excel_to_txt_by_row import export_new_experiments_to_txt

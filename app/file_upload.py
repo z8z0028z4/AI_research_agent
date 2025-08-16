@@ -19,10 +19,18 @@ import os
 import time
 import logging
 from typing import List, Dict, Optional, Callable
-from .metadata_extractor import extract_metadata
-from .semantic_lookup import lookup_semantic_scholar_metadata
-from .document_renamer import rename_and_copy_file
-from .metadata_registry import append_metadata_to_registry, get_existing_metadata
+# 兼容性導入：支持相對導入和絕對導入
+try:
+    from .metadata_extractor import extract_metadata
+    from .semantic_lookup import lookup_semantic_scholar_metadata
+    from .document_renamer import rename_and_copy_file
+    from .metadata_registry import append_metadata_to_registry, get_existing_metadata
+except ImportError:
+    # 當作為模組導入時使用絕對導入
+    from metadata_extractor import extract_metadata
+    from semantic_lookup import lookup_semantic_scholar_metadata
+    from document_renamer import rename_and_copy_file
+    from metadata_registry import append_metadata_to_registry, get_existing_metadata
 
 # 配置日誌
 logging.basicConfig(level=logging.DEBUG)

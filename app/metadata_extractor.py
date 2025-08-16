@@ -4,7 +4,12 @@ import fitz  # PyMuPDF
 import docx
 import json
 from openai import OpenAI
-from .config import OPENAI_API_KEY
+# 兼容性導入：支持相對導入和絕對導入
+try:
+    from .config import OPENAI_API_KEY
+except ImportError:
+    # 當作為模組導入時使用絕對導入
+    from config import OPENAI_API_KEY
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 

@@ -151,7 +151,7 @@ if os.path.exists("static"):
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # 導入路由
-from api.routes import routers
+from backend.api.routes import routers
 
 # 註冊路由
 for router in routers:

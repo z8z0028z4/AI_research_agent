@@ -22,7 +22,12 @@ import requests
 import warnings
 from typing import List, Dict
 import os
-from .document_renamer import sanitize_filename
+# 兼容性導入：支持相對導入和絕對導入
+try:
+    from .document_renamer import sanitize_filename
+except ImportError:
+    # 當作為模組導入時使用絕對導入
+    from document_renamer import sanitize_filename
 
 # ==================== 警告配置 ====================
 # 忽略未驗證HTTPS請求的警告

@@ -4,7 +4,12 @@ import json
 from typing import List, Dict
 import re
 from typing import Optional
-from .config import PARSED_CHEMICAL_DIR
+# 兼容性導入：支持相對導入和絕對導入
+try:
+    from .config import PARSED_CHEMICAL_DIR
+except ImportError:
+    # 當作為模組導入時使用絕對導入
+    from config import PARSED_CHEMICAL_DIR
 
 BASE_URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
 

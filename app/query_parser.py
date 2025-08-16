@@ -20,7 +20,12 @@ from typing import List, Literal, Dict, Optional
 import re
 from openai import OpenAI
 import os
-from .config import LLM_MODEL_NAME
+# 兼容性導入：支持相對導入和絕對導入
+try:
+    from .config import LLM_MODEL_NAME
+except ImportError:
+    # 當作為模組導入時使用絕對導入
+    from config import LLM_MODEL_NAME
 import ast
 
 # ==================== OpenAI客戶端初始化 ====================

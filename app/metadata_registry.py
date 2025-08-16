@@ -1,6 +1,11 @@
 import os
 import pandas as pd
-from .config import REGISTRY_PATH
+# 兼容性導入：支持相對導入和絕對導入
+try:
+    from .config import REGISTRY_PATH
+except ImportError:
+    # 當作為模組導入時使用絕對導入
+    from config import REGISTRY_PATH
 
 # 欄位順序
 METADATA_COLUMNS = [

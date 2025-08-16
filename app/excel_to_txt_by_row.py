@@ -1,6 +1,11 @@
 import pandas as pd
 import os
-from  config import EXPERIMENT_DIR
+# 兼容性導入：支持相對導入和絕對導入
+try:
+    from .config import EXPERIMENT_DIR
+except ImportError:
+    # 當作為模組導入時使用絕對導入
+    from config import EXPERIMENT_DIR
 
 def export_new_experiments_to_txt(
     excel_path: str,
