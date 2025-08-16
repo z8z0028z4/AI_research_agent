@@ -15,7 +15,7 @@ import pandas as pd
 # 添加原項目路徑到 sys.path
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../app'))
 
-from config import EXPERIMENT_DIR
+from app.config import EXPERIMENT_DIR
 from excel_to_txt_by_row import export_new_experiments_to_txt
 from chunk_embedding import embed_experiment_txt_batch
 

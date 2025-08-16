@@ -18,7 +18,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../../../app'))
 from file_upload import process_uploaded_files
 from chunk_embedding import embed_documents_from_metadata, embed_experiment_txt_batch
 from excel_to_txt_by_row import export_new_experiments_to_txt
-from config import EXPERIMENT_DIR
+from app.config import EXPERIMENT_DIR
 
 from .file_classifier import FileClassifier
 from .progress_tracker import progress_tracker
