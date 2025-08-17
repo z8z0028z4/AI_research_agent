@@ -1,0 +1,114 @@
+# 棄用檔案清單
+
+## 🚫 已棄用的 Streamlit 相關檔案
+
+### 主要 GUI 檔案 (已移動到 deprecated_files/streamlit_gui/)
+- deprecated_files/streamlit_gui/research_gui.py    # 原 Streamlit 主界面 (613行)
+- deprecated_files/streamlit_gui/main.py           # 原 Streamlit 啟動器 (159行)
+- deprecated_files/streamlit_gui/browser.py        # 原 Streamlit 文件選擇器 (280行)
+- deprecated_files/streamlit_gui/ARCHITECTURE_OVERVIEW.md  # 原架構說明文件 (132行)
+- deprecated_files/streamlit_gui/LEARNING_GUIDE.md  # 原學習指南 (260行)
+
+### 舊的依賴管理檔案 (已移動到 deprecated_files/old_dependencies/)
+- deprecated_files/old_dependencies/dependency_manager.py  # 舊的依賴管理工具，包含 Streamlit 依賴 (471行)
+
+### 舊的啟動腳本
+- 任何直接執行 streamlit run 的腳本
+- 任何啟動 app/research_gui.py 的腳本
+
+### 舊的配置文件
+- 僅適用於 Streamlit 的配置文件
+- 舊的環境變量設定
+
+## 🔄 新架構替代檔案
+
+### 前端替代
+- frontend/src/pages/Proposal.jsx       # 替代 research_gui.py 的提案功能
+- frontend/src/pages/Search.jsx         # 替代搜索功能
+- frontend/src/pages/Settings.jsx       # 替代設定功能
+- frontend/src/pages/Upload.jsx         # 替代文件上傳功能
+- frontend/src/pages/Chemical.jsx       # 替代化學品查詢功能
+- frontend/src/pages/KnowledgeQuery.jsx # 替代知識查詢功能
+- frontend/src/pages/Dashboard.jsx      # 替代儀表板功能
+
+### 後端替代
+- backend/main.py                       # 替代 Streamlit 後端
+- backend/api/routes/                   # 替代 Streamlit 頁面路由
+- backend/core/settings_manager.py      # 替代設定管理
+
+### 啟動腳本替代
+- start_react.bat                       # 替代舊的啟動腳本
+- restart_backend.bat                   # 後端重啟腳本
+
+### 依賴管理替代
+- dependency_manager.py (已更新)        # 移除 Streamlit 依賴的新版本
+
+## 📊 檔案統計
+
+### 棄用檔案大小 (已移動)
+- deprecated_files/streamlit_gui/research_gui.py: 28KB (613行)
+- deprecated_files/streamlit_gui/main.py: 5.7KB (159行)
+- deprecated_files/streamlit_gui/browser.py: 7.5KB (280行)
+- deprecated_files/streamlit_gui/ARCHITECTURE_OVERVIEW.md: 5.2KB (132行)
+- deprecated_files/streamlit_gui/LEARNING_GUIDE.md: 6.7KB (260行)
+- deprecated_files/old_dependencies/dependency_manager.py: 15KB (471行)
+- 總計: ~68KB
+
+### 新架構檔案大小
+- frontend/src/pages/: ~100KB (多個組件)
+- backend/: ~50KB (API和核心功能)
+- 總計: ~150KB (功能更豐富)
+
+## 🎯 功能對應關係
+
+| 舊功能 (Streamlit) | 新功能 (React) | 狀態 |
+|-------------------|----------------|------|
+| 提案生成 | Proposal.jsx | ✅ 完成 |
+| 文件上傳 | Upload.jsx | ✅ 完成 |
+| 設定管理 | Settings.jsx | ✅ 完成 |
+| 搜索功能 | Search.jsx | ✅ 完成 |
+| 化學品查詢 | Chemical.jsx | ✅ 完成 |
+| 知識查詢 | KnowledgeQuery.jsx | ✅ 完成 |
+| 儀表板 | Dashboard.jsx | ✅ 完成 |
+
+## 📁 檔案組織
+
+### 棄用檔案目錄結構
+```
+deprecated_files/
+├── README.md                           # 重構狀態總覽
+├── deprecated_files_list.txt           # 詳細清單
+├── refactoring_status_report.md        # 完整報告
+├── streamlit_gui/                      # Streamlit GUI 檔案
+│   ├── README.md                       # 檔案說明
+│   ├── research_gui.py                 # 原主界面
+│   ├── main.py                         # 原啟動器
+│   ├── browser.py                      # 原文件選擇器
+│   ├── ARCHITECTURE_OVERVIEW.md        # 原架構說明
+│   └── LEARNING_GUIDE.md               # 原學習指南
+└── old_dependencies/                   # 舊依賴管理檔案
+    ├── README.md                       # 依賴說明
+    └── dependency_manager.py           # 舊依賴管理工具
+```
+
+## ⚠️ 注意事項
+
+1. 這些檔案僅作為參考保留，不應直接使用
+2. 新架構提供更好的用戶體驗和功能
+3. 如需查看原實現，可參考這些檔案
+4. 建議在未來版本中完全移除這些檔案
+5. 所有棄用檔案已妥善組織在 deprecated_files 目錄中
+6. 依賴管理已更新，移除 Streamlit 相關依賴
+
+## 🎉 移動完成
+
+✅ **檔案移動狀態**: 已完成
+- 所有 Streamlit GUI 檔案已移動到 `deprecated_files/streamlit_gui/` 目錄
+- 舊依賴管理檔案已移動到 `deprecated_files/old_dependencies/` 目錄
+- 檔案結構已整理完成
+- 說明文件已更新
+- 依賴管理已更新，移除 Streamlit 依賴
+
+---
+*生成時間：2025-08-16*
+*更新時間：2025-08-16 (所有 Streamlit 相關檔案移動完成)*

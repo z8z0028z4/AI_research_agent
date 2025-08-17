@@ -17,12 +17,14 @@ if backend_path not in sys.path:
 
 try:
     # 兼容性導入：支持相對導入和絕對導入
-try:
     from backend.core.settings_manager import settings_manager
-except ImportError:
-    # 當作為模組導入時使用絕對導入
-    from core.settings_manager import settings_manager
-    from model_parameter_detector import adapt_parameters, detect_model_parameters
+    # 嘗試導入參數檢測器
+    try:
+        from .model_parameter_detector import adapt_parameters, detect_model_parameters
+        HAS_PARAMETER_DETECTOR = True
+    except ImportError:
+        HAS_PARAMETER_DETECTOR = False
+        print("警告：無法導入 model_parameter_detector，將使用基礎配置")
     
     def get_current_model():
         """獲取當前模型名稱"""
@@ -37,18 +39,29 @@ except ImportError:
         llm_params = settings_manager.get_llm_parameters()
         
         # 使用新的參數適配器
-        try:
-            adapted_params = adapt_parameters(model_name, llm_params)
-            print(f"🔧 模型參數適配完成: {adapted_params}")
-            return adapted_params
-        except Exception as e:
-            print(f"⚠️ 參數適配失敗，使用基礎參數: {e}")
-            # 如果適配失敗，使用基礎參數
-            return {
-                "model": model_name,
-                "max_tokens": llm_params.get("max_tokens", 2000),
-                "timeout": llm_params.get("timeout", 60),
-            }
+        if HAS_PARAMETER_DETECTOR:
+            try:
+                adapted_params = adapt_parameters(model_name, llm_params)
+                print(f"🔧 模型參數適配完成: {adapted_params}")
+                return adapted_params
+            except Exception as e:
+                print(f"⚠️ 參數適配失敗，使用基礎參數: {e}")
+        
+        # 如果適配失敗或沒有檢測器，使用基礎參數
+        base_params = {
+            "model": model_name,
+            "max_tokens": llm_params.get("max_tokens", 2000),
+            "timeout": llm_params.get("timeout", 60),
+        }
+        
+        # 對於GPT-5系列模型，添加verbosity和reasoning_effort參數
+        if model_name.startswith('gpt-5'):
+            if "verbosity" in llm_params:
+                base_params["verbosity"] = llm_params["verbosity"]
+            if "reasoning_effort" in llm_params:
+                base_params["reasoning_effort"] = llm_params["reasoning_effort"]
+        
+        return base_params
     
     def get_model_supported_parameters(model_name: str = None) -> Dict[str, Any]:
         """
@@ -63,33 +76,35 @@ except ImportError:
         if model_name is None:
             model_name = get_current_model()
         
-        try:
-            # 使用新的參數檢測器
-            model_info = detect_model_parameters(model_name)
-            return model_info['supported_parameters']
-        except Exception as e:
-            print(f"⚠️ 無法檢測模型參數，使用預設配置: {e}")
-            # 如果檢測失敗，使用預設配置
-            base_params = {
-                'max_tokens': {'type': 'int', 'range': [1, 32000], 'default': 2000},
-                'timeout': {'type': 'int', 'range': [10, 600], 'default': 60}
-            }
-            
-            if model_name.startswith('gpt-5'):
-                base_params.update({
-                    'reasoning_effort': {
-                        'type': 'select', 
-                        'options': ['minimal', 'low', 'medium', 'high'], 
-                        'default': 'medium'
-                    },
-                    'verbosity': {
-                        'type': 'select', 
-                        'options': ['low', 'medium', 'high'], 
-                        'default': 'medium'
-                    }
-                })
-            
-            return base_params
+        if HAS_PARAMETER_DETECTOR:
+            try:
+                # 使用新的參數檢測器
+                model_info = detect_model_parameters(model_name)
+                return model_info['supported_parameters']
+            except Exception as e:
+                print(f"⚠️ 無法檢測模型參數，使用預設配置: {e}")
+        
+        # 如果檢測失敗或沒有檢測器，使用預設配置
+        base_params = {
+            'max_tokens': {'type': 'int', 'range': [1, 32000], 'default': 2000},
+            'timeout': {'type': 'int', 'range': [10, 600], 'default': 60}
+        }
+        
+        if model_name.startswith('gpt-5'):
+            base_params.update({
+                'reasoning_effort': {
+                    'type': 'select', 
+                    'options': ['minimal', 'low', 'medium', 'high'], 
+                    'default': 'medium'
+                },
+                'verbosity': {
+                    'type': 'select', 
+                    'options': ['low', 'medium', 'high'], 
+                    'default': 'medium'
+                }
+            })
+        
+        return base_params
     
     def is_model_available(model_name):
         """檢查模型是否可用"""

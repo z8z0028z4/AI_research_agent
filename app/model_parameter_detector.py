@@ -36,7 +36,7 @@ class ModelParameterDetector:
         
         logger.info(f"開始檢測模型參數: {model_name}")
         
-        # 根據cookbook，GPT-5系列使用Responses API，GPT-4系列使用Chat Completions API
+        # 根據cookbook，GPT-5系列使用Responses API
         if model_name.startswith('gpt-5'):
             # GPT-5系列支援的參數（Responses API）
             supported_params = {
@@ -81,30 +81,8 @@ class ModelParameterDetector:
                 }
                 
         else:
-            # GPT-4系列支援的參數（Chat Completions API）
-            supported_params = {
-                'temperature': {
-                    'type': 'float', 
-                    'range': [0.0, 2.0], 
-                    'default': 0.7,
-                    'api_name': 'temperature',
-                    'description': '控制回應的隨機性'
-                },
-                'max_tokens': {
-                    'type': 'int', 
-                    'range': [1, 32000], 
-                    'default': 2000,
-                    'api_name': 'max_tokens',
-                    'description': '控制回應的最大長度'
-                },
-                'timeout': {
-                    'type': 'int', 
-                    'range': [10, 600], 
-                    'default': 60,
-                    'api_name': 'timeout',
-                    'description': 'API調用超時時間'
-                }
-            }
+            # 不支援的模型系列
+            raise ValueError(f"不支援的模型：{model_name}，僅支援 GPT-5 系列")
         
         result = {
             'model_name': model_name,

@@ -41,25 +41,23 @@ async def query_knowledge(request: KnowledgeQueryRequest):
         print(f"🔍 檢索數量：{request.retrieval_count}")
         print(f"🔍 回答模式：{request.answer_mode}")
         
-        # 延遲導入rag_core模組
-        from rag_core import (
+        # 延遲導入核心模組
+        from app.core import (
             load_paper_vectorstore,
-            retrieve_chunks_multi_query,
+            search_documents,
             build_prompt,
             build_inference_prompt,
-            call_llm
+            get_default_llm_manager
         )
         
         # 載入文獻向量數據庫
         vectorstore = load_paper_vectorstore()
         
         # 檢索文檔片段（直接使用用戶問題，不進行查詢擴展）
-        chunks = retrieve_chunks_multi_query(
+        chunks = search_documents(
             vectorstore=vectorstore,
-            query_list=[request.question],  # 直接使用用戶問題
-            k=request.retrieval_count,
-            fetch_k=request.retrieval_count * 2,
-            score_threshold=0.35
+            query=request.question,  # 直接使用用戶問題
+            k=request.retrieval_count
         )
         
         if not chunks:
@@ -78,7 +76,8 @@ async def query_knowledge(request: KnowledgeQueryRequest):
             raise HTTPException(status_code=400, detail="無效的回答模式")
         
         # 調用LLM生成回答
-        answer = call_llm(system_prompt)
+        llm_manager = get_default_llm_manager()
+        answer = llm_manager.generate_response(system_prompt)
         
         if not answer:
             raise HTTPException(status_code=500, detail="生成回答失敗")

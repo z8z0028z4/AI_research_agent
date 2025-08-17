@@ -204,7 +204,7 @@ research_agent/
 ├── app/                    # Main application code
 │   ├── main.py            # Entry point
 │   ├── research_gui.py    # Streamlit GUI
-│   ├── rag_core.py        # RAG implementation
+│   ├── core/              # RAG implementation (refactored)
 │   ├── knowledge_agent.py # Knowledge processing
 │   └── ...                # Other modules
 ├── requirements.txt        # Dependencies

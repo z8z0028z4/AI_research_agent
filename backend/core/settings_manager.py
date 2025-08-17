@@ -155,7 +155,7 @@ class SettingsManager:
         """獲取JSON Schema參數設定"""
         return {
             "min_length": self.get_setting('llm_min_length', 5),
-            "max_length": self.get_setting('llm_max_length', 100),
+            "max_length": self.get_setting('llm_max_length', 2000),
         }
     
     def set_json_schema_parameters(self, min_length: int = None, max_length: int = None):
@@ -166,8 +166,8 @@ class SettingsManager:
             self.set_setting('llm_min_length', min_length)
         
         if max_length is not None:
-            if not (10 <= max_length <= 200):
-                raise ValueError("max_length 必須在 10 到 200 之間")
+            if not (10 <= max_length <= 5000):
+                raise ValueError("max_length 必須在 10 到 5000 之間")
             self.set_setting('llm_max_length', max_length)
     
     def get_json_schema_supported_parameters(self) -> Dict[str, Any]:
@@ -181,8 +181,8 @@ class SettingsManager:
             },
             "max_length": {
                 "type": "int",
-                "range": [10, 200],
-                "default": 100,
+                "range": [10, 5000],
+                "default": 2000,
                 "description": "JSON Schema 欄位最大長度約束"
             }
         }

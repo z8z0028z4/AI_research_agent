@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     
     # AI 服務配置
     openai_api_key: Optional[str] = None
-    openai_model: str = "gpt-4"
+    openai_model: str = "gpt-5o-mini"  # 更新為 GPT-5 系列
     openai_max_tokens: int = 4000
     
     # 化學品查詢配置

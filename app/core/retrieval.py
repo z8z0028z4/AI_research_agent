@@ -9,9 +9,9 @@ from typing import List, Dict, Any, Optional
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-from ..utils.logger import get_logger
-from ..utils.exceptions import VectorStoreError
-from ..chunk_embedding import get_chroma_instance
+from app.utils.logger import get_logger
+from app.utils.exceptions import VectorStoreError
+from app.chunk_embedding import get_chroma_instance
 
 logger = get_logger(__name__)
 
@@ -193,9 +193,9 @@ def preview_chunks(chunks: List[Document], title: str, max_preview: int = 5):
         logger.info(f"📚 Preview: {preview}")
 
 
-def expand_query(original_query: str, llm_client) -> List[str]:
+def expand_query_with_llm_client(original_query: str, llm_client) -> List[str]:
     """
-    擴展查詢詞
+    使用 LLM 客戶端擴展查詢詞
     
     參數：
         original_query: 原始查詢

@@ -18,13 +18,26 @@ import requests
 from docx import Document as DocxDocument
 from docx.shared import Inches
 from io import BytesIO
+import logging
+from typing import List, Dict, Any, Optional
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+
+# 配置 logger
+logger = logging.getLogger(__name__)
+from fastapi.responses import FileResponse
+import tempfile
+import os
+import re
+from docx import Document as DocxDocument
+from docx.shared import Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+import json
 
 # 添加原項目路徑到 sys.path
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../app'))
 
 # 延遲導入以避免循環導入問題
 # from knowledge_agent import agent_answer
-# from rag_core import build_detail_experimental_plan_prompt
 from pubchem_handler import chemical_metadata_extractor
 from langchain_core.documents import Document
 
@@ -68,7 +81,7 @@ class ProposalResponse(BaseModel):
     chunks: List[Dict[str, Any]]
     used_model: Optional[str] = None
     structured_proposal: Optional[Dict[str, Any]] = None
-    structured_revision_explain: Optional[Dict[str, Any]] = None
+
 
 class ProposalRevisionRequest(BaseModel):
     """提案修訂請求模型"""
@@ -177,7 +190,8 @@ async def generate_proposal(request: ProposalRequest):
             citations=fixed_citations,
             not_found=not_found_list,
             chunks=_serialize_chunks(chunks),
-            used_model=used_model
+            used_model=used_model,
+            structured_proposal=result.get("structured_proposal")
         )
         
     except Exception as e:
@@ -540,9 +554,9 @@ async def generate_docx(request: DocxRequest):
         with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
             doc.save(tmp.name)
             tmp_path = tmp.name
-            print(f"🔍 BACKEND DEBUG: DOCX 文件已保存到: {tmp_path}")
+            logger.info(f"DOCX 文件已保存到: {tmp_path}")
 
-        print(f"🔍 BACKEND DEBUG: 準備返回 FileResponse")
+        logger.info("準備返回 FileResponse")
         return FileResponse(
             path=tmp_path,
             filename="proposal_report.docx",
@@ -550,15 +564,13 @@ async def generate_docx(request: DocxRequest):
         )
         
     except Exception as e:
-        print(f"❌ BACKEND DEBUG: DOCX 生成失敗: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"DOCX 生成失敗: {str(e)}", exc_info=True)
         # 清理臨時文件
-        if tmp_path and os.path.exists(tmp_path):
+        if 'tmp_path' in locals() and tmp_path and os.path.exists(tmp_path):
             try:
                 os.unlink(tmp_path)
-            except:
-                pass
+            except OSError as cleanup_error:
+                logger.warning(f"清理臨時文件失敗: {cleanup_error}")
         raise HTTPException(status_code=500, detail=f"DOCX 生成失敗: {str(e)}") 
 
 @router.post("/proposal/test-docx")
@@ -567,7 +579,7 @@ async def test_docx_generation():
     測試 DOCX 生成功能
     """
     try:
-        print(f"🔍 BACKEND DEBUG: 測試 DOCX 生成")
+        logger.info("開始測試 DOCX 生成")
         
         doc = DocxDocument()
         doc.add_heading("Test Document", 0)
@@ -577,7 +589,7 @@ async def test_docx_generation():
         with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
             doc.save(tmp.name)
             tmp_path = tmp.name
-            print(f"🔍 BACKEND DEBUG: 測試 DOCX 文件已保存到: {tmp_path}")
+            logger.info(f"測試 DOCX 文件已保存到: {tmp_path}")
 
         return FileResponse(
             path=tmp_path,
@@ -586,7 +598,5 @@ async def test_docx_generation():
         )
         
     except Exception as e:
-        print(f"❌ BACKEND DEBUG: 測試 DOCX 生成失敗: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"測試 DOCX 生成失敗: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"測試 DOCX 生成失敗: {str(e)}") 

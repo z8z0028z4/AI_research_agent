@@ -12,10 +12,17 @@ AI 研究助理系統配置文件
 - 使用python-dotenv管理環境變量
 - 集中管理所有配置參數
 - 提供清晰的目錄結構定義
+- 添加配置驗證和錯誤處理
 """
 
 import os
+import logging
+from pathlib import Path
+from typing import Dict, Any, Optional
 from dotenv import load_dotenv
+
+# 配置日誌
+logger = logging.getLogger(__name__)
 
 # ==================== 環境變量載入 ====================
 # 載入 .env 檔案，用於管理敏感信息（如API密鑰）
@@ -39,11 +46,46 @@ os.environ["HF_DATASETS_OFFLINE"] = "0"
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # OpenAI API密鑰，用於GPT模型調用
 PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")  # Perplexity API密鑰，用於搜索功能
 
+def validate_api_keys() -> Dict[str, bool]:
+    """
+    驗證API密鑰是否已設置
+    
+    Returns:
+        Dict[str, bool]: 各API密鑰的驗證結果
+    """
+    validation_results = {
+        "openai": bool(OPENAI_API_KEY),
+        "perplexity": bool(PERPLEXITY_API_KEY)
+    }
+    
+    missing_keys = [key for key, valid in validation_results.items() if not valid]
+    if missing_keys:
+        logger.warning(f"缺少API密鑰: {', '.join(missing_keys)}")
+    
+    return validation_results
+
 # ==================== 項目路徑配置 ====================
 # 設置基礎目錄路徑，確保跨平台兼容性
 # BASE_DIR 應指向專案根目錄 AI-research-agent
 # 原先設為上上層導致寫入到父資料夾（如 d:\OneDrive\3. tool\coding），現修正為上一層（專案根目錄）
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
+def ensure_directory_exists(path: str) -> bool:
+    """
+    確保目錄存在，如果不存在則創建
+    
+    Args:
+        path: 目錄路徑
+        
+    Returns:
+        bool: 是否成功創建或已存在
+    """
+    try:
+        Path(path).mkdir(parents=True, exist_ok=True)
+        return True
+    except Exception as e:
+        logger.error(f"創建目錄失敗 {path}: {e}")
+        return False
 
 # ==================== 數據目錄配置 ====================
 # 定義各種數據存儲目錄，用於組織和管理數據文件
@@ -70,6 +112,40 @@ REGISTRY_EXPERIMENT_PATH = os.path.join(BASE_DIR, "experiment_data", "metadata_e
 # 化學品解析目錄：存儲從PubChem下載的化學品數據
 # 用於存儲化學品的JSON格式數據和元數據
 PARSED_CHEMICAL_DIR = os.path.join(BASE_DIR, "experiment_data", "parsed_chemicals")
+
+# 上傳文件目錄
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+
+# 日誌目錄
+LOG_DIR = os.path.join(BASE_DIR, "logs")
+
+def initialize_directories() -> bool:
+    """
+    初始化所有必要的目錄
+    
+    Returns:
+        bool: 是否全部成功創建
+    """
+    directories = [
+        VECTOR_INDEX_DIR,
+        EXPERIMENT_DIR,
+        PAPER_DIR,
+        PARSED_CHEMICAL_DIR,
+        UPLOAD_DIR,
+        LOG_DIR
+    ]
+    
+    success = True
+    for directory in directories:
+        if not ensure_directory_exists(directory):
+            success = False
+    
+    if success:
+        logger.info("所有目錄初始化完成")
+    else:
+        logger.error("部分目錄初始化失敗")
+    
+    return success
 
 # ==================== 模型配置 ====================
 # 定義系統使用的AI模型參數
@@ -106,4 +182,93 @@ CHUNK_SIZE = 1000
 # 重疊可以幫助保持上下文連貫性
 CHUNK_OVERLAP = 200
 
+# ==================== 系統配置 ====================
+# 系統運行相關的配置
+
+# 批處理大小：一次處理的文件數量
+BATCH_SIZE = 10
+
+# 向量檢索的默認數量
+DEFAULT_K = 5
+
+# 最大文件大小（字節）
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+
+# 支持的文件格式
+SUPPORTED_FORMATS = {
+    "pdf": [".pdf"],
+    "word": [".docx", ".doc"],
+    "excel": [".xlsx", ".xls"],
+    "text": [".txt"]
+}
+
+def get_supported_extensions() -> list:
+    """
+    獲取所有支持的文件擴展名
+    
+    Returns:
+        list: 支持的文件擴展名列表
+    """
+    extensions = []
+    for format_exts in SUPPORTED_FORMATS.values():
+        extensions.extend(format_exts)
+    return extensions
+
+# ==================== 日誌配置 ====================
+# 日誌相關的配置
+
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+LOG_FILE = os.path.join(LOG_DIR, "ai_research_agent.log")
+
+# ==================== 配置驗證 ====================
+def validate_config() -> Dict[str, Any]:
+    """
+    驗證所有配置是否正確
+    
+    Returns:
+        Dict[str, Any]: 驗證結果
+    """
+    validation_results = {
+        "api_keys": validate_api_keys(),
+        "directories": initialize_directories(),
+        "base_dir_exists": os.path.exists(BASE_DIR),
+        "config_complete": True
+    }
+    
+    # 檢查必要的配置是否存在
+    if not OPENAI_API_KEY:
+        validation_results["config_complete"] = False
+        logger.error("缺少 OPENAI_API_KEY 配置")
+    
+    if not os.path.exists(BASE_DIR):
+        validation_results["config_complete"] = False
+        logger.error(f"基礎目錄不存在: {BASE_DIR}")
+    
+    return validation_results
+
+# ==================== 配置初始化 ====================
+def initialize_config() -> bool:
+    """
+    初始化配置系統
+    
+    Returns:
+        bool: 初始化是否成功
+    """
+    logger.info("開始初始化配置系統...")
+    
+    # 驗證配置
+    validation = validate_config()
+    
+    if validation["config_complete"]:
+        logger.info("配置系統初始化成功")
+        return True
+    else:
+        logger.error("配置系統初始化失敗")
+        return False
+
 __version__ = "1.0.0"
+
+# 自動初始化
+if __name__ == "__main__":
+    initialize_config()

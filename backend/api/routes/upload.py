@@ -317,7 +317,8 @@ async def process_files_background(task_id: str, file_paths: List[str], temp_dir
                         logger.info(f"🔢 向量嵌入進度: {current_file}/{total_files} ({progress}%)")
                     else:
                         update_progress(msg, current_progress)  # 使用當前進度
-                except:
+                except (ValueError, AttributeError) as parse_error:
+                    logger.warning(f"解析進度信息失敗: {parse_error}")
                     update_progress(msg, current_progress)  # 使用當前進度
             elif "向量嵌入批次" in msg:
                 try:
@@ -332,7 +333,8 @@ async def process_files_background(task_id: str, file_paths: List[str], temp_dir
                         logger.info(f"🔢 向量嵌入批次: {current_batch}/{total_batches} ({progress}%)")
                     else:
                         update_progress(msg, current_progress)  # 使用當前進度
-                except:
+                except (ValueError, AttributeError) as parse_error:
+                    logger.warning(f"解析批次進度信息失敗: {parse_error}")
                     update_progress(msg, current_progress)  # 使用當前進度
             elif "開始向量嵌入" in msg:
                 # 向量嵌入開始，設置進度為50%

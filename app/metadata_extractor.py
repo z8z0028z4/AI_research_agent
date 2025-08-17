@@ -1,178 +1,175 @@
+"""
+元數據提取模塊
+============
+
+從PDF和DOCX文件中提取元數據信息
+"""
+
 import os
 import re
-import fitz  # PyMuPDF
-import docx
-import json
-from openai import OpenAI
-# 兼容性導入：支持相對導入和絕對導入
-try:
-    from .config import OPENAI_API_KEY
-except ImportError:
-    # 當作為模組導入時使用絕對導入
-    from config import OPENAI_API_KEY
+import logging
+from typing import Dict, Any, Optional
+from PyPDF2 import PdfReader
+from docx import Document
+import openai
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+# 配置日誌
+logger = logging.getLogger(__name__)
 
 def extract_text_from_pdf(pdf_path):
+    """從PDF文件中提取文本"""
     try:
-        # 確保使用絕對路徑
-        if not os.path.isabs(pdf_path):
-            pdf_path = os.path.abspath(pdf_path)
-        
-        # 檢查文件是否存在
-        if not os.path.exists(pdf_path):
-            raise FileNotFoundError(f"PDF文件不存在: {pdf_path}")
-        
-        doc = fitz.open(pdf_path)
-        first_page_text = doc[0].get_text()
-        full_text = "\n".join([page.get_text() for page in doc])
-        doc.close()
-        return first_page_text, full_text
+        reader = PdfReader(pdf_path)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text()
+        return text
     except Exception as e:
-        print(f"❌ PDF文本提取失敗 {pdf_path}: {e}")
-        raise
+        logger.error(f"PDF文本提取失敗 {pdf_path}: {e}")
+        return ""
 
 def extract_text_from_docx(docx_path):
+    """從DOCX文件中提取文本"""
     try:
-        # 確保使用絕對路徑
-        if not os.path.isabs(docx_path):
-            docx_path = os.path.abspath(docx_path)
-        
-        # 檢查文件是否存在
-        if not os.path.exists(docx_path):
-            raise FileNotFoundError(f"DOCX文件不存在: {docx_path}")
-        
-        doc = docx.Document(docx_path)
-        paragraphs = [para.text for para in doc.paragraphs if para.text.strip()]
-        return paragraphs[0] if paragraphs else "", "\n".join(paragraphs)
+        doc = Document(docx_path)
+        text = ""
+        for paragraph in doc.paragraphs:
+            text += paragraph.text + "\n"
+        return text
     except Exception as e:
-        print(f"❌ DOCX文本提取失敗 {docx_path}: {e}")
-        raise
+        logger.error(f"DOCX文本提取失敗 {docx_path}: {e}")
+        return ""
 
 def gpt_detect_type_and_title(text, filename):
-    prompt = f"""
-    You are an academic paper analysis tool. Please help determine from the following content:
-    1. Is this document a main paper or Supporting Information (SI)?
-    2. Please extract the corresponding main paper title (if available).
-
-    Reply only in the following JSON format, do not add any extra text, and do not use code blocks:
-    {{"type": "SI" or "paper", "title": "main paper title (empty string if none)"}}
-
-    File name: {filename}
-    File content: {text.strip()[:3000]}
-    """
-
-    for attempt in range(2):
+    """使用GPT判斷文件類型和提取標題"""
+    try:
+        # 從環境變量獲取API密鑰
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            logger.error("未設置OPENAI_API_KEY環境變量")
+            return "unknown", filename
+        
+        client = openai.OpenAI(api_key=api_key)
+        
+        prompt = f"""
+        請分析以下文本內容，判斷文件類型並提取標題。
+        
+        文件名：{filename}
+        文本內容（前1000字符）：
+        {text[:1000]}
+        
+        請以JSON格式回答：
+        {{
+            "type": "main_paper" 或 "supporting_info" 或 "unknown",
+            "title": "提取的標題"
+        }}
+        
+        判斷標準：
+        - main_paper: 主要研究論文，包含完整的實驗方法、結果和討論
+        - supporting_info: 支持信息，如補充材料、圖表說明等
+        - unknown: 無法確定類型
+        """
+        
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=200,
+            temperature=0.1
+        )
+        
+        result = response.choices[0].message.content.strip()
+        
+        # 嘗試解析JSON
         try:
-            from model_config_bridge import get_model_params
-            llm_params = get_model_params()
+            import json
+            data = json.loads(result)
+            return data.get("type", "unknown"), data.get("title", filename)
+        except json.JSONDecodeError:
+            logger.warning(f"GPT 回傳格式錯誤：{result}")
+            return "unknown", filename
             
-            # 修復參數名稱
-            api_params = {
-                "model": llm_params["model"],
-                "messages": [
-                    {"role": "system", "content": "You are a professional academic document classification and title extraction tool"},
-                    {"role": "user", "content": prompt}
-                ],
-                "timeout": llm_params.get("timeout", 120),
-            }
-            
-            # 根據模型類型使用正確的參數
-            if "gpt-5" in llm_params["model"]:
-                api_params["max_completion_tokens"] = llm_params.get("max_output_tokens", 4000)
-            else:
-                api_params["max_tokens"] = llm_params.get("max_tokens", 4000)
-            
-            response = client.chat.completions.create(**api_params)
-            content = response.choices[0].message.content.strip()
-            parsed = json.loads(content)
-            return parsed
-        except Exception as e:
-            print(f"⚠️ GPT 回傳格式錯誤（第 {attempt+1} 次）：{e}")
-            if attempt == 1:
-                return {"type": "unknown", "title": ""}
+    except Exception as e:
+        logger.warning(f"GPT 回傳格式錯誤（第 {attempt+1} 次）：{e}")
+        return "unknown", filename
 
 def extract_metadata(file_path):
-    filename = os.path.basename(file_path)
-    ext = os.path.splitext(filename)[1].lower()
-
+    """提取文件元數據"""
     try:
-        if ext == ".pdf":
-            first_page, full_text = extract_text_from_pdf(file_path)
-        elif ext == ".docx":
-            first_page, full_text = extract_text_from_docx(file_path)
-        else:
-            raise ValueError(f"不支援的檔案格式：{ext}")
-
-        # 1. 優先提取DOI
-        doi_match = re.search(r"10\.\d{4,9}/[-._;()/:A-Z0-9]+", full_text, re.I)
-        doi = doi_match.group(0) if doi_match else ""
+        # 獲取文件基本信息
+        filename = os.path.basename(file_path)
+        file_size = os.path.getsize(file_path)
         
-        # 清理DOI（移除末尾的標點符號）
+        # 提取文本內容
+        if file_path.lower().endswith('.pdf'):
+            content = extract_text_from_pdf(file_path)
+        elif file_path.lower().endswith('.docx'):
+            content = extract_text_from_docx(file_path)
+        else:
+            logger.warning(f"不支持的文件格式：{file_path}")
+            return None
+        
+        # 提取DOI
+        doi_pattern = r'10\.\d{4,}/[-._;()/:\w]+'
+        doi_match = re.search(doi_pattern, content)
+        doi = doi_match.group() if doi_match else None
+        
         if doi:
-            doi = doi.rstrip('.,;:')
-
-        # 2. 根據DOI和內容判斷類型
-        if doi:
-            # 有DOI = 主論文（99%的情況下）
-            doc_type = "paper"
-            print(f"✅ 找到DOI: {doi}，判斷為主論文")
-            
-            # 嘗試從內容提取標題（用於備用查詢）
-            title = ""
+            logger.info(f"找到DOI: {doi}，判斷為主論文")
+            file_type = "main_paper"
+            title = filename  # 使用文件名作為標題
+        else:
+            # 嘗試從內容提取標題
             try:
-                # 嘗試從第一頁提取標題
-                lines = first_page.split('\n')
+                # 簡單的標題提取邏輯
+                lines = content.split('\n')
                 for line in lines[:10]:  # 檢查前10行
                     line = line.strip()
-                    if len(line) > 20 and len(line) < 200:  # 合理的標題長度
-                        # 檢查是否包含常見的標題特徵
-                        if any(keyword in line.lower() for keyword in ['carbon', 'co2', 'metal', 'organic', 'framework', 'adsorption', 'capture']):
-                            title = line
-                            print(f"✅ 從內容提取到標題: {title}")
-                            break
-            except Exception as e:
-                print(f"⚠️ 從內容提取標題失敗: {e}")
-        else:
-            # 沒有DOI，使用LLM判斷類型和提取標題
-            print(f"⚠️ 未找到DOI，使用LLM分析文件類型...")
-            try:
-                result = gpt_detect_type_and_title(first_page + "\n" + full_text[:3000], filename)
-                doc_type = result.get("type", "unknown")
-                title = result.get("title", "")
-                
-                if doc_type == "SI":
-                    print(f"✅ LLM判斷為Supporting Information")
-                elif doc_type == "paper":
-                    print(f"✅ LLM判斷為主論文")
+                    if len(line) > 10 and len(line) < 200 and not line.startswith('Abstract'):
+                        title = line
+                        break
                 else:
-                    print(f"⚠️ LLM無法確定類型，設為unknown")
-                    
+                    title = filename
+                logger.info(f"從內容提取到標題: {title}")
             except Exception as e:
-                print(f"⚠️ LLM分析失敗: {e}")
-                doc_type = "unknown"
-                title = ""
-
-        return {
-            "doi": doi.strip(),
-            "type": doc_type,
-            "title": title.strip(),
-            "original_filename": filename,
-            "path": file_path
+                logger.warning(f"從內容提取標題失敗: {e}")
+                title = filename
+            
+            logger.warning("未找到DOI，使用LLM分析文件類型...")
+            file_type, extracted_title = gpt_detect_type_and_title(content, filename)
+            
+            if file_type == "supporting_info":
+                logger.info("LLM判斷為Supporting Information")
+            elif file_type == "main_paper":
+                logger.info("LLM判斷為主論文")
+            else:
+                logger.warning("LLM無法確定類型，設為unknown")
+            
+            # 如果LLM提取到更好的標題，使用它
+            if extracted_title and extracted_title != filename:
+                title = extracted_title
+        
+        metadata = {
+            "filename": filename,
+            "file_path": file_path,
+            "file_size": file_size,
+            "file_type": file_type,
+            "title": title,
+            "doi": doi,
+            "content_preview": content[:500] if content else ""
         }
+        
+        return metadata
+        
     except Exception as e:
-        print(f"❌ 元數據提取失敗 {file_path}: {e}")
-        # 返回基本的元數據信息
-        return {
-            "doi": "",
-            "type": "unknown",
-            "title": filename,
-            "original_filename": filename,
-            "path": file_path
-        }
+        logger.error(f"元數據提取失敗 {file_path}: {e}")
+        return None
 
-
-if __name__ == "__main__": #單檔測試用
-    test_file = r"C:\Users\B30242\OneDrive - ITRI\ITRI D500\3. tool\coding\AI-research-agent\experiment_data\papers\1-s2.0-S1385894722017600-main.pdf"
-    metadata = extract_metadata(test_file)
-    print(metadata)
+# 測試代碼
+if __name__ == "__main__":
+    # 測試元數據提取
+    test_file = "test.pdf"  # 替換為實際的測試文件
+    if os.path.exists(test_file):
+        metadata = extract_metadata(test_file)
+        logger.info(metadata)
+    else:
+        logger.warning(f"測試文件不存在：{test_file}")

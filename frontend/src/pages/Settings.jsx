@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
-import { Card, Form, Select, Button, message, Space, Typography, Divider, Slider, InputNumber, Row, Col, Alert } from 'antd'
-import { SettingOutlined, SaveOutlined, InfoCircleOutlined, ReloadOutlined } from '@ant-design/icons'
+import { InfoCircleOutlined, ReloadOutlined, SaveOutlined, SettingOutlined } from '@ant-design/icons'
+import { Alert, Button, Card, Col, Divider, Form, InputNumber, message, Row, Select, Slider, Space, Typography } from 'antd'
+import React, { useEffect, useState } from 'react'
 
 const { Title, Text } = Typography
 const { Option } = Select
@@ -59,7 +59,7 @@ const Settings = () => {
   const loadCurrentSettings = async () => {
     try {
       setLoading(true)
-      
+
       // 載入模型設定
       const modelResponse = await fetch('/api/v1/settings/model', {
         method: 'GET',
@@ -67,7 +67,7 @@ const Settings = () => {
           'Content-Type': 'application/json',
         },
       })
-      
+
       // 載入LLM參數設定
       const paramsResponse = await fetch('/api/v1/settings/llm-parameters', {
         method: 'GET',
@@ -75,7 +75,7 @@ const Settings = () => {
           'Content-Type': 'application/json',
         },
       })
-      
+
       // 載入JSON Schema參數設定
       const jsonSchemaResponse = await fetch('/api/v1/settings/json-schema-parameters', {
         method: 'GET',
@@ -83,17 +83,17 @@ const Settings = () => {
           'Content-Type': 'application/json',
         },
       })
-      
+
       if (modelResponse.ok && paramsResponse.ok && jsonSchemaResponse.ok) {
         const modelData = await modelResponse.json()
         const paramsData = await paramsResponse.json()
         const jsonSchemaData = await jsonSchemaResponse.json()
-        
+
         setCurrentModel(modelData.current_model)
         setSelectedModel(modelData.current_model) // 初始化選擇的模型
         setLlmParams(paramsData)
         setJsonSchemaParams(jsonSchemaData)
-        
+
         form.setFieldsValue({
           llm_model: modelData.current_model,
           ...paramsData,
@@ -118,12 +118,12 @@ const Settings = () => {
           'Content-Type': 'application/json',
         },
       })
-      
+
       if (response.ok) {
         const data = await response.json()
         setSupportedParams(data.supported_parameters)
         setModelParamsInfo(data)
-        
+
         // 更新表單的初始值以反映新模型的參數
         // 但保留用戶已修改但尚未保存的設定
         const currentFormValues = form.getFieldsValue()
@@ -146,7 +146,7 @@ const Settings = () => {
           'Content-Type': 'application/json',
         },
       })
-      
+
       if (response.ok) {
         const data = await response.json()
         setJsonSchemaSupportedParams(data.supported_parameters)
@@ -166,7 +166,7 @@ const Settings = () => {
   const handleSaveAllSettings = async (values) => {
     try {
       setLoading(true)
-      
+
       // 1. 儲存模型設定
       const modelResponse = await fetch('/api/v1/settings/model', {
         method: 'POST',
@@ -177,13 +177,13 @@ const Settings = () => {
           llm_model: values.llm_model
         }),
       })
-      
+
       if (!modelResponse.ok) {
         const errorData = await modelResponse.json()
         message.error(errorData.detail || '儲存模型設定失敗')
         return
       }
-      
+
       // 2. 儲存LLM參數設定
       const paramsToSend = {}
       Object.keys(supportedParams).forEach(key => {
@@ -191,7 +191,7 @@ const Settings = () => {
           paramsToSend[key] = values[key]
         }
       })
-      
+
       const paramsResponse = await fetch('/api/v1/settings/llm-parameters', {
         method: 'POST',
         headers: {
@@ -199,15 +199,15 @@ const Settings = () => {
         },
         body: JSON.stringify(paramsToSend),
       })
-      
+
       if (!paramsResponse.ok) {
         const errorData = await paramsResponse.json()
         message.error(errorData.detail || '儲存LLM參數失敗')
         return
       }
-      
-             // 3. 儲存JSON Schema參數設定
-       if (values.llm_model) {
+
+      // 3. 儲存JSON Schema參數設定
+      if (values.llm_model) {
         const jsonSchemaParamsToSend = {}
         if (values.min_length !== undefined) {
           jsonSchemaParamsToSend.min_length = values.min_length
@@ -215,7 +215,7 @@ const Settings = () => {
         if (values.max_length !== undefined) {
           jsonSchemaParamsToSend.max_length = values.max_length
         }
-        
+
         if (Object.keys(jsonSchemaParamsToSend).length > 0) {
           const jsonSchemaResponse = await fetch('/api/v1/settings/json-schema-parameters', {
             method: 'POST',
@@ -224,7 +224,7 @@ const Settings = () => {
             },
             body: JSON.stringify(jsonSchemaParamsToSend),
           })
-          
+
           if (!jsonSchemaResponse.ok) {
             const errorData = await jsonSchemaResponse.json()
             message.error(errorData.detail || '儲存JSON Schema參數失敗')
@@ -232,10 +232,10 @@ const Settings = () => {
           }
         }
       }
-      
+
       message.success('所有設定已成功儲存')
       setCurrentModel(values.llm_model)
-      
+
       // 重新載入設定以確保同步
       await loadCurrentSettings()
     } catch (error) {
@@ -250,7 +250,7 @@ const Settings = () => {
   const handleResetToDefault = async () => {
     try {
       setLoading(true)
-      
+
       // 設定預設值：gpt-5-mini 與預設設定
       const defaultSettings = {
         llm_model: 'gpt-5-mini',
@@ -259,7 +259,7 @@ const Settings = () => {
         reasoning_effort: 'medium',
         verbosity: 'medium'
       }
-      
+
       // 1. 儲存模型設定
       const modelResponse = await fetch('/api/v1/settings/model', {
         method: 'POST',
@@ -270,12 +270,12 @@ const Settings = () => {
           llm_model: defaultSettings.llm_model
         }),
       })
-      
+
       if (!modelResponse.ok) {
         message.error('重置模型設定失敗')
         return
       }
-      
+
       // 2. 儲存參數設定
       const paramsResponse = await fetch('/api/v1/settings/llm-parameters', {
         method: 'POST',
@@ -289,10 +289,10 @@ const Settings = () => {
           verbosity: defaultSettings.verbosity
         }),
       })
-      
+
       if (paramsResponse.ok) {
         message.success('已重置為預設設定 (GPT-5 Mini)')
-        
+
         // 更新本地狀態
         setCurrentModel(defaultSettings.llm_model)
         setSelectedModel(defaultSettings.llm_model)
@@ -302,7 +302,7 @@ const Settings = () => {
           reasoning_effort: defaultSettings.reasoning_effort,
           verbosity: defaultSettings.verbosity
         })
-        
+
         // 更新表單
         form.setFieldsValue({
           llm_model: defaultSettings.llm_model,
@@ -311,7 +311,7 @@ const Settings = () => {
           reasoning_effort: defaultSettings.reasoning_effort,
           verbosity: defaultSettings.verbosity
         })
-        
+
         // 重新載入參數資訊
         await loadModelParametersInfo(defaultSettings.llm_model)
       } else {
@@ -346,7 +346,7 @@ const Settings = () => {
             }}
           />
         )
-      
+
       case 'int':
         return (
           <InputNumber
@@ -356,7 +356,7 @@ const Settings = () => {
             placeholder={`設定${paramName}`}
           />
         )
-      
+
       case 'select':
         return (
           <Select
@@ -370,7 +370,7 @@ const Settings = () => {
             ))}
           </Select>
         )
-      
+
       default:
         return null
     }
@@ -406,9 +406,9 @@ const Settings = () => {
         high: "較大值 (30-50): 適合詳細描述"
       },
       max_length: {
-        low: "較小限制 (10-50): 強制簡潔輸出",
-        medium: "中等限制 (50-100): 平衡長度控制",
-        high: "較大限制 (100-200): 允許詳細輸出"
+        low: "較小限制 (10-500): 強制簡潔輸出",
+        medium: "中等限制 (500-1500): 平衡長度控制",
+        high: "較大限制 (1500-5000): 允許詳細輸出"
       }
     }
 
@@ -416,9 +416,9 @@ const Settings = () => {
     if (!desc) return null
 
     return (
-      <div style={{ 
-        background: '#f6f8fa', 
-        padding: '12px', 
+      <div style={{
+        background: '#f6f8fa',
+        padding: '12px',
         borderRadius: '6px',
         fontSize: '12px',
         lineHeight: '1.4'
@@ -438,16 +438,16 @@ const Settings = () => {
         <SettingOutlined style={{ marginRight: 8 }} />
         系統設定
       </Title>
-      
+
       {/* 語言模型設定 */}
       <Card style={{ marginBottom: 16 }}>
         <Title level={4}>語言模型設定</Title>
         <Text type="secondary">
           選擇用於整個系統的語言模型。不同的模型在性能和成本上有所差異。
         </Text>
-        
+
         <Divider />
-        
+
         <Form
           form={form}
           layout="vertical"
@@ -474,22 +474,22 @@ const Settings = () => {
               onChange={handleModelChange} // 新增：處理模型選擇變更
             >
               {modelOptions.map((option) => (
-                <Option 
-                  key={option.value} 
+                <Option
+                  key={option.value}
                   value={option.value}
                   label={option.label}
                 >
                   <div style={{ padding: '4px 0' }}>
-                    <div style={{ 
-                      fontWeight: 'bold', 
+                    <div style={{
+                      fontWeight: 'bold',
                       fontSize: '14px',
                       lineHeight: '1.4',
                       marginBottom: '4px'
                     }}>
                       {option.label}
                     </div>
-                    <div style={{ 
-                      fontSize: '12px', 
+                    <div style={{
+                      fontSize: '12px',
                       color: '#666',
                       lineHeight: '1.3'
                     }}>
@@ -502,9 +502,9 @@ const Settings = () => {
           </Form.Item>
 
           {selectedModel && (
-            <div style={{ 
-              background: '#f6f8fa', 
-              padding: '12px', 
+            <div style={{
+              background: '#f6f8fa',
+              padding: '12px',
               borderRadius: '6px',
               marginBottom: '16px'
             }}>
@@ -527,13 +527,13 @@ const Settings = () => {
               >
                 儲存所有設定
               </Button>
-              <Button 
-                onClick={handleResetToDefault} 
+              <Button
+                onClick={handleResetToDefault}
                 disabled={loading}
                 icon={<ReloadOutlined />}
-                             >
-                 重置為預設 (GPT-5 Mini)
-               </Button>
+              >
+                重置為預設 (GPT-5 Mini)
+              </Button>
             </Space>
           </Form.Item>
         </Form>
@@ -543,13 +543,13 @@ const Settings = () => {
       {selectedModel && Object.keys(supportedParams).length > 0 && (
         <Card>
           <Title level={4}>LLM 參數設定</Title>
-                     <Text type="secondary">
-             調整語言模型的生成參數，影響回應的長度和響應時間。
-             GPT-5系列支援推理控制和輸出詳盡度參數。
-           </Text>
-          
+          <Text type="secondary">
+            調整語言模型的生成參數，影響回應的長度和響應時間。
+            GPT-5系列支援推理控制和輸出詳盡度參數。
+          </Text>
+
           <Divider />
-          
+
           <Form
             form={form}
             layout="vertical"
@@ -590,7 +590,7 @@ const Settings = () => {
                     {renderParameterControl(paramName, paramConfig)}
                   </Form.Item>
                 </Col>
-                
+
                 <Col span={12}>
                   <Form.Item
                     label={`${paramName.charAt(0).toUpperCase() + paramName.slice(1)} 說明`}
@@ -613,9 +613,9 @@ const Settings = () => {
             設定結構化輸出的欄位約束，控制生成內容的長度和格式要求。
             這些參數主要用於研究提案生成等結構化輸出任務。
           </Text>
-          
+
           <Divider />
-          
+
           <Form
             form={form}
             layout="vertical"
@@ -651,7 +651,7 @@ const Settings = () => {
                     />
                   </Form.Item>
                 </Col>
-                
+
                 <Col span={12}>
                   <Form.Item
                     label={`${paramName === 'min_length' ? '最小長度' : '最大長度'}說明`}
@@ -676,30 +676,30 @@ const Settings = () => {
         </Card>
       )}
 
-             {/* 模型特性說明 */}
-       {selectedModel && (
-         <Card style={{ marginTop: 16 }}>
-           <Title level={4}>模型特性說明</Title>
-           <Alert
-             message="模型特性"
-             description={
-               <div>
-                 <p><strong>GPT-5系列特性：</strong></p>
-                 <ul>
-                   <li><strong>推理控制 (reasoning.effort)：</strong> 控制模型的推理密度和成本</li>
-                   <li><strong>輸出詳盡度 (verbosity)：</strong> 控制回應的詳細程度</li>
-                   <li><strong>工具鏈支援：</strong> 支援function calling和工具使用</li>
-                   <li><strong>結構化輸出：</strong> 支援JSON等格式的強制輸出</li>
-                   <li><strong>JSON Schema 驗證：</strong> 支援欄位長度和格式約束</li>
-                 </ul>
-               </div>
-             }
-             type="info"
-             showIcon
-             icon={<InfoCircleOutlined />}
-           />
-         </Card>
-       )}
+      {/* 模型特性說明 */}
+      {selectedModel && (
+        <Card style={{ marginTop: 16 }}>
+          <Title level={4}>模型特性說明</Title>
+          <Alert
+            message="模型特性"
+            description={
+              <div>
+                <p><strong>GPT-5系列特性：</strong></p>
+                <ul>
+                  <li><strong>推理控制 (reasoning.effort)：</strong> 控制模型的推理密度和成本</li>
+                  <li><strong>輸出詳盡度 (verbosity)：</strong> 控制回應的詳細程度</li>
+                  <li><strong>工具鏈支援：</strong> 支援function calling和工具使用</li>
+                  <li><strong>結構化輸出：</strong> 支援JSON等格式的強制輸出</li>
+                  <li><strong>JSON Schema 驗證：</strong> 支援欄位長度和格式約束</li>
+                </ul>
+              </div>
+            }
+            type="info"
+            showIcon
+            icon={<InfoCircleOutlined />}
+          />
+        </Card>
+      )}
     </div>
   )
 }

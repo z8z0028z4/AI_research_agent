@@ -516,169 +516,113 @@ def call_llm(prompt: str) -> str:
         print(f"🔍 DEBUG: current_model 類型: {type(current_model)}")
         print(f"🔍 DEBUG: current_model.startswith('gpt-5'): {current_model.startswith('gpt-5')}")
     except Exception as e:
-        print(f"⚠️ 無法獲取模型信息：{e}")
-        # 使用fallback配置
-        llm_params = {
-            "model": "gpt-4-1106-preview",
-            "temperature": 0.3,
-            "max_tokens": 4000,
-            "timeout": 120,
-        }
+        print(f"❌ 無法獲取模型信息：{e}")
+        raise Exception(f"無法獲取模型信息：{str(e)}")
     
     try:
-        # 根據模型類型選擇不同的API
-        if current_model.startswith('gpt-5'):
-            # GPT-5系列使用Responses API
-            from openai import OpenAI
-            client = OpenAI()
+        # 只支援 GPT-5 系列使用 Responses API
+        if not current_model.startswith('gpt-5'):
+            raise Exception(f"不支援的模型：{current_model}，只支援 GPT-5 系列")
             
-            # 準備Responses API的參數
-            # 使用設定的max_output_tokens，不自動提高
-            max_tokens = llm_params.get('max_output_tokens', 2000)
-            print(f"🔧 使用設定的max_output_tokens: {max_tokens}")
+        from openai import OpenAI
+        client = OpenAI()
+        
+        # 準備Responses API的參數
+        # 優先使用max_output_tokens，如果沒有則使用max_tokens
+        max_tokens = llm_params.get('max_output_tokens', llm_params.get('max_tokens', 2000))
+        print(f"🔧 使用設定的max_output_tokens: {max_tokens}")
+        
+        responses_params = {
+            'model': current_model,
+            'input': [{'role': 'user', 'content': prompt}],
+            'max_output_tokens': max_tokens
+        }
+        
+        # 添加其他參數（排除model、input、max_output_tokens和max_tokens）
+        # 注意：model_parameter_detector已經將參數適配為正確的格式
+        for key, value in llm_params.items():
+            if key not in ['model', 'input', 'max_output_tokens', 'max_tokens', 'verbosity', 'reasoning_effort']:
+                responses_params[key] = value
+                print(f"🔧 添加參數 {key}: {value}")
+        
+        # 特殊處理verbosity和reasoning_effort，因為它們已經被model_parameter_detector適配為嵌套結構
+        if 'text' in llm_params:
+            responses_params['text'] = llm_params['text']
+            print(f"🔧 添加嵌套參數 text: {llm_params['text']}")
+        if 'reasoning' in llm_params:
+            responses_params['reasoning'] = llm_params['reasoning']
+            print(f"🔧 添加嵌套參數 reasoning: {llm_params['reasoning']}")
+        
+        print(f"🔧 使用Responses API，參數：{responses_params}")
+        print(f"🔍 DEBUG: 準備調用 client.responses.create")
+        
+        # 處理GPT-5的incomplete狀態
+        max_retries = 3
+        retry_count = 0
+        current_max_tokens = max_tokens
+        
+        while retry_count < max_retries:
+            # 更新token數（每次重試增加1500）
+            if retry_count > 0:
+                current_max_tokens += 1500
+                responses_params['max_output_tokens'] = current_max_tokens
+                print(f"🔄 重試 {retry_count}：提高max_output_tokens到 {current_max_tokens}")
             
-            responses_params = {
-                'model': current_model,
-                'input': [{'role': 'user', 'content': prompt}],
-                'max_output_tokens': max_tokens
-            }
+            response = client.responses.create(**responses_params)
             
-            # 添加其他參數（排除model、input、max_output_tokens和max_tokens）
-            for key, value in llm_params.items():
-                if key not in ['model', 'input', 'max_output_tokens', 'max_tokens']:
-                    responses_params[key] = value
+            print(f"🔍 DEBUG: API調用完成 (嘗試 {retry_count + 1}/{max_retries})")
+            print(f"🔍 DEBUG: response 類型: {type(response)}")
+            print(f"🔍 DEBUG: response.status: {getattr(response, 'status', 'N/A')}")
             
-            print(f"🔧 使用Responses API，參數：{responses_params}")
-            print(f"🔍 DEBUG: 準備調用 client.responses.create")
+            # 檢查整體response狀態
+            if hasattr(response, 'status') and response.status == 'incomplete':
+                print(f"⚠️ 檢測到incomplete狀態，等待後重試...")
+                print(f"💡 當前max_output_tokens: {current_max_tokens}")
+                retry_count += 1
+                if retry_count < max_retries:
+                    import time
+                    time.sleep(2)  # 等待2秒後重試
+                    continue
+                else:
+                    print(f"❌ 達到最大重試次數，使用incomplete的結果")
             
-
+            # 提取文本內容（只使用 output_text）
+            output = ""
             
-            # 處理GPT-5的incomplete狀態
-            max_retries = 3
-            retry_count = 0
-            current_max_tokens = max_tokens
-            
-            while retry_count < max_retries:
-                # 更新token數（每次重試增加1500）
-                if retry_count > 0:
-                    current_max_tokens += 1500
-                    responses_params['max_output_tokens'] = current_max_tokens
-                    print(f"🔄 重試 {retry_count}：提高max_output_tokens到 {current_max_tokens}")
-                
-                response = client.responses.create(**responses_params)
-                
-                print(f"🔍 DEBUG: API調用完成 (嘗試 {retry_count + 1}/{max_retries})")
-                print(f"🔍 DEBUG: response 類型: {type(response)}")
-                print(f"🔍 DEBUG: response.status: {getattr(response, 'status', 'N/A')}")
-                
-                # 檢查整體response狀態
-                if hasattr(response, 'status') and response.status == 'incomplete':
-                    print(f"⚠️ 檢測到incomplete狀態，等待後重試...")
-                    print(f"💡 當前max_output_tokens: {current_max_tokens}")
+            # 使用 output_text
+            if getattr(response, "output_text", None):
+                txt = response.output_text.strip()
+                if txt:
+                    print(f"✅ 使用 output_text: {len(txt)} 字符")
+                    output = txt
+                    print(f"✅ LLM 調用成功，回應長度：{len(output)} 字符")
+                    print(f"📝 LLM 回應預覽：{output[:200]}...")
+                    return output
+                else:
+                    print(f"❌ output_text 為空")
                     retry_count += 1
                     if retry_count < max_retries:
-                        import time
-                        time.sleep(2)  # 等待2秒後重試
                         continue
                     else:
-                        print(f"❌ 達到最大重試次數，使用incomplete的結果")
-                
-                # 提取文本內容（優先使用output_text，後備解析output陣列）
-                output = ""
-                
-                # 1) 優先嘗試官方便捷屬性 output_text
-                try:
-                    if getattr(response, "output_text", None):
-                        txt = response.output_text.strip()
-                        if txt:
-                            print(f"✅ 使用 output_text: {len(txt)} 字符")
-                            output = txt
-                except Exception as e:
-                    print(f"⚠️ output_text 提取失敗: {e}")
-                
-                # 2) 如果output_text為空，後備解析output陣列
-                if not output:
-                    if hasattr(response, 'output') and response.output:
-                        print(f"🔍 DEBUG: 開始解析 output 陣列，共 {len(response.output)} 個項目")
-                        
-                        for i, item in enumerate(response.output):
-                            item_type = getattr(item, "type", None)
-                            item_status = getattr(item, "status", None)
-                            print(f"  - [{i}] type={item_type}, status={item_status}")
-                            
-                            # 最終答案通常在 type="message"
-                            if item_type == "message":
-                                content = getattr(item, "content", []) or []
-                                print(f"    📝 message 有 {len(content)} 個 content 項目")
-                                
-                                for j, c in enumerate(content):
-                                    # content 物件通常有 .text
-                                    textval = getattr(c, "text", None)
-                                    if textval:
-                                        print(f"    ✅ content[{j}] 提取到文本: {len(textval)} 字符")
-                                        output += textval
-                                    else:
-                                        print(f"    ⚠️ content[{j}] 沒有 text 屬性")
-                    else:
-                        print(f"🔍 DEBUG: response 沒有 output 屬性或 output 為空")
-
-                output = output.strip()
-                print(f"🔍 DEBUG: 最終 output 長度: {len(output)}")
-                print(f"🔍 DEBUG: 最終 output 內容: {output[:200]}...")
-
-                # 檢查整體response狀態
-                response_status = getattr(response, 'status', None)
-                if response_status == 'incomplete':
-                    print(f"⚠️ 整體響應狀態為 incomplete")
-                    if output:
-                        print(f"✅ 即使incomplete狀態，仍成功提取文本: {len(output)} 字符")
-                        print(f"✅ LLM 調用成功，回應長度：{len(output)} 字符")
-                        print(f"📝 LLM 回應預覽：{output[:200]}...")
-                        return output
-                    else:
-                        print(f"❌ incomplete狀態且無法提取文本")
-                        retry_count += 1
-                        if retry_count < max_retries:
-                            import time
-                            time.sleep(2)  # 等待2秒後重試
-                            continue
-                        else:
-                            print(f"❌ 達到最大重試次數")
-                            print(f"💡 已嘗試提高token數到 {current_max_tokens}")
-                            return ""
+                        print(f"❌ 達到最大重試次數")
+                        return ""
+            else:
+                print(f"❌ 無法提取 output_text")
+                retry_count += 1
+                if retry_count < max_retries:
+                    continue
                 else:
-                    # 正常狀態
-                    if output:
-                        print(f"✅ 成功提取文本: {len(output)} 字符")
-                        print(f"✅ LLM 調用成功，回應長度：{len(output)} 字符")
-                        print(f"📝 LLM 回應預覽：{output[:200]}...")
-                        return output
-                    else:
-                        print(f"❌ 無法提取文本")
-                        retry_count += 1
-                        if retry_count < max_retries:
-                            import time
-                            time.sleep(2)
-                            continue
-                        else:
-                            print(f"❌ 達到最大重試次數")
-                            print(f"💡 已嘗試提高token數到 {current_max_tokens}")
-                            return ""
-
-            print(f"❌ 所有重試都失敗，返回空字符串")
-            return ""
-            
-        else:
-            # GPT-4系列使用Chat Completions API (LangChain)
-            llm = ChatOpenAI(**llm_params)
-            response = llm.invoke(prompt)
-            print(f"✅ LLM 調用成功，回應長度：{len(response.content)} 字符")
-            print(f"📝 LLM 回應預覽：{response.content[:200]}...")
-            return response.content
-            
+                    print(f"❌ 達到最大重試次數")
+                    return ""
+        
+        print(f"❌ 所有重試都失敗，返回空字符串")
+        return ""
+        
     except Exception as e:
         print(f"❌ LLM 調用失敗：{e}")
-        return ""
+        import traceback
+        print(f"❌ 詳細錯誤信息：{traceback.format_exc()}")
+        raise Exception(f"LLM 調用失敗：{str(e)}")
 
 
 def call_llm_structured_proposal(system_prompt: str, user_prompt: str) -> Dict[str, Any]:
@@ -703,25 +647,19 @@ def call_llm_structured_proposal(system_prompt: str, user_prompt: str) -> Dict[s
         print(f"🤖 使用模型：{current_model}")
         print(f"🔧 模型參數：{llm_params}")
     except Exception as e:
-        print(f"⚠️ 無法獲取模型信息：{e}")
-        # 使用fallback配置
-        current_model = "gpt-4-1106-preview"
-        llm_params = {
-            "model": "gpt-4-1106-preview",
-            "temperature": 0.0,  # 結構化輸出使用0溫度
-            "max_tokens": 4000,
-            "timeout": 120,
-        }
+        print(f"❌ 無法獲取模型信息：{e}")
+        raise Exception(f"無法獲取模型信息：{str(e)}")
     
     try:
-        # 根據模型類型選擇不同的API
-        if current_model.startswith('gpt-5'):
+        # 只支援 GPT-5 系列使用 Responses API
+        if not current_model.startswith('gpt-5'):
+            raise Exception(f"不支援的模型：{current_model}，只支援 GPT-5 系列")
             # GPT-5系列使用Responses API with JSON Schema
             from openai import OpenAI
             client = OpenAI()
             
             # 準備Responses API的參數
-            max_tokens = llm_params.get('max_output_tokens', 4000)
+            max_tokens = llm_params.get('max_output_tokens', llm_params.get('max_tokens', 4000))
             
             # 動態獲取最新的 schema
             current_schema = create_research_proposal_schema()
@@ -861,44 +799,9 @@ def call_llm_structured_proposal(system_prompt: str, user_prompt: str) -> Dict[s
             print(f"❌ 所有重試都失敗，返回空字典")
             return {}
             
-        else:
-            # GPT-4系列使用Chat Completions API with function calling
-            from openai import OpenAI
-            client = OpenAI()
-            
-            # 動態獲取最新的 schema
-            current_schema = create_research_proposal_schema()
-            
-            # 使用function calling作為fallback
-            response = client.chat.completions.create(
-                model=current_model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.0,
-                functions=[{
-                    "name": "create_research_proposal",
-                    "description": "Create a structured research proposal",
-                    "parameters": current_schema
-                }],
-                function_call={"name": "create_research_proposal"},
-                max_tokens=llm_params.get('max_tokens', 4000)
-            )
-            
-            # 提取function call結果
-            if response.choices[0].message.function_call:
-                function_call = response.choices[0].message.function_call
-                arguments = json.loads(function_call.arguments)
-                print(f"✅ 成功解析function call結構化提案")
-                return arguments
-            else:
-                print(f"❌ 無法從function call提取結果")
-                return {}
-            
     except Exception as e:
         print(f"❌ 結構化LLM調用失敗：{e}")
-        return {}
+        raise Exception(f"結構化LLM調用失敗：{str(e)}")
 
 def call_llm_structured_experimental_detail(chunks: List[Document], proposal: str) -> Dict[str, Any]:
     """
@@ -940,7 +843,7 @@ def call_llm_structured_experimental_detail(chunks: List[Document], proposal: st
             client = OpenAI()
             
             # 準備Responses API的參數
-            max_tokens = llm_params.get('max_output_tokens', 6000)  # 使用測試報告推薦的 6000
+            max_tokens = llm_params.get('max_output_tokens', llm_params.get('max_tokens', 6000))  # 使用測試報告推薦的 6000
             
             # 構建系統提示詞
             system_prompt = f"""
@@ -1245,7 +1148,7 @@ def call_llm_structured_revision_explain(user_feedback: str, proposal: str) -> D
             client = OpenAI()
             
             # 準備Responses API的參數
-            max_tokens = llm_params.get('max_output_tokens', 4000)
+            max_tokens = llm_params.get('max_output_tokens', llm_params.get('max_tokens', 4000))
             
             # 動態獲取最新的 schema
             current_schema = create_revision_explain_schema()
@@ -2170,7 +2073,7 @@ def call_llm_structured_revision_proposal(question: str, new_chunks: List[Docume
             client = OpenAI()
             
             # 準備Responses API的參數
-            max_tokens = llm_params.get('max_output_tokens', 4000)
+            max_tokens = llm_params.get('max_output_tokens', llm_params.get('max_tokens', 4000))
             
             # 動態獲取最新的 schema
             current_schema = create_revision_proposal_schema()

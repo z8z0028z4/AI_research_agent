@@ -19,15 +19,13 @@ AI 研究助理 - 文檔分塊和向量嵌入模塊
 """
 
 import os
-import sys
 import time
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 import chromadb
-from chromadb.config import Settings
 # 兼容性導入：支持相對導入和絕對導入
 try:
     from .pdf_read_and_chunk_page_get import load_and_parse_file, get_page_number_for_chunk
@@ -90,7 +88,7 @@ def get_chroma_instance(vectorstore_type: str = "paper"):
             )
             
         except Exception as e:
-            print(f"❌ 創建向量數據庫失敗：{e}")
+            logger.error(f"創建向量數據庫失敗：{e}")
             raise
     
     return _chroma_instances[vectorstore_type]
@@ -98,8 +96,7 @@ def get_chroma_instance(vectorstore_type: str = "paper"):
 
 # ==================== 設備配置 ====================
 # 自動檢測並使用GPU或CPU進行向量計算
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"🚀 嵌入模型使用設備：{device.upper()}")
+logger.info(f"嵌入模型使用設備：{device.upper()}")
 
 
 def embed_documents_from_metadata(metadata_list, status_callback=None):
@@ -129,7 +126,7 @@ def embed_documents_from_metadata(metadata_list, status_callback=None):
     - 自動持久化存儲
     """
     start_time = time.time()
-    logger.info(f"🚀 開始向量嵌入處理，共 {len(metadata_list)} 個文件")
+    logger.info(f"開始向量嵌入處理，共 {len(metadata_list)} 個文件")
     
     # ==================== 文本分割器配置 ====================
     # 配置文本分割參數
@@ -345,7 +342,6 @@ def embed_documents_from_metadata(metadata_list, status_callback=None):
             logger.info(f"   ✅ 批次 {batch_idx + 1}/{total_batches} 完成，耗時: {batch_end_time - batch_start_time:.2f}秒")
             
             if status_callback:
-                progress_percent = 70 + int(((batch_idx + 1) / total_batches) * 25)  # 70-95%
                 status_callback(f"✅ 完成批次 {batch_idx + 1}/{total_batches} 的向量嵌入")
         
         embedding_end_time = time.time()
@@ -354,11 +350,11 @@ def embed_documents_from_metadata(metadata_list, status_callback=None):
         if status_callback:
             status_callback(f"✅ 向量嵌入完成，共處理 {len(texts)} 個文本塊")
         
-        print(f"✅ 向量嵌入完成，共處理 {len(texts)} 個文本塊")
+        logger.info(f"✅ 向量嵌入完成，共處理 {len(texts)} 個文本塊")
         
     except Exception as e:
         logger.error(f"❌ 向量嵌入失敗: {e}")
-        print(f"❌ 向量嵌入失敗: {e}")
+        logger.info(f"❌ 向量嵌入失敗: {e}")
         if status_callback:
             status_callback(f"❌ 向量嵌入失敗: {e}")
         raise
@@ -433,13 +429,13 @@ def embed_experiment_txt_batch(txt_paths: List[str], status_callback=None):
             
             # 檢查文件是否存在
             if not os.path.exists(absolute_path):
-                print(f"❌ 文件不存在: {absolute_path}")
+                logger.error(f"文件不存在: {absolute_path}")
                 continue
             
             with open(absolute_path, "r", encoding="utf-8") as f:
                 content = f.read().strip()
         except Exception as e:
-            print(f"❌ 讀取文件失敗 {path}: {e}")
+            logger.error(f"讀取文件失敗 {path}: {e}")
             continue
             
         # 過濾過短的內容
@@ -465,17 +461,17 @@ def embed_experiment_txt_batch(txt_paths: List[str], status_callback=None):
         vectorstore.add_texts(texts=texts, metadatas=metadatas)
         # vectorstore.persist()  # 已棄用，自動持久化
     except Exception as e:
-        print(f"❌ 實驗數據嵌入失敗: {e}")
+        logger.error(f"實驗數據嵌入失敗: {e}")
         if status_callback:
-            status_callback(f"❌ 實驗數據嵌入失敗: {e}")
+            status_callback(f"實驗數據嵌入失敗: {e}")
         return
 
     # ==================== 統計信息 ====================
     try:
         docs = vectorstore.get(include=["documents"])
-        print("📦 向量數量：", len(docs["documents"]))
+        logger.info(f"向量數量：{len(docs['documents'])}")
     except Exception as e:
-        print(f"⚠️ 無法獲取實驗向量庫統計信息: {e}")
+        logger.warning(f"無法獲取實驗向量庫統計信息: {e}")
         docs = {"documents": []}
 
     # ==================== 進度回調 ====================
@@ -483,12 +479,12 @@ def embed_experiment_txt_batch(txt_paths: List[str], status_callback=None):
         status_callback(f"✅ 嵌入完成，共 {len(texts)} 筆實驗摘要")
 
     # ==================== 詳細預覽 ====================
-    print("📊 本次嵌入預覽：")
+    logger.info("📊 本次嵌入預覽：")
     for i, t in enumerate(texts[:5]):
         try:
-            print(f"#{i+1} | {metadatas[i]['exp_id']} | 頭 80 字：{t[:80].replace(chr(10), ' ')}")
+            logger.info(f"#{i+1} | {metadatas[i]['exp_id']} | 頭 80 字：{t[:80].replace(chr(10), ' ')}")
         except Exception as e:
-            print(f"#{i+1} | 預覽顯示失敗: {e}")
+            logger.warning(f"預覽顯示失敗: {e}")
 
 
 # ==================== 輔助函數 ====================
@@ -523,14 +519,14 @@ def validate_embedding_model():
         bool: 模型是否可用
     """
     try:
-        embedding_model = HuggingFaceEmbeddings(
+        HuggingFaceEmbeddings(
             model_name=EMBEDDING_MODEL_NAME,
             model_kwargs={"trust_remote_code": True, "device": device}
         )
-        print(f"✅ 嵌入模型驗證成功：{EMBEDDING_MODEL_NAME}")
+        logger.info(f"嵌入模型驗證成功：{EMBEDDING_MODEL_NAME}")
         return True
     except Exception as e:
-        print(f"❌ 嵌入模型驗證失敗：{e}")
+        logger.error(f"嵌入模型驗證失敗：{e}")
         return False
 
 
@@ -567,7 +563,7 @@ def get_vectorstore_stats(vectorstore_type: str = "paper"):
         }
         
     except Exception as e:
-        print(f"❌ 獲取統計信息失敗：{e}")
+        logger.error(f"獲取統計信息失敗：{e}")
         return {"error": str(e)}
 
 
@@ -578,19 +574,19 @@ if __name__ == "__main__":
     
     這個測試代碼用於驗證嵌入功能是否正常工作
     """
-    print("🧪 開始測試嵌入功能...")
+    logger.info("開始測試嵌入功能...")
     
     # 驗證嵌入模型
     if validate_embedding_model():
-        print("✅ 嵌入模型驗證通過")
+        logger.info("✅ 嵌入模型驗證通過")
         
         # 獲取統計信息
         paper_stats = get_vectorstore_stats("paper")
         experiment_stats = get_vectorstore_stats("experiment")
         
-        print("📊 向量數據庫統計：")
-        print(f"  文獻向量庫：{paper_stats}")
-        print(f"  實驗向量庫：{experiment_stats}")
+        logger.info("📊 向量數據庫統計：")
+        logger.info(f"  文獻向量庫：{paper_stats}")
+        logger.info(f"  實驗向量庫：{experiment_stats}")
     else:
-        print("❌ 嵌入模型驗證失敗")
+        logger.error("❌ 嵌入模型驗證失敗")
 

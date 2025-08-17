@@ -43,6 +43,7 @@ PYTHON_DEPS = {
     "scipy": ("scipy", "scipy"),
     
     # Web 框架
+    "streamlit": ("streamlit", "streamlit"),
     "fastapi": ("fastapi", "fastapi"),
     "uvicorn": ("uvicorn", "uvicorn[standard]"),
     

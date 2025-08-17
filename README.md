@@ -255,7 +255,7 @@ backend/                  # FastAPI backend
 └── main.py              # FastAPI application
 app/                     # Legacy Streamlit components
 ├── model_config_bridge.py  # Bridge between app and backend
-└── rag_core.py          # RAG implementation
+└── core/                # RAG implementation (refactored)
 ```
 
 ---

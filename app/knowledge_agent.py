@@ -17,27 +17,47 @@ AI 研究助理 - 知識代理模塊
 """
 
 import pandas as pd
+# 導入核心模組
+from app.core import (
+    # 向量數據庫操作
+    load_paper_vectorstore,
+    load_experiment_vectorstore,
+    retrieve_chunks_multi_query,
+    preview_chunks,
+    
+    # 提示詞構建
+    build_prompt,
+    build_proposal_prompt,
+    build_detail_experimental_plan_prompt,
+    build_inference_prompt,
+    build_dual_inference_prompt,
+    build_iterative_proposal_prompt,
+    
+    # LLM 生成
+    call_llm,
+    
+    # 查詢擴展
+    expand_query,
+    
+    # 格式轉換
+    structured_proposal_to_text,
+    structured_experimental_detail_to_text,
+    structured_revision_proposal_to_text
+)
+
+# 導入便捷函數
+from app.rag_core_refactored import (
+    generate_iterative_structured_proposal,
+    generate_structured_experimental_detail,
+
+    generate_structured_revision_proposal,
+    generate_structured_proposal
+)
+
 # 兼容性導入：支持相對導入和絕對導入
 try:
-    from .rag_core import (
-        load_paper_vectorstore, build_proposal_prompt, build_detail_experimental_plan_prompt, 
-        build_iterative_proposal_prompt, load_experiment_vectorstore, preview_chunks, 
-        retrieve_chunks_multi_query, build_prompt, call_llm, build_inference_prompt, 
-        build_dual_inference_prompt, expand_query, generate_proposal_with_fallback,
-        generate_iterative_structured_proposal, generate_structured_experimental_detail,
-        generate_structured_revision_explain, generate_structured_revision_proposal
-    )
     from .config import EXPERIMENT_DIR
 except ImportError:
-    # 當作為模組導入時使用絕對導入
-    from rag_core import (
-        load_paper_vectorstore, build_proposal_prompt, build_detail_experimental_plan_prompt, 
-        build_iterative_proposal_prompt, load_experiment_vectorstore, preview_chunks, 
-        retrieve_chunks_multi_query, build_prompt, call_llm, build_inference_prompt, 
-        build_dual_inference_prompt, expand_query, generate_proposal_with_fallback,
-        generate_iterative_structured_proposal, generate_structured_experimental_detail,
-        generate_structured_revision_explain, generate_structured_revision_proposal
-    )
     from config import EXPERIMENT_DIR
 import os
 
@@ -147,7 +167,10 @@ def agent_answer(question: str, mode: str = "make proposal", **kwargs):
         print(f"📄 [AGENT-{request_id}] 檢索到 {len(chunks)} 個文檔塊")
         
         # 使用新的結構化提案生成功能
-        text_proposal, structured_data = generate_proposal_with_fallback(chunks, question)
+        structured_data = generate_structured_proposal(chunks, question)
+        
+        # 將結構化數據轉換為文本格式
+        text_proposal = structured_proposal_to_text(structured_data) if structured_data else ""
         
         end_time = time.time()
         duration = end_time - start_time
@@ -217,7 +240,6 @@ def agent_answer(question: str, mode: str = "make proposal", **kwargs):
         structured_data = generate_structured_experimental_detail(chunks, proposal)
         
         # 轉換為文本格式
-        from rag_core import structured_experimental_detail_to_text
         text_experiment = structured_experimental_detail_to_text(structured_data)
         
         # 返回結構化結果
@@ -252,7 +274,6 @@ def agent_answer(question: str, mode: str = "make proposal", **kwargs):
         structured_data = generate_structured_revision_proposal(question, new_chunks, old_chunks, proposal)
         
         # 轉換為文本格式
-        from rag_core import structured_revision_proposal_to_text
         text_proposal = structured_revision_proposal_to_text(structured_data)
         
         # 返回結構化結果
