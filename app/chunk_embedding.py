@@ -1,21 +1,21 @@
 """
-AI 研究助理 - 文檔分塊和向量嵌入模塊
-================================
+AI 研究助理 - 文檔分塊和向量嵌入模塊 (OpenAI版本)
+================================================
 
 這個模塊負責將文檔轉換為向量表示，為RAG系統提供檢索基礎。
 主要功能包括：
 1. 文檔分塊和預處理
-2. 文本向量化
+2. 文本向量化 (使用OpenAI Embeddings)
 3. 向量數據庫存儲
 4. 批量處理支持
 
 架構說明：
 - 使用LangChain的文本分割器
-- 集成HuggingFace嵌入模型
+- 集成OpenAI嵌入模型
 - 使用Chroma作為向量數據庫
-- 支持GPU加速計算
+- 支持批量處理以優化API調用
 
-⚠️ 注意：此模塊是RAG系統的基礎，所有文檔檢索都依賴於此模塊
+⚠️ 注意：此模塊使用OpenAI API，需要設置API密鑰
 """
 
 import os
@@ -24,15 +24,14 @@ import time
 import logging
 from typing import List, Dict, Any, Optional
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
 import chromadb
 from chromadb.config import Settings
 from pdf_read_and_chunk_page_get import load_and_parse_file, get_page_number_for_chunk
-import torch
 
 # 配置日誌
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ==================== 全局變量 ====================
@@ -44,40 +43,21 @@ backend_path = os.path.join(os.path.dirname(__file__), "..", "backend")
 if backend_path not in sys.path:
     sys.path.insert(0, backend_path)
 
-# Use a simple, stable model that doesn't require special configurations
-# This model is lightweight and works well for multilingual text
-DEFAULT_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-
-def get_working_model_name():
-    """
-    Get a working embedding model name with simplified approach
-    """
-    # Try to get from settings first
+# OpenAI配置
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    # Try to get from settings
     try:
         from core.settings_manager import settings_manager
-        model_from_settings = settings_manager.get_embedding_model()
-        
-        # List of models known to have issues with certain configurations
-        problematic_models = [
-            "paraphrase-multilingual-MiniLM-L12-v2",
-            "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-        ]
-        
-        # If the model from settings is problematic, use default
-        if any(prob in model_from_settings for prob in problematic_models):
-            logger.warning(f"Model {model_from_settings} may have compatibility issues, using default model instead")
-            return DEFAULT_MODEL
-            
-        return model_from_settings
-    except Exception as e:
-        logger.warning(f"Could not get model from settings: {e}, using default")
-        return DEFAULT_MODEL
+        OPENAI_API_KEY = settings_manager.get_openai_api_key()
+    except:
+        logger.warning("⚠️ OpenAI API key not found in environment or settings")
 
-# Get model name
-EMBEDDING_MODEL_NAME = get_working_model_name()
-
-# 設備配置
-device = "cuda" if torch.cuda.is_available() else "cpu"
+# OpenAI嵌入模型選擇
+# text-embedding-3-small: 便宜且快速，適合大多數用途
+# text-embedding-3-large: 更高質量，但成本更高
+# text-embedding-ada-002: 舊版本，但仍然穩定
+EMBEDDING_MODEL_NAME = "text-embedding-3-small"
 
 # 全局 Chroma 實例緩存，避免重複創建
 _chroma_instances = {}
@@ -85,85 +65,51 @@ _embedding_model_instance = None
 
 def get_embedding_model_instance():
     """
-    獲取或創建一個全局的嵌入模型實例
-    使用最簡單的配置以避免兼容性問題
+    獲取或創建一個全局的OpenAI嵌入模型實例
+    
+    Returns:
+        OpenAIEmbeddings: OpenAI嵌入模型實例
     """
     global _embedding_model_instance
     if _embedding_model_instance is None:
+        if not OPENAI_API_KEY:
+            raise ValueError(
+                "OpenAI API key not found! Please set it in one of these ways:\n"
+                "1. Set environment variable: set OPENAI_API_KEY=your-key-here\n"
+                "2. Add to .env file: OPENAI_API_KEY=your-key-here\n"
+                "3. Add to settings.json: {\"openai_api_key\": \"your-key-here\"}\n"
+                "Get your API key from: https://platform.openai.com/api-keys"
+            )
+        
         try:
-            logger.info(f"🚀 Loading embedding model: {EMBEDDING_MODEL_NAME} on device: {device}")
+            logger.info(f"🚀 Initializing OpenAI embedding model: {EMBEDDING_MODEL_NAME}")
             
-            # Use the simplest possible configuration
-            # Avoid using sentence_transformers directly to prevent config issues
-            _embedding_model_instance = HuggingFaceEmbeddings(
-                model_name=EMBEDDING_MODEL_NAME,
-                model_kwargs={
-                    'device': device,
-                    # Don't use trust_remote_code to avoid custom configs
-                },
-                encode_kwargs={
-                    'normalize_embeddings': True,
-                    'batch_size': 32
-                }
+            _embedding_model_instance = OpenAIEmbeddings(
+                model=EMBEDDING_MODEL_NAME,
+                openai_api_key=OPENAI_API_KEY,
+                # Optional parameters for optimization
+                chunk_size=1000,  # Process texts in chunks to avoid rate limits
+                max_retries=3,     # Retry on failure
+                show_progress_bar=False  # Set to True if you want to see progress
             )
             
             # Test the model
             try:
-                test_embedding = _embedding_model_instance.embed_query("test embedding")
-                logger.info(f"✅ Model loaded successfully, embedding dimension: {len(test_embedding)}")
+                test_embedding = _embedding_model_instance.embed_query("測試文本 test text")
+                logger.info(f"✅ OpenAI embedding model loaded successfully, dimension: {len(test_embedding)}")
             except Exception as test_error:
-                logger.error(f"Model test failed: {test_error}")
-                # Fall back to a very basic configuration
-                logger.info("Trying minimal configuration...")
-                _embedding_model_instance = HuggingFaceEmbeddings(
-                    model_name=DEFAULT_MODEL,
-                    model_kwargs={'device': 'cpu'}
-                )
-                test_embedding = _embedding_model_instance.embed_query("test")
-                logger.info(f"✅ Fallback model loaded, dimension: {len(test_embedding)}")
+                logger.error(f"❌ Model test failed: {test_error}")
+                raise
                 
         except Exception as e:
-            logger.error(f"Failed to load embedding model: {e}")
-            # Last resort: use the most basic model
-            logger.info(f"Using absolute fallback model: {DEFAULT_MODEL}")
-            try:
-                # Clear any cached models that might be causing issues
-                import shutil
-                cache_dir = os.path.expanduser("~/.cache/huggingface/hub")
-                problem_dirs = [
-                    "models--sentence-transformers--paraphrase-multilingual-MiniLM-L12-v2",
-                ]
-                for prob_dir in problem_dirs:
-                    prob_path = os.path.join(cache_dir, prob_dir)
-                    if os.path.exists(prob_path):
-                        logger.info(f"Removing problematic cache: {prob_path}")
-                        try:
-                            shutil.rmtree(prob_path)
-                        except:
-                            pass
-                
-                # Now try with the default model
-                _embedding_model_instance = HuggingFaceEmbeddings(
-                    model_name=DEFAULT_MODEL,
-                    model_kwargs={'device': 'cpu'},
-                    encode_kwargs={'normalize_embeddings': True}
-                )
-                logger.info("✅ Default model loaded successfully")
-            except Exception as final_error:
-                logger.error(f"Could not load any embedding model: {final_error}")
-                raise RuntimeError(
-                    f"Failed to load embedding model. Please try:\n"
-                    f"1. pip uninstall sentence-transformers transformers -y\n"
-                    f"2. pip install sentence-transformers==2.2.2 transformers==4.36.0\n"
-                    f"3. Clear cache: rmdir /s %USERPROFILE%\\.cache\\huggingface (Windows)\n"
-                    f"Error: {final_error}"
-                )
+            logger.error(f"❌ Failed to load OpenAI embedding model: {e}")
+            raise
     
     return _embedding_model_instance
 
 def get_chroma_instance(vectorstore_type: str = "paper"):
     """
-    獲取或創建 Chroma 實例（使用新的 ChromaDB 架構）
+    獲取或創建 Chroma 實例（使用 ChromaDB 1.0+ 架構）
     
     參數：
         vectorstore_type (str): 向量數據庫類型（"paper" 或 "experiment"）
@@ -176,11 +122,11 @@ def get_chroma_instance(vectorstore_type: str = "paper"):
             embedding_model = get_embedding_model_instance()
             
             if vectorstore_type == "paper":
-                vector_dir = os.path.join(VECTOR_INDEX_DIR, "paper_vector")
-                collection_name = "paper"
+                vector_dir = os.path.join(VECTOR_INDEX_DIR, "paper_vector_openai")
+                collection_name = "paper_openai"
             else:
-                vector_dir = os.path.join(VECTOR_INDEX_DIR, "experiment_vector")
-                collection_name = "experiment"
+                vector_dir = os.path.join(VECTOR_INDEX_DIR, "experiment_vector_openai")
+                collection_name = "experiment_openai"
             
             # 確保目錄存在
             os.makedirs(vector_dir, exist_ok=True)
@@ -200,7 +146,7 @@ def get_chroma_instance(vectorstore_type: str = "paper"):
                 collection_name=collection_name,
                 embedding_function=embedding_model
             )
-            logger.info(f"✅ ChromaDB instance '{collection_name}' created successfully.")
+            logger.info(f"✅ ChromaDB instance '{collection_name}' created successfully with OpenAI embeddings.")
             
         except Exception as e:
             logger.error(f"❌ Failed to create vector database '{vectorstore_type}': {e}")
@@ -209,17 +155,16 @@ def get_chroma_instance(vectorstore_type: str = "paper"):
     return _chroma_instances[vectorstore_type]
 
 
-# ==================== 設備配置 ====================
-# 自動檢測並使用GPU或CPU進行向量計算
-print(f"🚀 Embedding model device: {device.upper()}")
-
-
 def embed_documents_from_metadata(metadata_list, status_callback=None):
     """
     根據元數據列表嵌入文檔
+    
+    參數：
+        metadata_list: 文檔元數據列表
+        status_callback: 狀態回調函數
     """
     start_time = time.time()
-    logger.info(f"🚀 Starting vector embedding, total {len(metadata_list)} files")
+    logger.info(f"🚀 Starting vector embedding process, total {len(metadata_list)} files")
     
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=500,
@@ -281,17 +226,42 @@ def embed_documents_from_metadata(metadata_list, status_callback=None):
         return
     
     if status_callback:
-        status_callback(f"🔢 Starting vector embedding, total {len(texts)} text chunks...")
+        status_callback(f"🔢 Starting OpenAI embedding, total {len(texts)} text chunks...")
     
     try:
         vectorstore = get_chroma_instance()
-        batch_size = 100
+        
+        # OpenAI has rate limits, so we process in smaller batches
+        batch_size = 20  # Smaller batch size for OpenAI API
+        total_batches = (len(texts) + batch_size - 1) // batch_size
+        
         for i in range(0, len(texts), batch_size):
             batch_texts = texts[i:i + batch_size]
             batch_metadatas = metadatas[i:i + batch_size]
-            vectorstore.add_texts(texts=batch_texts, metadatas=batch_metadatas)
+            
+            current_batch = i // batch_size + 1
+            logger.info(f"Processing batch {current_batch}/{total_batches}")
+            
             if status_callback:
-                status_callback(f"🔢 Embedding batch {i//batch_size + 1}/{(len(texts) + batch_size - 1)//batch_size}...")
+                status_callback(f"🔢 Embedding batch {current_batch}/{total_batches}...")
+            
+            # Add texts with retry logic
+            retry_count = 0
+            max_retries = 3
+            while retry_count < max_retries:
+                try:
+                    vectorstore.add_texts(texts=batch_texts, metadatas=batch_metadatas)
+                    break
+                except Exception as e:
+                    retry_count += 1
+                    if retry_count >= max_retries:
+                        raise e
+                    logger.warning(f"Retry {retry_count}/{max_retries} after error: {e}")
+                    time.sleep(2 ** retry_count)  # Exponential backoff
+            
+            # Small delay to respect rate limits
+            time.sleep(0.5)
+            
     except Exception as e:
         logger.error(f"❌ Vector embedding failed: {e}")
         if status_callback:
@@ -305,6 +275,10 @@ def embed_documents_from_metadata(metadata_list, status_callback=None):
 def embed_experiment_txt_batch(txt_paths: List[str], status_callback=None):
     """
     批量嵌入實驗文本文件
+    
+    參數：
+        txt_paths: 文本文件路徑列表
+        status_callback: 狀態回調函數
     """
     vectorstore = get_chroma_instance("experiment")
     texts, metadatas = [], []
@@ -324,7 +298,7 @@ def embed_experiment_txt_batch(txt_paths: List[str], status_callback=None):
                 absolute_path = os.path.abspath(path)
 
         if not os.path.exists(absolute_path):
-            print(f"❌ File does not exist: {absolute_path}")
+            logger.error(f"❌ File does not exist: {absolute_path}")
             continue
             
         try:
@@ -335,7 +309,7 @@ def embed_experiment_txt_batch(txt_paths: List[str], status_callback=None):
             texts.append(content)
             metadatas.append({"type": "experiment", "exp_id": exp_id, "filename": os.path.basename(path)})
         except Exception as e:
-            print(f"❌ Failed to read file {path}: {e}")
+            logger.error(f"❌ Failed to read file {path}: {e}")
             continue
 
     if not texts:
@@ -344,9 +318,16 @@ def embed_experiment_txt_batch(txt_paths: List[str], status_callback=None):
         return
 
     try:
-        vectorstore.add_texts(texts=texts, metadatas=metadatas)
+        # Process in batches for OpenAI
+        batch_size = 20
+        for i in range(0, len(texts), batch_size):
+            batch_texts = texts[i:i + batch_size]
+            batch_metadatas = metadatas[i:i + batch_size]
+            vectorstore.add_texts(texts=batch_texts, metadatas=batch_metadatas)
+            time.sleep(0.5)  # Respect rate limits
+            
     except Exception as e:
-        print(f"❌ Experiment data embedding failed: {e}")
+        logger.error(f"❌ Experiment data embedding failed: {e}")
         if status_callback:
             status_callback(f"❌ Experiment data embedding failed: {e}")
         return
@@ -356,15 +337,18 @@ def embed_experiment_txt_batch(txt_paths: List[str], status_callback=None):
 
 
 def get_vectorstore(vectorstore_type: str = "paper"):
+    """獲取向量數據庫實例"""
     return get_chroma_instance(vectorstore_type)
 
 
 def validate_embedding_model():
+    """驗證嵌入模型是否正常工作"""
     try:
         model = get_embedding_model_instance()
         test_embedding = model.embed_query("test embedding model 測試嵌入模型")
-        print(f"✅ Embedding model validation successful: {EMBEDDING_MODEL_NAME}")
+        print(f"✅ OpenAI embedding model validation successful: {EMBEDDING_MODEL_NAME}")
         print(f"   Vector dimension: {len(test_embedding)}")
+        print(f"   API Key configured: {'Yes' if OPENAI_API_KEY else 'No'}")
         return True
     except Exception as e:
         print(f"❌ Embedding model validation failed: {e}")
@@ -372,6 +356,7 @@ def validate_embedding_model():
 
 
 def get_vectorstore_stats(vectorstore_type: str = "paper"):
+    """獲取向量數據庫統計信息"""
     try:
         vectorstore = get_chroma_instance(vectorstore_type)
         
@@ -385,33 +370,76 @@ def get_vectorstore_stats(vectorstore_type: str = "paper"):
             count = len(docs["ids"]) if "ids" in docs else 0
         
         if vectorstore_type == "paper":
-            vector_dir = os.path.join(VECTOR_INDEX_DIR, "paper_vector")
-            collection_name = "paper"
+            vector_dir = os.path.join(VECTOR_INDEX_DIR, "paper_vector_openai")
+            collection_name = "paper_openai"
         else:
-            vector_dir = os.path.join(VECTOR_INDEX_DIR, "experiment_vector")
-            collection_name = "experiment"
+            vector_dir = os.path.join(VECTOR_INDEX_DIR, "experiment_vector_openai")
+            collection_name = "experiment_openai"
         
         return {
             "total_documents": count,
             "collection_name": collection_name,
             "vector_dir": vector_dir,
-            "model": EMBEDDING_MODEL_NAME
+            "model": EMBEDDING_MODEL_NAME,
+            "provider": "OpenAI"
         }
     except Exception as e:
-        print(f"❌ Failed to get statistics: {e}")
+        logger.error(f"❌ Failed to get statistics: {e}")
         return {"error": str(e), "total_documents": 0}
 
-if __name__ == "__main__":
-    print("🧪 Starting embedding function test...")
-    print(f"📦 Using model: {EMBEDDING_MODEL_NAME}")
-    print(f"🖥️ Using device: {device.upper()}")
+
+def estimate_embedding_cost(num_tokens: int) -> float:
+    """
+    估算OpenAI嵌入成本
     
-    if validate_embedding_model():
-        print("✅ Embedding model validation passed")
-        paper_stats = get_vectorstore_stats("paper")
-        experiment_stats = get_vectorstore_stats("experiment")
-        print("📊 Vector database statistics:")
-        print(f"  Paper vector database: {paper_stats}")
-        print(f"  Experiment vector database: {experiment_stats}")
+    參數：
+        num_tokens: token數量
+    
+    返回：
+        float: 預估成本（美元）
+    """
+    # OpenAI pricing (as of 2024)
+    # text-embedding-3-small: $0.00002 per 1K tokens
+    # text-embedding-3-large: $0.00013 per 1K tokens
+    # text-embedding-ada-002: $0.00010 per 1K tokens
+    
+    pricing = {
+        "text-embedding-3-small": 0.00002,
+        "text-embedding-3-large": 0.00013,
+        "text-embedding-ada-002": 0.00010
+    }
+    
+    price_per_1k = pricing.get(EMBEDDING_MODEL_NAME, 0.00002)
+    cost = (num_tokens / 1000) * price_per_1k
+    return cost
+
+
+if __name__ == "__main__":
+    print("🧪 Starting OpenAI embedding function test...")
+    print(f"📦 Using model: {EMBEDDING_MODEL_NAME}")
+    print(f"🔑 API Key configured: {'Yes' if OPENAI_API_KEY else 'No'}")
+    
+    if not OPENAI_API_KEY:
+        print("\n❌ OpenAI API key not configured!")
+        print("Please set your API key using one of these methods:")
+        print("1. Set environment variable: set OPENAI_API_KEY=your-key-here")
+        print("2. Create .env file with: OPENAI_API_KEY=your-key-here")
+        print("3. Add to settings.json")
+        print("\nGet your API key from: https://platform.openai.com/api-keys")
     else:
-        print("❌ Embedding model validation failed")
+        if validate_embedding_model():
+            print("✅ Embedding model validation passed")
+            
+            # Estimate costs
+            sample_text = "This is a sample text for cost estimation" * 10
+            estimated_tokens = len(sample_text.split()) * 1.3  # Rough estimate
+            cost = estimate_embedding_cost(int(estimated_tokens))
+            print(f"💰 Estimated cost per 100 similar chunks: ${cost * 100:.4f}")
+            
+            paper_stats = get_vectorstore_stats("paper")
+            experiment_stats = get_vectorstore_stats("experiment")
+            print("\n📊 Vector database statistics:")
+            print(f"  Paper vector database: {paper_stats}")
+            print(f"  Experiment vector database: {experiment_stats}")
+        else:
+            print("❌ Embedding model validation failed")
