@@ -30,7 +30,6 @@ import chromadb
 from chromadb.config import Settings
 from pdf_read_and_chunk_page_get import load_and_parse_file, get_page_number_for_chunk
 import torch
-from sentence_transformers import SentenceTransformer
 
 # 配置日誌
 logging.basicConfig(level=logging.DEBUG)
@@ -45,13 +44,37 @@ backend_path = os.path.join(os.path.dirname(__file__), "..", "backend")
 if backend_path not in sys.path:
     sys.path.insert(0, backend_path)
 
-try:
-    from core.settings_manager import settings_manager
-    EMBEDDING_MODEL_NAME = settings_manager.get_embedding_model()
-except (ImportError, AttributeError):
-    # Switched to a more stable model to resolve startup issues.
-    EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+# Use a simple, stable model that doesn't require special configurations
+# This model is lightweight and works well for multilingual text
+DEFAULT_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
+def get_working_model_name():
+    """
+    Get a working embedding model name with simplified approach
+    """
+    # Try to get from settings first
+    try:
+        from core.settings_manager import settings_manager
+        model_from_settings = settings_manager.get_embedding_model()
+        
+        # List of models known to have issues with certain configurations
+        problematic_models = [
+            "paraphrase-multilingual-MiniLM-L12-v2",
+            "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+        ]
+        
+        # If the model from settings is problematic, use default
+        if any(prob in model_from_settings for prob in problematic_models):
+            logger.warning(f"Model {model_from_settings} may have compatibility issues, using default model instead")
+            return DEFAULT_MODEL
+            
+        return model_from_settings
+    except Exception as e:
+        logger.warning(f"Could not get model from settings: {e}, using default")
+        return DEFAULT_MODEL
+
+# Get model name
+EMBEDDING_MODEL_NAME = get_working_model_name()
 
 # 設備配置
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -63,23 +86,79 @@ _embedding_model_instance = None
 def get_embedding_model_instance():
     """
     獲取或創建一個全局的嵌入模型實例
+    使用最簡單的配置以避免兼容性問題
     """
     global _embedding_model_instance
     if _embedding_model_instance is None:
         try:
-            logger.info(f"🚀首次加載嵌入模型: {EMBEDDING_MODEL_NAME} on device: {device}")
-            # 1. 直接使用 sentence_transformers 庫加載模型
-            model = SentenceTransformer(
-                EMBEDDING_MODEL_NAME,
-                device=device,
-                trust_remote_code=True
+            logger.info(f"🚀 Loading embedding model: {EMBEDDING_MODEL_NAME} on device: {device}")
+            
+            # Use the simplest possible configuration
+            # Avoid using sentence_transformers directly to prevent config issues
+            _embedding_model_instance = HuggingFaceEmbeddings(
+                model_name=EMBEDDING_MODEL_NAME,
+                model_kwargs={
+                    'device': device,
+                    # Don't use trust_remote_code to avoid custom configs
+                },
+                encode_kwargs={
+                    'normalize_embeddings': True,
+                    'batch_size': 32
+                }
             )
-            # 2. 將加載好的模型對象傳遞給 LangChain 封裝器
-            _embedding_model_instance = HuggingFaceEmbeddings(client=model)
-            logger.info("✅ 嵌入模型加載成功")
+            
+            # Test the model
+            try:
+                test_embedding = _embedding_model_instance.embed_query("test embedding")
+                logger.info(f"✅ Model loaded successfully, embedding dimension: {len(test_embedding)}")
+            except Exception as test_error:
+                logger.error(f"Model test failed: {test_error}")
+                # Fall back to a very basic configuration
+                logger.info("Trying minimal configuration...")
+                _embedding_model_instance = HuggingFaceEmbeddings(
+                    model_name=DEFAULT_MODEL,
+                    model_kwargs={'device': 'cpu'}
+                )
+                test_embedding = _embedding_model_instance.embed_query("test")
+                logger.info(f"✅ Fallback model loaded, dimension: {len(test_embedding)}")
+                
         except Exception as e:
-            logger.error(f"❌ 加載嵌入模型失敗: {e}")
-            raise
+            logger.error(f"Failed to load embedding model: {e}")
+            # Last resort: use the most basic model
+            logger.info(f"Using absolute fallback model: {DEFAULT_MODEL}")
+            try:
+                # Clear any cached models that might be causing issues
+                import shutil
+                cache_dir = os.path.expanduser("~/.cache/huggingface/hub")
+                problem_dirs = [
+                    "models--sentence-transformers--paraphrase-multilingual-MiniLM-L12-v2",
+                ]
+                for prob_dir in problem_dirs:
+                    prob_path = os.path.join(cache_dir, prob_dir)
+                    if os.path.exists(prob_path):
+                        logger.info(f"Removing problematic cache: {prob_path}")
+                        try:
+                            shutil.rmtree(prob_path)
+                        except:
+                            pass
+                
+                # Now try with the default model
+                _embedding_model_instance = HuggingFaceEmbeddings(
+                    model_name=DEFAULT_MODEL,
+                    model_kwargs={'device': 'cpu'},
+                    encode_kwargs={'normalize_embeddings': True}
+                )
+                logger.info("✅ Default model loaded successfully")
+            except Exception as final_error:
+                logger.error(f"Could not load any embedding model: {final_error}")
+                raise RuntimeError(
+                    f"Failed to load embedding model. Please try:\n"
+                    f"1. pip uninstall sentence-transformers transformers -y\n"
+                    f"2. pip install sentence-transformers==2.2.2 transformers==4.36.0\n"
+                    f"3. Clear cache: rmdir /s %USERPROFILE%\\.cache\\huggingface (Windows)\n"
+                    f"Error: {final_error}"
+                )
+    
     return _embedding_model_instance
 
 def get_chroma_instance(vectorstore_type: str = "paper"):
@@ -109,7 +188,11 @@ def get_chroma_instance(vectorstore_type: str = "paper"):
             # 使用新的 ChromaDB 1.0+ 客戶端配置
             client = chromadb.PersistentClient(
                 path=vector_dir,
-                settings=Settings(anonymized_telemetry=False) # 禁用遙測
+                settings=Settings(
+                    anonymized_telemetry=False,
+                    allow_reset=True,
+                    is_persistent=True
+                )
             )
             
             _chroma_instances[vectorstore_type] = Chroma(
@@ -117,10 +200,10 @@ def get_chroma_instance(vectorstore_type: str = "paper"):
                 collection_name=collection_name,
                 embedding_function=embedding_model
             )
-            logger.info(f"✅ ChromaDB 實例 '{collection_name}' 創建成功.")
+            logger.info(f"✅ ChromaDB instance '{collection_name}' created successfully.")
             
         except Exception as e:
-            logger.error(f"❌ 創建向量數據庫 '{vectorstore_type}' 失敗: {e}")
+            logger.error(f"❌ Failed to create vector database '{vectorstore_type}': {e}")
             raise
     
     return _chroma_instances[vectorstore_type]
@@ -128,7 +211,7 @@ def get_chroma_instance(vectorstore_type: str = "paper"):
 
 # ==================== 設備配置 ====================
 # 自動檢測並使用GPU或CPU進行向量計算
-print(f"🚀 嵌入模型使用設備：{device.upper()}")
+print(f"🚀 Embedding model device: {device.upper()}")
 
 
 def embed_documents_from_metadata(metadata_list, status_callback=None):
@@ -136,7 +219,7 @@ def embed_documents_from_metadata(metadata_list, status_callback=None):
     根據元數據列表嵌入文檔
     """
     start_time = time.time()
-    logger.info(f"🚀 開始向量嵌入處理，共 {len(metadata_list)} 個文件")
+    logger.info(f"🚀 Starting vector embedding, total {len(metadata_list)} files")
     
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=500,
@@ -147,15 +230,15 @@ def embed_documents_from_metadata(metadata_list, status_callback=None):
     texts, metadatas = [], []
 
     if status_callback:
-        status_callback("📚 開始文件分塊處理...")
+        status_callback("📚 Starting file chunking...")
     
-    logger.info("📚 開始文件分塊處理...")
+    logger.info("📚 Starting file chunking...")
     for i, metadata in enumerate(metadata_list):
         filename = metadata.get("new_filename", metadata.get("original_filename", "unknown"))
         file_path = metadata.get("new_path", metadata.get("original_path"))
         
         if not file_path:
-            logger.error(f"❌ 無法獲取文件路徑: {filename}")
+            logger.error(f"❌ Cannot get file path: {filename}")
             continue
 
         absolute_path = file_path
@@ -168,7 +251,7 @@ def embed_documents_from_metadata(metadata_list, status_callback=None):
                  absolute_path = os.path.abspath(file_path)
 
         if not os.path.exists(absolute_path):
-            logger.error(f"❌ 文件不存在: {absolute_path}")
+            logger.error(f"❌ File does not exist: {absolute_path}")
             continue
         
         try:
@@ -182,7 +265,7 @@ def embed_documents_from_metadata(metadata_list, status_callback=None):
                 texts.append(chunk)
                 metadatas.append({
                     "source": filename,
-                    "title": metadata.get("title", "未知標題"),
+                    "title": metadata.get("title", "Unknown Title"),
                     "type": metadata.get("type", "unknown"),
                     "tracing_number": metadata.get("tracing_number", "unknown"),
                     "page": page_num,
@@ -190,33 +273,33 @@ def embed_documents_from_metadata(metadata_list, status_callback=None):
                     "total_chunks": len(chunks)
                 })
         except Exception as e:
-            logger.error(f"❌ 處理文件失敗 {absolute_path}: {e}")
+            logger.error(f"❌ Failed to process file {absolute_path}: {e}")
             continue
     
     if not texts:
-        logger.warning("⚠️ 沒有有效的文本塊進行嵌入")
+        logger.warning("⚠️ No valid text chunks for embedding")
         return
     
     if status_callback:
-        status_callback(f"🔢 開始向量嵌入，共 {len(texts)} 個文本塊...")
+        status_callback(f"🔢 Starting vector embedding, total {len(texts)} text chunks...")
     
     try:
         vectorstore = get_chroma_instance()
-        batch_size = 500
+        batch_size = 100
         for i in range(0, len(texts), batch_size):
             batch_texts = texts[i:i + batch_size]
             batch_metadatas = metadatas[i:i + batch_size]
             vectorstore.add_texts(texts=batch_texts, metadatas=batch_metadatas)
             if status_callback:
-                status_callback(f"🔢 向量嵌入批次 {i//batch_size + 1}/{(len(texts) + batch_size - 1)//batch_size}...")
+                status_callback(f"🔢 Embedding batch {i//batch_size + 1}/{(len(texts) + batch_size - 1)//batch_size}...")
     except Exception as e:
-        logger.error(f"❌ 向量嵌入失敗: {e}")
+        logger.error(f"❌ Vector embedding failed: {e}")
         if status_callback:
-            status_callback(f"❌ 向量嵌入失敗: {e}")
+            status_callback(f"❌ Vector embedding failed: {e}")
         raise
     
     end_time = time.time()
-    logger.info(f"🎉 向量嵌入處理完成，總耗時: {end_time - start_time:.2f}秒")
+    logger.info(f"🎉 Vector embedding completed, total time: {end_time - start_time:.2f} seconds")
 
 
 def embed_experiment_txt_batch(txt_paths: List[str], status_callback=None):
@@ -241,7 +324,7 @@ def embed_experiment_txt_batch(txt_paths: List[str], status_callback=None):
                 absolute_path = os.path.abspath(path)
 
         if not os.path.exists(absolute_path):
-            print(f"❌ 文件不存在: {absolute_path}")
+            print(f"❌ File does not exist: {absolute_path}")
             continue
             
         try:
@@ -252,24 +335,24 @@ def embed_experiment_txt_batch(txt_paths: List[str], status_callback=None):
             texts.append(content)
             metadatas.append({"type": "experiment", "exp_id": exp_id, "filename": os.path.basename(path)})
         except Exception as e:
-            print(f"❌ 讀取文件失敗 {path}: {e}")
+            print(f"❌ Failed to read file {path}: {e}")
             continue
 
     if not texts:
         if status_callback:
-            status_callback("⚠️ 沒有新的實驗摘要可嵌入")
+            status_callback("⚠️ No new experiment summaries to embed")
         return
 
     try:
         vectorstore.add_texts(texts=texts, metadatas=metadatas)
     except Exception as e:
-        print(f"❌ 實驗數據嵌入失敗: {e}")
+        print(f"❌ Experiment data embedding failed: {e}")
         if status_callback:
-            status_callback(f"❌ 實驗數據嵌入失敗: {e}")
+            status_callback(f"❌ Experiment data embedding failed: {e}")
         return
 
     if status_callback:
-        status_callback(f"✅ 嵌入完成，共 {len(texts)} 筆實驗摘要")
+        status_callback(f"✅ Embedding completed, total {len(texts)} experiment summaries")
 
 
 def get_vectorstore(vectorstore_type: str = "paper"):
@@ -278,18 +361,28 @@ def get_vectorstore(vectorstore_type: str = "paper"):
 
 def validate_embedding_model():
     try:
-        get_embedding_model_instance()
-        print(f"✅ 嵌入模型驗證成功：{EMBEDDING_MODEL_NAME}")
+        model = get_embedding_model_instance()
+        test_embedding = model.embed_query("test embedding model 測試嵌入模型")
+        print(f"✅ Embedding model validation successful: {EMBEDDING_MODEL_NAME}")
+        print(f"   Vector dimension: {len(test_embedding)}")
         return True
     except Exception as e:
-        print(f"❌ 嵌入模型驗證失敗：{e}")
+        print(f"❌ Embedding model validation failed: {e}")
         return False
 
 
 def get_vectorstore_stats(vectorstore_type: str = "paper"):
     try:
         vectorstore = get_chroma_instance(vectorstore_type)
-        docs = vectorstore.get(include=["documents", "metadatas"])
+        
+        # Try to get collection info
+        try:
+            collection = vectorstore._collection
+            count = collection.count()
+        except:
+            # Fallback method
+            docs = vectorstore.get(include=["metadatas"])
+            count = len(docs["ids"]) if "ids" in docs else 0
         
         if vectorstore_type == "paper":
             vector_dir = os.path.join(VECTOR_INDEX_DIR, "paper_vector")
@@ -299,22 +392,26 @@ def get_vectorstore_stats(vectorstore_type: str = "paper"):
             collection_name = "experiment"
         
         return {
-            "total_documents": len(docs["documents"]),
+            "total_documents": count,
             "collection_name": collection_name,
-            "vector_dir": vector_dir
+            "vector_dir": vector_dir,
+            "model": EMBEDDING_MODEL_NAME
         }
     except Exception as e:
-        print(f"❌ 獲取統計信息失敗：{e}")
-        return {"error": str(e)}
+        print(f"❌ Failed to get statistics: {e}")
+        return {"error": str(e), "total_documents": 0}
 
 if __name__ == "__main__":
-    print("🧪 開始測試嵌入功能...")
+    print("🧪 Starting embedding function test...")
+    print(f"📦 Using model: {EMBEDDING_MODEL_NAME}")
+    print(f"🖥️ Using device: {device.upper()}")
+    
     if validate_embedding_model():
-        print("✅ 嵌入模型驗證通過")
+        print("✅ Embedding model validation passed")
         paper_stats = get_vectorstore_stats("paper")
         experiment_stats = get_vectorstore_stats("experiment")
-        print("📊 向量數據庫統計：")
-        print(f"  文獻向量庫：{paper_stats}")
-        print(f"  實驗向量庫：{experiment_stats}")
+        print("📊 Vector database statistics:")
+        print(f"  Paper vector database: {paper_stats}")
+        print(f"  Experiment vector database: {experiment_stats}")
     else:
-        print("❌ 嵌入模型驗證失敗")
+        print("❌ Embedding model validation failed")
