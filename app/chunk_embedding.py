@@ -30,6 +30,7 @@ import chromadb
 from chromadb.config import Settings
 from pdf_read_and_chunk_page_get import load_and_parse_file, get_page_number_for_chunk
 import torch
+from sentence_transformers import SentenceTransformer
 
 # 配置日誌
 logging.basicConfig(level=logging.DEBUG)
@@ -56,6 +57,29 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # 全局 Chroma 實例緩存，避免重複創建
 _chroma_instances = {}
+_embedding_model_instance = None
+
+def get_embedding_model_instance():
+    """
+    獲取或創建一個全局的嵌入模型實例
+    """
+    global _embedding_model_instance
+    if _embedding_model_instance is None:
+        try:
+            logger.info(f"🚀首次加載嵌入模型: {EMBEDDING_MODEL_NAME} on device: {device}")
+            # 1. 直接使用 sentence_transformers 庫加載模型
+            model = SentenceTransformer(
+                EMBEDDING_MODEL_NAME,
+                device=device,
+                trust_remote_code=True
+            )
+            # 2. 將加載好的模型對象傳遞給 LangChain 封裝器
+            _embedding_model_instance = HuggingFaceEmbeddings(client=model)
+            logger.info("✅ 嵌入模型加載成功")
+        except Exception as e:
+            logger.error(f"❌ 加載嵌入模型失敗: {e}")
+            raise
+    return _embedding_model_instance
 
 def get_chroma_instance(vectorstore_type: str = "paper"):
     """
@@ -69,10 +93,7 @@ def get_chroma_instance(vectorstore_type: str = "paper"):
     """
     if vectorstore_type not in _chroma_instances:
         try:
-            embedding_model = HuggingFaceEmbeddings(
-                model_name=EMBEDDING_MODEL_NAME,
-                model_kwargs={"trust_remote_code": True, "device": device}
-            )
+            embedding_model = get_embedding_model_instance()
             
             if vectorstore_type == "paper":
                 vector_dir = os.path.join(VECTOR_INDEX_DIR, "paper_vector")
@@ -86,7 +107,8 @@ def get_chroma_instance(vectorstore_type: str = "paper"):
             
             # 使用新的 ChromaDB 1.0+ 客戶端配置
             client = chromadb.PersistentClient(
-                path=vector_dir
+                path=vector_dir,
+                settings=Settings(anonymized_telemetry=False) # 禁用遙測
             )
             
             _chroma_instances[vectorstore_type] = Chroma(
@@ -94,9 +116,10 @@ def get_chroma_instance(vectorstore_type: str = "paper"):
                 collection_name=collection_name,
                 embedding_function=embedding_model
             )
+            logger.info(f"✅ ChromaDB 實例 '{collection_name}' 創建成功.")
             
         except Exception as e:
-            print(f"❌ 創建向量數據庫失敗：{e}")
+            logger.error(f"❌ 創建向量數據庫 '{vectorstore_type}' 失敗: {e}")
             raise
     
     return _chroma_instances[vectorstore_type]
@@ -104,7 +127,6 @@ def get_chroma_instance(vectorstore_type: str = "paper"):
 
 # ==================== 設備配置 ====================
 # 自動檢測並使用GPU或CPU進行向量計算
-device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"🚀 嵌入模型使用設備：{device.upper()}")
 
 
@@ -469,7 +491,6 @@ def embed_experiment_txt_batch(txt_paths: List[str], status_callback=None):
     # ==================== 批量向量化 ====================
     try:
         vectorstore.add_texts(texts=texts, metadatas=metadatas)
-        # vectorstore.persist()  # 已棄用，自動持久化
     except Exception as e:
         print(f"❌ 實驗數據嵌入失敗: {e}")
         if status_callback:
@@ -529,10 +550,7 @@ def validate_embedding_model():
         bool: 模型是否可用
     """
     try:
-        embedding_model = HuggingFaceEmbeddings(
-            model_name=EMBEDDING_MODEL_NAME,
-            model_kwargs={"trust_remote_code": True, "device": device}
-        )
+        get_embedding_model_instance()
         print(f"✅ 嵌入模型驗證成功：{EMBEDDING_MODEL_NAME}")
         return True
     except Exception as e:
@@ -599,4 +617,3 @@ if __name__ == "__main__":
         print(f"  實驗向量庫：{experiment_stats}")
     else:
         print("❌ 嵌入模型驗證失敗")
-

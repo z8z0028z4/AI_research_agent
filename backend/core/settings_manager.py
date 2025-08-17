@@ -15,15 +15,14 @@ class SettingsManager:
     """設定管理器類"""
     
     def __init__(self):
-        # 始終使用項目根目錄的settings.json文件
-        # 從當前文件位置向上找到項目根目錄
-        current_file = Path(__file__)
-        project_root = current_file.parent.parent.parent  # backend/core -> backend -> project_root
+        # Use a robust method to find the project root and settings.json
+        # Resolves the path of the current file and finds its grandparent's parent (project root)
+        project_root = Path(__file__).resolve().parents[2]
         self.settings_file = project_root / "settings.json"
         
         # 調試：打印路徑信息
         print(f"🔧 SettingsManager 初始化:")
-        print(f"   當前文件: {current_file}")
+        print(f"   當前文件: {Path(__file__).resolve()}")
         print(f"   項目根目錄: {project_root}")
         print(f"   設定文件: {self.settings_file}")
         print(f"   設定文件存在: {self.settings_file.exists()}")
@@ -200,4 +199,4 @@ class SettingsManager:
         self._current_settings = self._load_settings()
 
 # 創建全局設定管理器實例
-settings_manager = SettingsManager() 
+settings_manager = SettingsManager()

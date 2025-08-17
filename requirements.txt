@@ -7,11 +7,11 @@ langchain-huggingface>=0.1.0
 langchain-chroma>=0.1.0
 openai==1.97.0
 
-# Vector database and embeddings
+# Vector database and embeddings (Downgraded to known stable versions)
 chromadb==1.0.11
-sentence-transformers==5.0.0
-transformers==4.53.2
-tokenizers==0.21.2
+sentence-transformers==2.2.2
+transformers==4.28.1
+tokenizers==0.15.2
 huggingface-hub==0.33.4
 einops==0.8.1
 
