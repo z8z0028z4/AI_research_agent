@@ -36,7 +36,10 @@ logger = logging.getLogger(__name__)
 
 # ==================== 全局變量 ====================
 # 配置路徑
-VECTOR_INDEX_DIR = os.path.join(os.path.dirname(__file__), "..", "experiment_data", "vector_index")
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+EXPERIMENT_DATA_DIR = os.path.join(PROJECT_ROOT, "experiment_data")
+VECTOR_INDEX_DIR = os.path.join(EXPERIMENT_DATA_DIR, "vector_index")
+PAPERS_DIR = os.path.join(EXPERIMENT_DATA_DIR, "papers")
 
 # Add backend to path to import settings_manager
 backend_path = os.path.join(os.path.dirname(__file__), "..", "backend")
@@ -188,12 +191,16 @@ def embed_documents_from_metadata(metadata_list, status_callback=None):
 
         absolute_path = file_path
         if not os.path.isabs(file_path):
-             current_dir = os.getcwd()
-             if os.path.basename(current_dir) == "backend":
-                 project_root = os.path.dirname(os.path.dirname(current_dir))
-                 absolute_path = os.path.join(project_root, file_path)
-             else:
-                 absolute_path = os.path.abspath(file_path)
+            # Check if the file_path is relative to experiment_data
+            if file_path.startswith("experiment_data"):
+                absolute_path = os.path.join(PROJECT_ROOT, file_path)
+            else:
+                # Try to find the file in the papers directory
+                possible_path = os.path.join(PAPERS_DIR, os.path.basename(file_path))
+                if os.path.exists(possible_path):
+                    absolute_path = possible_path
+                else:
+                    absolute_path = os.path.join(PROJECT_ROOT, file_path)
 
         if not os.path.exists(absolute_path):
             logger.error(f"❌ File does not exist: {absolute_path}")
