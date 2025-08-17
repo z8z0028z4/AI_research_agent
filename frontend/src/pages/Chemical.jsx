@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { Card, Input, Button, Table, Typography, Space, message, Tag } from 'antd';
+import { Card, Input, Button, Table, Typography, Space, message, Tag, Image } from 'antd';
 import { SearchOutlined, ExperimentOutlined } from '@ant-design/icons';
+import axios from 'axios';
 
 const { Title, Paragraph } = Typography;
 const { Search } = Input;
+
+const API_URL = 'http://localhost:8000/api/v1';
 
 const Chemical = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -17,33 +20,39 @@ const Chemical = () => {
     }
 
     setLoading(true);
+    setChemicalData(null);
     try {
-      // TODO: Implement API call to backend
-      console.log('Searching for chemical:', searchQuery);
-      
-      // Mock chemical data
-      const mockData = {
-        name: searchQuery,
-        formula: 'C6H12O6',
-        molecularWeight: '180.16 g/mol',
-        casNumber: '50-99-7',
-        properties: {
-          meltingPoint: '146°C',
-          boilingPoint: 'Decomposes',
-          density: '1.54 g/cm³',
-          solubility: 'Soluble in water'
-        },
-        structure: 'Sample structure data',
-        safety: {
-          hazards: ['Irritant'],
-          precautions: ['Wear protective equipment']
-        }
-      };
-      
-      setChemicalData(mockData);
-      message.success('Chemical information found');
+      const response = await axios.post(`${API_URL}/chemical/search`, {
+        chemical_name: searchQuery,
+      });
+
+      if (response.data && !response.data.error) {
+        const data = response.data;
+        const formattedData = {
+          name: data.name,
+          formula: data.formula,
+          molecularWeight: data.molecular_weight,
+          casNumber: data.cas_number,
+          properties: {
+            meltingPoint: data.melting_point,
+            boilingPoint: data.boiling_point,
+            density: data.properties?.density,
+            solubility: data.properties?.solubility,
+          },
+          structure_url: data.image_url,
+          safety: {
+            hazards: data.hazard_statements || [],
+            precautions: data.precautionary_statements || [],
+            ghs_icons: data.safety_data?.ghs_icons || [],
+          }
+        };
+        setChemicalData(formattedData);
+        message.success('Chemical information found');
+      } else {
+        message.error(response.data.error || 'Failed to find chemical information');
+      }
     } catch (error) {
-      message.error('Failed to find chemical information');
+      message.error('An error occurred while fetching chemical data.');
       console.error('Chemical search error:', error);
     } finally {
       setLoading(false);
@@ -76,69 +85,64 @@ const Chemical = () => {
       { key: '5', property: 'Boiling Point', value: chemicalData.properties.boilingPoint },
       { key: '6', property: 'Density', value: chemicalData.properties.density },
       { key: '7', property: 'Solubility', value: chemicalData.properties.solubility },
-    ];
+    ].filter(item => item.value);
 
     return (
       <div>
-        <Card 
-          title="Chemical Properties" 
-          style={{ 
-            marginBottom: 16,
-            fontSize: '16px'
-          }}
-          headStyle={{
-            fontSize: '18px',
-            fontWeight: 'bold',
-            color: '#1890ff'
-          }}
+        <Card
+          title="Chemical Properties"
+          style={{ marginBottom: 16 }}
         >
           <Table
             columns={columns}
             dataSource={propertiesData}
             pagination={false}
             size="small"
-            style={{
-              fontSize: '16px'
-            }}
           />
         </Card>
 
-        <Card 
-          title="Safety Information" 
-          style={{ 
-            marginBottom: 16,
-            fontSize: '16px'
-          }}
-          headStyle={{
-            fontSize: '18px',
-            fontWeight: 'bold',
-            color: '#1890ff'
-          }}
+        <Card
+          title="Safety Information"
+          style={{ marginBottom: 16 }}
         >
           <Space direction="vertical" style={{ width: '100%' }}>
-            <div style={{ fontSize: '16px' }}>
-              <strong>Hazards:</strong>
+            <div>
+              <strong>GHS Icons:</strong>
               <Space style={{ marginLeft: 8 }}>
-                {chemicalData.safety.hazards.map((hazard, index) => (
-                  <Tag key={index} color="red" style={{ fontSize: '14px' }}>{hazard}</Tag>
+                {chemicalData.safety.ghs_icons.map((icon, index) => (
+                  <Image key={index} src={icon} width={40} preview={false} />
                 ))}
               </Space>
             </div>
             <div>
-              <strong>Precautions:</strong>
-              <ul style={{ margin: '8px 0 0 0' }}>
-                {chemicalData.safety.precautions.map((precaution, index) => (
-                  <li key={index}>{precaution}</li>
-                ))}
-              </ul>
+              <strong>Hazard Statements:</strong>
+              <List
+                size="small"
+                dataSource={chemicalData.safety.hazards}
+                renderItem={(item) => <List.Item>{item}</List.Item>}
+              />
+            </div>
+            <div>
+              <strong>Precautionary Statements:</strong>
+              <List
+                size="small"
+                dataSource={chemicalData.safety.precautions}
+                renderItem={(item) => <List.Item>{item}</List.Item>}
+              />
             </div>
           </Space>
         </Card>
 
         <Card title="Molecular Structure">
           <div style={{ textAlign: 'center', padding: '20px' }}>
-            <ExperimentOutlined style={{ fontSize: '48px', color: '#1890ff' }} />
-            <p>Structure visualization would be displayed here</p>
+            {chemicalData.structure_url ? (
+              <Image src={chemicalData.structure_url} width={200} />
+            ) : (
+              <>
+                <ExperimentOutlined style={{ fontSize: '48px', color: '#1890ff' }} />
+                <p>Structure image not available</p>
+              </>
+            )}
           </div>
         </Card>
       </div>

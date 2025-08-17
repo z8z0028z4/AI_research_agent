@@ -25,7 +25,7 @@ python --version
 echo.
 
 REM Set virtual environment path
-set "VENV_PATH=C:\ai_research_venv"
+set "VENV_PATH=%~dp0.venv"
 set "VENV_ACTIVATE=%VENV_PATH%\Scripts\activate.bat"
 
 echo Virtual environment will be created at: %VENV_PATH%
@@ -67,18 +67,12 @@ echo Installing PyTorch...
 pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
 echo.
 
-REM Install requirements (prioritize backend requirements for ChromaDB fixed version)
+REM Install requirements
 echo Installing requirements...
-if exist "backend\requirements.txt" (
-    echo Installing backend requirements first (for ChromaDB fixed version 1.0.11)...
-    pip install -r backend\requirements.txt
-    echo Backend requirements installed.
-)
-
 if exist "requirements.txt" (
-    echo Installing additional requirements...
+    echo Installing requirements...
     pip install -r requirements.txt
-    echo Additional requirements installed.
+    echo Requirements installed.
 ) else (
     echo WARNING: requirements.txt not found
 )

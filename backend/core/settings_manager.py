@@ -63,6 +63,10 @@ class SettingsManager:
         if key == 'llm_model':
             settings.openai_model = value
     
+    def get_embedding_model(self) -> str:
+        """獲取當前嵌入模型"""
+        return self.get_setting('embedding_model', 'BAAI/bge-small-zh-v1.5')
+
     def get_current_model(self) -> str:
         """獲取當前LLM模型"""
         return self.get_setting('llm_model', 'gpt-5-mini')

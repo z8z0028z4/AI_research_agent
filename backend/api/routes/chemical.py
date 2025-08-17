@@ -14,7 +14,7 @@ import os
 # 添加原項目路徑到 sys.path
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../app'))
 
-from pubchem_handler import chemical_metadata_extractor
+from pubchem_handler import extract_and_fetch_chemicals
 
 router = APIRouter()
 
@@ -38,6 +38,8 @@ class ChemicalResponse(BaseModel):
     safety_data: Optional[Dict[str, Any]] = None
     properties: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
+    hazard_statements: Optional[List[str]] = None
+    precautionary_statements: Optional[List[str]] = None
 
 class ChemicalBatchRequest(BaseModel):
     """批量化學品查詢請求模型"""
@@ -62,15 +64,16 @@ async def search_chemical(request: ChemicalRequest):
         化學品詳細信息
     """
     try:
-        # 調用原有的化學品查詢功能
-        result = chemical_metadata_extractor(request.chemical_name)
+        summaries, not_found = extract_and_fetch_chemicals([request.chemical_name])
         
-        if not result or result.get("error"):
+        if not summaries:
             return ChemicalResponse(
                 name=request.chemical_name,
-                error=result.get("error", "未找到化學品信息")
+                error="Chemical not found"
             )
         
+        result = summaries[0]
+
         # 構建響應數據
         safety_data = None
         if request.include_safety and result.get("safety_icons"):
@@ -101,7 +104,9 @@ async def search_chemical(request: ChemicalRequest):
             pubchem_url=result.get("pubchem_url"),
             image_url=result.get("image_url"),
             safety_data=safety_data,
-            properties=properties
+            properties=properties,
+            hazard_statements=result.get("hazard_statements", []),
+            precautionary_statements=result.get("precautionary_statements", [])
         )
         
     except Exception as e:

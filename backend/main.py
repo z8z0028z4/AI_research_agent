@@ -77,8 +77,28 @@ def initialize_vector_stats():
         logger.info(f"✅ 向量統計初始化完成，耗時: {end_time - start_time:.2f}秒")
         logger.info(f"📊 統計結果 - 論文: {paper_count}, 實驗: {experiment_count}, 總計: {paper_count + experiment_count}")
         
+    except (FileNotFoundError, IOError) as e:
+        logger.error(f"❌ 向量數據庫文件未找到或讀取錯誤: {e}")
+        # 設置默認值
+        vector_stats_cache.update({
+            "paper_vectors": 0,
+            "experiment_vectors": 0,
+            "total_vectors": 0,
+            "last_updated": time.time(),
+            "is_initialized": True
+        })
+    except ImportError as e:
+        logger.error(f"❌ 導入 'chunk_embedding' 模塊失敗: {e}")
+        # 設置默認值
+        vector_stats_cache.update({
+            "paper_vectors": 0,
+            "experiment_vectors": 0,
+            "total_vectors": 0,
+            "last_updated": time.time(),
+            "is_initialized": True
+        })
     except Exception as e:
-        logger.error(f"❌ 向量統計初始化失敗: {e}")
+        logger.error(f"❌ 向量統計初始化時發生未知錯誤: {e}")
         # 設置默認值
         vector_stats_cache.update({
             "paper_vectors": 0,

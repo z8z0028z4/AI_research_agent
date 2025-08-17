@@ -235,6 +235,8 @@ def get_safety_info(cid: int) -> dict:
         ghs_urls = set()
         nfpa_url = None
         cas_number = None
+        hazard_statements = []
+        precautionary_statements = []
 
         def clean_text_for_xml(text):
             """清理文本以確保XML兼容性"""
@@ -259,7 +261,7 @@ def get_safety_info(cid: int) -> dict:
             return cleaned
 
         def walk(sections):
-            nonlocal ghs_urls, nfpa_url, cas_number
+            nonlocal ghs_urls, nfpa_url, cas_number, hazard_statements, precautionary_statements
             for sec in sections:
                 heading = sec.get("TOCHeading", "")
 
@@ -291,6 +293,23 @@ def get_safety_info(cid: int) -> dict:
                                     cas_number = clean_text_for_xml(maybe_cas)
                                     break
 
+                # Hazard Statements
+                elif heading == "GHS Hazard Statements":
+                    for info in sec.get("Information", []):
+                        val = info.get("Value", {}).get("StringWithMarkup", [])
+                        if val:
+                            for entry in val:
+                                hazard_statements.append(clean_text_for_xml(entry.get("String", "")))
+
+                # Precautionary Statements
+                elif "Precautionary Statement" in heading:
+                    for info in sec.get("Information", []):
+                        val = info.get("Value", {}).get("StringWithMarkup", [])
+                        if val:
+                            for entry in val:
+                                precautionary_statements.append(clean_text_for_xml(entry.get("String", "")))
+
+
                 # 遞迴深入子區塊
                 if "Section" in sec:
                     walk(sec["Section"])
@@ -300,7 +319,9 @@ def get_safety_info(cid: int) -> dict:
         return {
             "ghs_icons": sorted(ghs_urls),
             "nfpa_image": nfpa_url,
-            "cas": cas_number
+            "cas": cas_number,
+            "hazard_statements": hazard_statements,
+            "precautionary_statements": precautionary_statements,
         }
 
     except Exception as e:
@@ -359,6 +380,8 @@ def extract_and_fetch_chemicals(name_list: List[str], save_dir=PARSED_CHEMICAL_D
                 "nfpa_image": safety_info.get("nfpa_image")
             }
             parsed["cas"] = safety_info.get("cas")
+            parsed["hazard_statements"] = safety_info.get("hazard_statements", [])
+            parsed["precautionary_statements"] = safety_info.get("precautionary_statements", [])
 
             # Step 4: 儲存乾淨版本
             save_path = os.path.join(save_dir, f"parsed_cid{cid}.json")

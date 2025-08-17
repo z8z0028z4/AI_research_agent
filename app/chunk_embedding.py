@@ -38,7 +38,18 @@ logger = logging.getLogger(__name__)
 # ==================== 全局變量 ====================
 # 配置路徑
 VECTOR_INDEX_DIR = os.path.join(os.path.dirname(__file__), "..", "experiment_data", "vector_index")
-EMBEDDING_MODEL_NAME = "BAAI/bge-small-zh-v1.5"
+
+# Add backend to path to import settings_manager
+backend_path = os.path.join(os.path.dirname(__file__), "..", "backend")
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+
+try:
+    from core.settings_manager import settings_manager
+    EMBEDDING_MODEL_NAME = settings_manager.get_embedding_model()
+except (ImportError, AttributeError):
+    EMBEDDING_MODEL_NAME = "BAAI/bge-small-zh-v1.5"
+
 
 # 設備配置
 device = "cuda" if torch.cuda.is_available() else "cpu"

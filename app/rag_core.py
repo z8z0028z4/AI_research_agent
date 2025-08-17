@@ -497,10 +497,16 @@ def call_llm(prompt: str) -> str:
         print(f"🔍 DEBUG: current_model 類型: {type(current_model)}")
         print(f"🔍 DEBUG: current_model.startswith('gpt-5'): {current_model.startswith('gpt-5')}")
     except Exception as e:
-        print(f"⚠️ 無法獲取模型信息：{e}")
+        print(f"⚠️ 無法獲取模型信息，使用 settings manager 中的模型和預設參數: {e}")
+        import sys
+        backend_path = os.path.join(os.path.dirname(__file__), "..", "backend")
+        if backend_path not in sys.path:
+            sys.path.insert(0, backend_path)
+        from core.settings_manager import settings_manager
+        current_model = settings_manager.get_current_model()
         # 使用fallback配置
         llm_params = {
-            "model": "gpt-4-1106-preview",
+            "model": current_model,
             "temperature": 0.3,
             "max_tokens": 4000,
             "timeout": 120,
@@ -684,11 +690,16 @@ def call_llm_structured_proposal(system_prompt: str, user_prompt: str) -> Dict[s
         print(f"🤖 使用模型：{current_model}")
         print(f"🔧 模型參數：{llm_params}")
     except Exception as e:
-        print(f"⚠️ 無法獲取模型信息：{e}")
+        print(f"⚠️ 無法獲取模型信息，使用 settings manager 中的模型和預設參數: {e}")
+        import sys
+        backend_path = os.path.join(os.path.dirname(__file__), "..", "backend")
+        if backend_path not in sys.path:
+            sys.path.insert(0, backend_path)
+        from core.settings_manager import settings_manager
+        current_model = settings_manager.get_current_model()
         # 使用fallback配置
-        current_model = "gpt-4-1106-preview"
         llm_params = {
-            "model": "gpt-4-1106-preview",
+            "model": current_model,
             "temperature": 0.0,  # 結構化輸出使用0溫度
             "max_tokens": 4000,
             "timeout": 120,
@@ -903,11 +914,16 @@ def call_llm_structured_experimental_detail(chunks: List[Document], proposal: st
         print(f"🤖 使用模型：{current_model}")
         print(f"🔧 模型參數：{llm_params}")
     except Exception as e:
-        print(f"⚠️ 無法獲取模型信息：{e}")
+        print(f"⚠️ 無法獲取模型信息，使用 settings manager 中的模型和預設參數: {e}")
+        import sys
+        backend_path = os.path.join(os.path.dirname(__file__), "..", "backend")
+        if backend_path not in sys.path:
+            sys.path.insert(0, backend_path)
+        from core.settings_manager import settings_manager
+        current_model = settings_manager.get_current_model()
         # 使用fallback配置
-        current_model = "gpt-4-1106-preview"
         llm_params = {
-            "model": "gpt-4-1106-preview",
+            "model": current_model,
             "temperature": 0.0,  # 結構化輸出使用0溫度
             "max_tokens": 4000,
             "timeout": 120,
@@ -1208,11 +1224,16 @@ def call_llm_structured_revision_explain(user_feedback: str, proposal: str) -> D
         print(f"🤖 使用模型：{current_model}")
         print(f"🔧 模型參數：{llm_params}")
     except Exception as e:
-        print(f"⚠️ 無法獲取模型信息：{e}")
+        print(f"⚠️ 無法獲取模型信息，使用 settings manager 中的模型和預設參數: {e}")
+        import sys
+        backend_path = os.path.join(os.path.dirname(__file__), "..", "backend")
+        if backend_path not in sys.path:
+            sys.path.insert(0, backend_path)
+        from core.settings_manager import settings_manager
+        current_model = settings_manager.get_current_model()
         # 使用fallback配置
-        current_model = "gpt-4-1106-preview"
         llm_params = {
-            "model": "gpt-4-1106-preview",
+            "model": current_model,
             "temperature": 0.0,  # 結構化輸出使用0溫度
             "max_tokens": 4000,
             "timeout": 120,
@@ -1564,10 +1585,15 @@ def expand_query(user_prompt: str) -> List[str]:
         current_model = get_current_model()
         llm_params = get_model_params()
     except Exception as e:
-        print(f"⚠️ 無法獲取模型參數：{e}")
-        current_model = "gpt-4-1106-preview"
+        print(f"⚠️ 無法獲取模型參數，使用 settings manager 中的模型和預設參數: {e}")
+        import sys
+        backend_path = os.path.join(os.path.dirname(__file__), "..", "backend")
+        if backend_path not in sys.path:
+            sys.path.insert(0, backend_path)
+        from core.settings_manager import settings_manager
+        current_model = settings_manager.get_current_model()
         llm_params = {
-            "model": "gpt-4-1106-preview",
+            "model": current_model,
             "temperature": 0.3,
             "max_tokens": 4000,
             "timeout": 120,
@@ -2133,11 +2159,16 @@ def call_llm_structured_revision_proposal(question: str, new_chunks: List[Docume
         print(f"🤖 使用模型：{current_model}")
         print(f"🔧 模型參數：{llm_params}")
     except Exception as e:
-        print(f"⚠️ 無法獲取模型信息：{e}")
+        print(f"⚠️ 無法獲取模型信息，使用 settings manager 中的模型和預設參數: {e}")
+        import sys
+        backend_path = os.path.join(os.path.dirname(__file__), "..", "backend")
+        if backend_path not in sys.path:
+            sys.path.insert(0, backend_path)
+        from core.settings_manager import settings_manager
+        current_model = settings_manager.get_current_model()
         # 使用fallback配置
-        current_model = "gpt-4-1106-preview"
         llm_params = {
-            "model": "gpt-4-1106-preview",
+            "model": current_model,
             "temperature": 0.0,  # 結構化輸出使用0溫度
             "max_tokens": 4000,
             "timeout": 120,

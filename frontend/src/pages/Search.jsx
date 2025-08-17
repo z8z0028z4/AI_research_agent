@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { Card, Input, Button, List, Typography, Space, Select, message } from 'antd';
 import { SearchOutlined, FileTextOutlined, ExperimentOutlined } from '@ant-design/icons';
+import axios from 'axios';
 
 const { Title, Paragraph } = Typography;
 const { Search } = Input;
 const { Option } = Select;
+
+const API_URL = 'http://localhost:8000/api/v1';
 
 const SearchPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -19,31 +22,34 @@ const SearchPage = () => {
     }
 
     setLoading(true);
+    setResults([]);
+
+    if (searchType !== 'papers') {
+      message.warning('Search for experiments and other types is not yet implemented.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      // TODO: Implement API call to backend
-      console.log('Searching for:', searchQuery, 'Type:', searchType);
-      
-      // Mock results for now
-      const mockResults = [
-        {
-          id: 1,
-          title: 'Sample Research Paper',
-          authors: 'John Doe, Jane Smith',
-          abstract: 'This is a sample research paper abstract...',
-          type: 'paper'
-        },
-        {
-          id: 2,
-          title: 'Sample Experiment',
-          description: 'This is a sample experiment description...',
-          type: 'experiment'
-        }
-      ];
-      
-      setResults(mockResults);
-      message.success(`Found ${mockResults.length} results`);
+      const response = await axios.post(`${API_URL}/search/literature`, {
+        query: searchQuery,
+        max_results: 10,
+      });
+
+      if (response.data.success) {
+        const aipResults = response.data.results.map((item, index) => ({
+          id: index,
+          title: item.filename,
+          size: item.size,
+          type: 'paper',
+        }));
+        setResults(aipResults);
+        message.success(response.data.message || `Found ${response.data.total_count} results`);
+      } else {
+        message.error(response.data.message || 'Search failed');
+      }
     } catch (error) {
-      message.error('Search failed');
+      message.error('An error occurred during the search.');
       console.error('Search error:', error);
     } finally {
       setLoading(false);
@@ -57,16 +63,12 @@ const SearchPage = () => {
           <List.Item.Meta
             avatar={<FileTextOutlined style={{ fontSize: '24px', color: '#1890ff' }} />}
             title={item.title}
-            description={
-              <div>
-                <div><strong>Authors:</strong> {item.authors}</div>
-                <div><strong>Abstract:</strong> {item.abstract}</div>
-              </div>
-            }
+            description={`Size: ${(item.size / 1024).toFixed(2)} KB`}
           />
         </List.Item>
       );
     } else {
+      // This part is not used for now, but kept for future implementation
       return (
         <List.Item>
           <List.Item.Meta

@@ -75,8 +75,10 @@ pip>=23.0.0
 aiofiles>=23.0.0
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
-python-multipart>=0.0.6
 
 # Logging and debugging
 colorlog>=6.8.0
 
+# Code quality tools
+black
+flake8
