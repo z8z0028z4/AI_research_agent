@@ -17,7 +17,7 @@ from collections import defaultdict
 
 # 導入必要的模組
 from langchain_openai import ChatOpenAI
-from langchain_huggingface import HuggingFaceEmbeddings
+# from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from chunk_embedding import get_chroma_instance
 from langchain.schema import Document
