@@ -4,6 +4,7 @@ setlocal enabledelayedexpansion
 echo ========================================
 echo AI Research Assistant - Simple Setup
 echo ========================================
+echo This script will create a virtual environment and install all dependencies.
 echo.
 
 REM Get current directory
@@ -16,11 +17,11 @@ REM Check Python
 echo Checking Python...
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo ERROR: Python not found. Please install Python 3.10+
+    echo [ERROR] Python not found. Please install Python 3.10+ and ensure it's in your PATH.
     pause
     exit /b 1
 )
-echo Python found: 
+echo [OK] Python found:
 python --version
 echo.
 
@@ -36,11 +37,11 @@ if not exist "%VENV_PATH%" (
     echo Creating virtual environment...
     python -m venv "%VENV_PATH%"
     if errorlevel 1 (
-        echo ERROR: Failed to create virtual environment
+        echo [ERROR] Failed to create virtual environment.
         pause
         exit /b 1
     )
-    echo Virtual environment created successfully!
+    echo [OK] Virtual environment created successfully!
 ) else (
     echo Virtual environment already exists.
 )
@@ -50,80 +51,81 @@ REM Activate virtual environment
 echo Activating virtual environment...
 call "%VENV_ACTIVATE%"
 if errorlevel 1 (
-    echo ERROR: Failed to activate virtual environment
+    echo [ERROR] Failed to activate virtual environment.
     pause
     exit /b 1
 )
-echo Virtual environment activated.
+echo [OK] Virtual environment activated.
 echo.
 
 REM Upgrade pip
 echo Upgrading pip...
 python -m pip install --upgrade pip
-echo.
-
-REM Install PyTorch
-echo Installing PyTorch...
-pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
-echo.
-
-REM Install requirements
-echo Installing requirements...
-if exist "requirements.txt" (
-    echo Installing requirements...
-    pip install -r requirements.txt
-    echo Requirements installed.
-) else (
-    echo WARNING: requirements.txt not found
+if errorlevel 1 (
+    echo [ERROR] Failed to upgrade pip.
+    pause
+    exit /b 1
 )
 echo.
 
-REM Install frontend dependencies (at the end)
-echo Installing frontend dependencies...
-if exist "frontend" (
-    if exist "frontend\package.json" (
-        echo Running npm install in frontend directory...
-        cd frontend
-        npm install
-        if errorlevel 1 (
-            echo WARNING: npm install failed, but continuing...
-        ) else (
-            echo Frontend dependencies installed successfully!
-        )
-        cd ..
-        echo Returned to project root: %CD%
-    ) else (
-        echo WARNING: package.json not found in frontend
+REM Install main requirements
+echo Installing main requirements from requirements.txt...
+if exist "requirements.txt" (
+    pip install -r requirements.txt
+    if errorlevel 1 (
+        echo [ERROR] Failed to install packages from requirements.txt.
+        pause
+        exit /b 1
     )
+    echo [OK] Main requirements installed successfully.
 ) else (
-    echo WARNING: frontend directory not found
+    echo [ERROR] requirements.txt not found.
+    pause
+    exit /b 1
+)
+echo.
+
+REM Install frontend dependencies
+echo Installing frontend dependencies...
+if exist "frontend\package.json" (
+    echo Running npm install in frontend directory...
+    cd frontend
+    npm install
+    if errorlevel 1 (
+        echo [WARNING] npm install failed. Please check your Node.js/npm setup.
+        echo Continuing with setup...
+    ) else (
+      echo [OK] Frontend dependencies installed successfully!
+    )
+    cd ..
+) else (
+    echo [WARNING] package.json not found in frontend directory. Skipping frontend installation.
 )
 echo.
 
 REM Create configuration file
 echo Creating configuration file...
-echo VENV_PATH=%VENV_PATH% > .venv_config
-echo VENV_ACTIVATE=%VENV_ACTIVATE% >> .venv_config
-echo Configuration file created: .venv_config
+(
+    echo VENV_PATH="%VENV_PATH%"
+    echo VENV_ACTIVATE="%VENV_ACTIVATE%"
+) > .venv_config
+echo [OK] Configuration file created: .venv_config
 echo.
 
 echo ========================================
-echo Setup completed successfully!
-echo ========================================
-echo.
-echo Virtual environment: %VENV_PATH%
-echo.
-
-REM Verify dependencies
-echo ========================================
-echo Verifying dependencies...
+echo  Setup script completed. Verifying...
 echo ========================================
 echo.
 python dependency_manager.py
-echo.
+set "VERIFY_CODE=%ERRORLEVEL%"
 
+echo.
 echo ========================================
-echo Setup and verification completed!
+if %VERIFY_CODE% EQU 0 (
+    echo [SUCCESS] Setup and verification completed successfully!
+) else (
+    echo [ERROR] Verification failed. Please review the errors above.
+)
 echo ========================================
 echo.
 echo To start the application:
@@ -132,3 +134,4 @@ echo 2. Frontend: start_react.bat
 echo.
 echo Press any key to exit...
 pause >nul
+exit /b %VERIFY_CODE%

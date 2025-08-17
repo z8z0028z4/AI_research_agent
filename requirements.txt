@@ -1,84 +1,69 @@
 # Core AI and ML dependencies
+langchain>=0.3.26
 langchain-openai>=0.1.6
-langchain==0.3.26
-langchain_community==0.3.27
-langchain_core==0.3.70
+langchain-community>=0.3.27
+langchain-core>=0.3.70
 langchain-huggingface>=0.1.0
 langchain-chroma>=0.1.0
-openai==1.97.0
+openai>=1.97.0
 
-# Vector database and embeddings (Downgraded to known stable versions)
-chromadb==1.0.11
-sentence-transformers==2.2.2
-transformers==4.28.1
-tokenizers==0.15.2
-huggingface-hub==0.33.4
-einops==0.8.1
+# Vector database and embeddings
+chromadb>=1.0.0
+sentence-transformers>=2.7.0
+transformers>=4.34.0
+huggingface-hub>=0.33.0
+einops>=0.8.0
 
 # Document processing
-PyMuPDF==1.26.0
-python-docx==1.1.2
-openpyxl==3.1.5
-PyYAML==6.0.2
+PyMuPDF>=1.26.0
+python-docx>=1.1.0
+openpyxl>=3.1.0
+PyYAML>=6.0.0
 
 # Data processing and analysis
-pandas==2.3.1
-scikit-learn==1.6.1
-numpy>=1.24.0
+pandas>=2.3.0
+scikit-learn>=1.6.0
+numpy>=1.24.0,<2.0.0  # Keep numpy 1.x for compatibility
 
-# Web framework and UI (for Streamlit version)
-streamlit==1.45.1
+# Web framework and UI
+streamlit>=1.45.0
 
-# HTTP requests and networking
-requests==2.32.4
-certifi==2025.1.31
-
-# Image processing and visualization
-Pillow>=10.0.0
-svglib>=1.5.1
-reportlab>=4.0.0
-
-# Web automation (for chemical data scraping)
-selenium>=4.15.0
-
-# Environment and configuration
-python-dotenv==1.1.1
-pydantic-settings>=2.0.0
-
-# Progress tracking and utilities
-tqdm==4.67.1
-
-# PyTorch (with CUDA support for GPU acceleration)
-torch>=2.0.0
-torchaudio==2.5.1+cu121
---extra-index-url https://download.pytorch.org/whl/cu121
-
-# Additional utilities
-urllib3>=2.0.0
-beautifulsoup4>=4.12.0
-lxml>=4.9.0
-
-# Additional dependencies for sentence-transformers
-scipy>=1.11.0
-
-# FastAPI and web framework dependencies (for backend)
-fastapi>=0.115.9
+# FastAPI and backend
+fastapi>=0.115.0
 uvicorn[standard]>=0.24.0
 python-multipart>=0.0.6
 
-# Additional dependencies for better compatibility
-setuptools>=68.0.0
-wheel>=0.41.0
-pip>=23.0.0
+# HTTP requests and networking
+requests>=2.32.0
+certifi>=2024.0.0
 
-# Optional dependencies for enhanced functionality
+# Image processing
+Pillow>=10.0.0
+svglib>=1.5.0
+reportlab>=4.0.0
+
+# Web automation
+selenium>=4.15.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# Environment and configuration
+python-dotenv>=1.0.0
+pydantic-settings>=2.0.0
+
+# Utilities
+tqdm>=4.67.0
+urllib3>=2.0.0
+scipy>=1.11.0
 aiofiles>=23.0.0
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
-
-# Logging and debugging
 colorlog>=6.8.0
 
-# Code quality tools
+# Code quality tools (optional)
 black
 flake8
+
+# PyTorch - install separately based on your system
+# For CPU: pip install torch torchvision torchaudio
+# For CUDA 12.1: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
