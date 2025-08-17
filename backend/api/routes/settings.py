@@ -224,7 +224,7 @@ async def get_system_settings():
             "debug": settings.debug,
             "api_prefix": settings.api_prefix,
             "upload_dir": settings.upload_dir,
-            "max_file_size": settings.max_file_size,
+            "max_file_size": "unlimited",  # File size limit removed
             "allowed_file_types": settings.allowed_file_types
         }
     except Exception as e:

@@ -1,38 +1,48 @@
 # Core AI and ML dependencies
 langchain-openai>=0.1.6
-langchain==0.3.26
-langchain_community==0.3.27
-langchain_core==0.3.70
+langchain>=0.3.26
+langchain_community>=0.3.27
+langchain_core>=0.3.70
 langchain-huggingface>=0.1.0
 langchain-chroma>=0.1.0
-openai==1.97.0
+openai>=1.97.0
 
 # Vector database and embeddings
 chromadb==1.0.11
-sentence-transformers==5.0.0
-transformers==4.53.2
-tokenizers==0.21.2
-huggingface-hub==0.33.4
-einops==0.8.1
+sentence-transformers>=5.0.0
+transformers>=4.53.2
+tokenizers>=0.21.2
+huggingface-hub>=0.33.4
+einops>=0.8.1
 
 # Document processing
-PyMuPDF==1.26.0
+PyMuPDF>=1.26.0
 PyPDF2>=3.0.0
-python-docx==1.1.2
-openpyxl==3.1.5
-PyYAML==6.0.2
+python-docx>=1.1.2
+openpyxl>=3.1.5
+PyYAML>=6.0.2
 
 # Data processing and analysis
-pandas==2.3.1
-scikit-learn==1.6.1
+pandas>=2.3.1
+scikit-learn>=1.6.1
 numpy>=1.24.0
 
+# PyTorch (with CUDA support for GPU acceleration)
+torch>=2.0.0
+torchaudio==2.5.1+cu121
+--extra-index-url https://download.pytorch.org/whl/cu121
+
 # Web framework and UI (for Streamlit version)
-streamlit==1.45.1
+streamlit>=1.45.1
+
+# FastAPI and web framework dependencies (for backend)
+fastapi>=0.115.9
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
 
 # HTTP requests and networking
-requests==2.32.4
-certifi==2025.1.31
+requests>=2.32.4
+certifi>=2025.1.31
 
 # Image processing and visualization
 Pillow>=10.0.0
@@ -43,16 +53,11 @@ reportlab>=4.0.0
 selenium>=4.15.0
 
 # Environment and configuration
-python-dotenv==1.1.1
+python-dotenv>=1.1.1
 pydantic-settings>=2.0.0
 
 # Progress tracking and utilities
-tqdm==4.67.1
-
-# PyTorch (with CUDA support for GPU acceleration)
-torch>=2.0.0
-torchaudio==2.5.1+cu121
---extra-index-url https://download.pytorch.org/whl/cu121
+tqdm>=4.67.1
 
 # Additional utilities
 urllib3>=2.0.0
@@ -61,11 +66,6 @@ lxml>=4.9.0
 
 # Additional dependencies for sentence-transformers
 scipy>=1.11.0
-
-# FastAPI and web framework dependencies (for backend)
-fastapi>=0.115.9
-uvicorn[standard]>=0.24.0
-python-multipart>=0.0.6
 
 # Additional dependencies for better compatibility
 setuptools>=68.0.0
@@ -76,7 +76,6 @@ pip>=23.0.0
 aiofiles>=23.0.0
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
-python-multipart>=0.0.6
 
 # Logging and debugging
 colorlog>=6.8.0

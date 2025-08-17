@@ -51,38 +51,46 @@ def check_batch_duplicate(current_metadata: dict, processed_metadata_list: List[
             "existing_metadata": dict or None
         }
     """
-    for meta in processed_metadata_list:
-        # 1. 檢查 type + DOI 組合重複（最可靠）
-        current_doi = current_metadata.get("doi", "").strip()
-        current_type = current_metadata.get("type", "").strip()
-        meta_doi = meta.get("doi", "").strip()
-        meta_type = meta.get("type", "").strip()
+    try:
+        for meta in processed_metadata_list:
+            # 1. 檢查 type + DOI 組合重複（最可靠）
+            current_doi = (current_metadata.get("doi") or "").strip()
+            current_type = (current_metadata.get("type") or "").strip()
+            meta_doi = (meta.get("doi") or "").strip()
+            meta_type = (meta.get("type") or "").strip()
+            
+            if current_doi and meta_doi and current_type and meta_type:
+                if current_doi == meta_doi and current_type == meta_type:
+                    return {
+                        "is_duplicate": True,
+                        "duplicate_type": "doi",
+                        "existing_metadata": meta
+                    }
+            
+            # 2. 檢查 title + type 組合重複（次可靠）
+            current_title = (current_metadata.get("title") or "").strip()
+            meta_title = (meta.get("title") or "").strip()
+            
+            if current_title and meta_title and current_type and meta_type:
+                if current_title == meta_title and current_type == meta_type:
+                    return {
+                        "is_duplicate": True,
+                        "duplicate_type": "title",
+                        "existing_metadata": meta
+                    }
         
-        if current_doi and meta_doi and current_type and meta_type:
-            if current_doi == meta_doi and current_type == meta_type:
-                return {
-                    "is_duplicate": True,
-                    "duplicate_type": "doi",
-                    "existing_metadata": meta
-                }
-        
-        # 2. 檢查 title + type 組合重複（次可靠）
-        current_title = current_metadata.get("title", "").strip()
-        meta_title = meta.get("title", "").strip()
-        
-        if current_title and meta_title and current_type and meta_type:
-            if current_title == meta_title and current_type == meta_type:
-                return {
-                    "is_duplicate": True,
-                    "duplicate_type": "title",
-                    "existing_metadata": meta
-                }
-    
-    return {
-        "is_duplicate": False,
-        "duplicate_type": "none",
-        "existing_metadata": None
-    }
+        return {
+            "is_duplicate": False,
+            "duplicate_type": "none",
+            "existing_metadata": None
+        }
+    except Exception as e:
+        logger.error(f"❌ 批次去重檢查錯誤: {e}")
+        return {
+            "is_duplicate": False,
+            "duplicate_type": "error",
+            "existing_metadata": None
+        }
 
 def check_duplicate_file(file_path: str, metadata: dict) -> Dict[str, any]:
     """
@@ -101,8 +109,8 @@ def check_duplicate_file(file_path: str, metadata: dict) -> Dict[str, any]:
         
         if existing_metadata is not None and not existing_metadata.empty:
             # 1. 檢查 type + DOI 組合重複（最可靠）
-            doi = metadata.get("doi", "").strip()
-            doc_type = metadata.get("type", "").strip()
+            doi = (metadata.get("doi") or "").strip()
+            doc_type = (metadata.get("type") or "").strip()
             
             if doi and doc_type:
                 # 檢查相同type和DOI的組合
@@ -118,7 +126,7 @@ def check_duplicate_file(file_path: str, metadata: dict) -> Dict[str, any]:
                     }
             
             # 2. 檢查 title + type 組合重複（次可靠）
-            title = metadata.get("title", "").strip()
+            title = (metadata.get("title") or "").strip()
             if title and doc_type:
                 # 檢查相同title和type的組合
                 title_type_matches = existing_metadata[
@@ -139,7 +147,7 @@ def check_duplicate_file(file_path: str, metadata: dict) -> Dict[str, any]:
         }
         
     except Exception as e:
-        print(f"⚠️ 去重檢查失敗: {e}")
+        logger.error(f"❌ 去重檢查失敗: {e}")
         return {
             "is_duplicate": False,
             "duplicate_type": "error",

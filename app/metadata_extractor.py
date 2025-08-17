@@ -7,11 +7,11 @@
 
 import os
 import re
+import json
 import logging
-from typing import Dict, Any, Optional
+import openai
 from PyPDF2 import PdfReader
 from docx import Document
-import openai
 
 # 配置日誌
 logger = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ def gpt_detect_type_and_title(text, filename):
         client = openai.OpenAI(api_key=api_key)
         
         prompt = f"""
-        請分析以下文本內容，判斷文件類型並提取標題。
+        請分析以下文本內容，判斷文件類型為paper或supporting information (SI)，並提取標題。
         
         文件名：{filename}
         文本內容（前1000字符）：
@@ -60,13 +60,13 @@ def gpt_detect_type_and_title(text, filename):
         
         請以JSON格式回答：
         {{
-            "type": "main_paper" 或 "supporting_info" 或 "unknown",
+            "type": "paper" 或 "SI",
             "title": "提取的標題"
         }}
         
         判斷標準：
-        - main_paper: 主要研究論文，包含完整的實驗方法、結果和討論
-        - supporting_info: 支持信息，如補充材料、圖表說明等
+        - paper: 主要研究論文，包含完整的實驗方法、結果和討論
+        - supporting_info: 支持信息，如補充材料、圖表說明等，通常包含supporting information的字眼、且不會有DOI。
         - unknown: 無法確定類型
         """
         
@@ -77,11 +77,10 @@ def gpt_detect_type_and_title(text, filename):
             temperature=0.1
         )
         
-        result = response.choices[0].message.content.strip()
+        result = (response.choices[0].message.content or "").strip()
         
         # 嘗試解析JSON
         try:
-            import json
             data = json.loads(result)
             return data.get("type", "unknown"), data.get("title", filename)
         except json.JSONDecodeError:
@@ -89,7 +88,7 @@ def gpt_detect_type_and_title(text, filename):
             return "unknown", filename
             
     except Exception as e:
-        logger.warning(f"GPT 回傳格式錯誤（第 {attempt+1} 次）：{e}")
+        logger.warning(f"GPT 調用失敗：{e}")
         return "unknown", filename
 
 def extract_metadata(file_path):
@@ -98,6 +97,9 @@ def extract_metadata(file_path):
         # 獲取文件基本信息
         filename = os.path.basename(file_path)
         file_size = os.path.getsize(file_path)
+        
+        # 設定預設值，確保在任何情況下都有type值
+        file_type = "unknown"  # 預設值
         
         # 提取文本內容
         if file_path.lower().endswith('.pdf'):
@@ -115,7 +117,7 @@ def extract_metadata(file_path):
         
         if doi:
             logger.info(f"找到DOI: {doi}，判斷為主論文")
-            file_type = "main_paper"
+            file_type = "paper"  # 標準流程：有DOI時設為paper
             title = filename  # 使用文件名作為標題
         else:
             # 嘗試從內容提取標題
@@ -135,14 +137,26 @@ def extract_metadata(file_path):
                 title = filename
             
             logger.warning("未找到DOI，使用LLM分析文件類型...")
-            file_type, extracted_title = gpt_detect_type_and_title(content, filename)
-            
-            if file_type == "supporting_info":
-                logger.info("LLM判斷為Supporting Information")
-            elif file_type == "main_paper":
-                logger.info("LLM判斷為主論文")
-            else:
-                logger.warning("LLM無法確定類型，設為unknown")
+            try:
+                file_type, extracted_title = gpt_detect_type_and_title(content, filename)
+                
+                if file_type == "SI":
+                    logger.info("LLM判斷為Supporting Information")
+                elif file_type == "paper":
+                    logger.info("LLM判斷為主論文")
+                elif file_type == "supporting_info":  # 保持向後兼容
+                    logger.info("LLM判斷為Supporting Information")
+                    file_type = "SI"  # 標準化為 SI
+                elif file_type == "main_paper":  # 保持向後兼容
+                    logger.info("LLM判斷為主論文")
+                    file_type = "paper"  # 標準化為 paper
+                else:
+                    logger.warning(f"LLM無法確定類型，返回: {file_type}")
+                    file_type = "unknown"  # 確保是有效值
+            except Exception as e:
+                logger.error(f"LLM分析失敗: {e}")
+                file_type = "unknown"  # 備用值
+                extracted_title = filename
             
             # 如果LLM提取到更好的標題，使用它
             if extracted_title and extracted_title != filename:
@@ -152,7 +166,7 @@ def extract_metadata(file_path):
             "filename": filename,
             "file_path": file_path,
             "file_size": file_size,
-            "file_type": file_type,
+            "type": file_type,
             "title": title,
             "doi": doi,
             "content_preview": content[:500] if content else ""

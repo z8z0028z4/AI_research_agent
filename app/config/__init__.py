@@ -191,8 +191,8 @@ BATCH_SIZE = 10
 # 向量檢索的默認數量
 DEFAULT_K = 5
 
-# 最大文件大小（字節）
-MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+# 最大文件大小（字節）- 已移除限制
+# MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB - removed
 
 # 支持的文件格式
 SUPPORTED_FORMATS = {

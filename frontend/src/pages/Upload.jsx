@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Card, Upload, Button, Typography, Space, message, Progress, List, Tag, Statistic, Row, Col } from 'antd';
-import { InboxOutlined, FileTextOutlined, UploadOutlined, DatabaseOutlined } from '@ant-design/icons';
+import { DatabaseOutlined, FileTextOutlined, InboxOutlined, UploadOutlined } from '@ant-design/icons';
+import { Button, Card, Col, List, message, Progress, Row, Space, Statistic, Tag, Typography, Upload } from 'antd';
 import axios from 'axios';
+import React, { useEffect, useRef, useState } from 'react';
 
 const { Title, Paragraph } = Typography;
 const { Dragger } = Upload;
@@ -105,14 +105,14 @@ const UploadPage = () => {
           console.log('🔄 開始輪詢任務狀態:', newTaskId);
           const statusResp = await axios.get(`/api/v1/upload/status/${newTaskId}`);
           const { status, progress, message: msg, results: r } = statusResp.data;
-          
+
           console.log('📊 後端狀態響應:', {
             status,
             progress,
             message: msg,
             hasResults: !!r
           });
-          
+
           // 直接同步後端進度：後端進度就是前端進度
           // 處理progress可能為null或undefined的情況
           const safeProgress = progress !== null && progress !== undefined ? progress : 0;
@@ -124,7 +124,7 @@ const UploadPage = () => {
             前端進度: backendProgress,
             說明: '直接同步後端進度'
           });
-          
+
           // 確保進度不會倒退，只會向前更新
           setUploadProgress(prevProgress => {
             const newProgress = Math.max(prevProgress, backendProgress);
@@ -134,7 +134,7 @@ const UploadPage = () => {
             return newProgress;
           });
           setServerMessage(msg || '');
-          
+
           if (status === 'completed') {
             console.log('✅ 任務完成，結果:', r);
             setResults(r || {});
@@ -156,7 +156,7 @@ const UploadPage = () => {
             message.error(msg || 'Processing failed');
             return;
           }
-          
+
           console.log('⏳ 任務進行中，繼續輪詢...');
           // 繼續輪詢，縮短輪詢間隔以更頻繁地更新進度
           pollingRef.current = setTimeout(poll, 500);
@@ -184,23 +184,18 @@ const UploadPage = () => {
     fileList: fileList,
     beforeUpload: (file) => {
       // Check file type
-      const isAccepted = file.type === 'application/pdf' || 
-                        file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-                        file.type === 'application/vnd.ms-excel' ||
-                        file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-                        file.type === 'text/plain';
-      
+      const isAccepted = file.type === 'application/pdf' ||
+        file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+        file.type === 'application/vnd.ms-excel' ||
+        file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+        file.type === 'text/plain';
+
       if (!isAccepted) {
         message.error('You can only upload PDF, Word, Excel, or text files!');
         return false;
       }
 
-      // Check file size (10MB limit)
-      const isLt10M = file.size / 1024 / 1024 < 10;
-      if (!isLt10M) {
-        message.error('File must be smaller than 10MB!');
-        return false;
-      }
+      // File size check removed - no limit
 
       setFileList(prev => [...prev, file]);
       return false; // Prevent default upload behavior
@@ -230,13 +225,13 @@ const UploadPage = () => {
       </Paragraph>
 
       {/* 向量數據庫統計信息 */}
-      <Card 
-        title="Vector Database Statistics" 
+      <Card
+        title="Vector Database Statistics"
         style={{ marginBottom: 24 }}
         extra={
-          <Button 
-            type="primary" 
-            size="small" 
+          <Button
+            type="primary"
+            size="small"
             onClick={refreshVectorStats}
             icon={<DatabaseOutlined />}
           >
@@ -279,7 +274,7 @@ const UploadPage = () => {
           </p>
           <p className="ant-upload-text">Click or drag files to this area to upload</p>
           <p className="ant-upload-hint">
-            Support for PDF, Word, Excel, and text files. Max file size: 10MB
+            Support for PDF, Word, Excel, and text files. No file size limit
           </p>
         </Dragger>
 
@@ -303,9 +298,9 @@ const UploadPage = () => {
 
         {uploading && (
           <div style={{ marginTop: 16 }}>
-            <Progress 
-              percent={uploadProgress} 
-              status="active" 
+            <Progress
+              percent={uploadProgress}
+              status="active"
               strokeColor={{
                 '0%': '#108ee9',
                 '100%': '#87d068',
@@ -380,7 +375,7 @@ const UploadPage = () => {
             >
               {uploading ? 'Uploading...' : 'Upload Files'}
             </Button>
-            <Button 
+            <Button
               onClick={() => setFileList([])}
               disabled={fileList.length === 0 || uploading}
             >
@@ -396,7 +391,7 @@ const UploadPage = () => {
           <ul>
             {results.file_info && (
               <li>
-                Files classified: 
+                Files classified:
                 <Space size="small" style={{ marginLeft: 8 }}>
                   <Tag color="blue">papers: {results.file_info.papers?.length || 0}</Tag>
                   <Tag color="green">experiments: {results.file_info.experiments?.length || 0}</Tag>
@@ -414,7 +409,7 @@ const UploadPage = () => {
             )}
             {results.vector_stats && (
               <li>
-                Vector chunks in database: 
+                Vector chunks in database:
                 <Space size="small" style={{ marginLeft: 8 }}>
                   <Tag color="blue">papers: {results.vector_stats.paper_vectors || 0}</Tag>
                   <Tag color="green">experiments: {results.vector_stats.experiment_vectors || 0}</Tag>
@@ -428,7 +423,7 @@ const UploadPage = () => {
       <Card title="Upload Guidelines">
         <ul>
           <li>Supported file types: PDF, Word (.docx), Excel (.xlsx), and text files</li>
-          <li>Maximum file size: 10MB per file</li>
+          <li>No file size limit</li>
           <li>Files will be processed for text extraction and analysis</li>
           <li>Uploaded files will be stored securely and can be accessed later</li>
         </ul>

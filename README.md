@@ -1,8 +1,8 @@
-# 🧪 AI Research Assistant v3.1 - Model Selector Edition
+# 🧪 AI Research Assistant v4.0 - Production Release
 
-A comprehensive AI-powered research assistant system designed for materials science and chemistry research workflows. **Major Update: Enhanced with Model Selector System, Latest Responses API + JSON Schema, and Literature Search Recovery.**
+A comprehensive AI-powered research assistant system designed for materials science and chemistry research workflows. **Production Release: Complete system with enhanced document processing, intelligent deduplication, and robust file upload capabilities.**
 
-This tool combines document ingestion, vector embedding, GPT-based QA with source tracking, experimental data analysis, and advanced model selection capabilities.
+This production-ready tool combines document ingestion, vector embedding, GPT-based QA with source tracking, experimental data analysis, and intelligent content management.
 
 ---
 
@@ -26,13 +26,13 @@ This tool combines document ingestion, vector embedding, GPT-based QA with sourc
 - **GPT-5 Advanced Features**: Support for reasoning_effort and verbosity controls for enhanced reasoning
 - **Bridge Architecture**: Seamless integration between app and backend model configurations
 
-### 🔍 **Literature Search** *(Recovered)*
-- **Academic Search Integration**: Real-time academic source retrieval with proper citations
-- **Reference Management**: Automatic citation formatting and source tracking
-- **Improved Metadata Extracting system**:with higher catching rate, and de-duplication workflow
-- **Search History**: Track and manage your search queries (Coming Soon)
-- **Europe PMC**: Direct access to biomedical literature (Coming Soon)
-- **Perplexity API**: Enhanced search capabilities with academic focus (pending)
+### 🔍 **Intelligent Document Management** *(Production Ready)*
+- **Smart Upload System**: Automatic file classification and metadata extraction
+- **Duplicate Detection**: Advanced deduplication using DOI + type and title + type combinations
+- **Semantic Scholar Integration**: Automatic metadata enrichment with journal venues and author information
+- **Batch Processing**: Efficient handling of multiple documents with progress tracking
+- **Type Classification**: Intelligent distinction between main papers and supporting information
+- **Error Recovery**: Robust error handling with detailed logging and fallback mechanisms
 
 ### 🖥️ **Enhanced User Interface** *(Updated)*
 - **React Frontend**: Modern, responsive web interface built with React 18 + Ant Design
@@ -86,69 +86,86 @@ Access the Settings page in the React interface to:
 - **Memory**: Minimum 8GB RAM (16GB recommended for large document sets)
 - **Storage**: At least 2GB free space for vector database
 
-### Installation
+### 🎯 One-Click Installation (Windows)
 
-**Option 1: Quick Installation (Windows) - Recommended**
+**Recommended: Complete automated setup**
 ```bash
-# Run the automated installation script
-venv_setup.bat
-
-# Start the application
-start_react.bat
+# Clone and setup everything in one command
+simple_setup.bat
 ```
 
-**Option 2: Manual Installation**
+This script will:
+- ✅ Create Python virtual environment
+- ✅ Install all Python dependencies
+- ✅ Install Node.js dependencies
+- ✅ Start backend and frontend services
+- ✅ Open the application in your browser
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/z8z0028z4/AI-research-agent.git
-   cd AI-research-agent
-   ```
+### Manual Installation (All Platforms)
 
-2. **Install Python dependencies**
-   ```bash
-   # Create virtual environment
-   python -m venv .venv
-   
-   # Windows
-   .venv\Scripts\activate
-   # macOS/Linux
-   source .venv/bin/activate
-   
-   # Install dependencies
-   pip install -r requirements.txt
-   pip install -r backend/requirements.txt
-   ```
+**1. Clone the repository**
+```bash
+git clone https://github.com/z8z0028z4/AI-research-agent.git
+cd AI-research-agent
+```
 
-3. **Install Node.js dependencies**
-   ```bash
-   cd frontend
-   npm install
-   cd ..
-   ```
+**2. Install Python dependencies**
+```bash
+# Create virtual environment
+python -m venv ai_research_venv
 
-4. **Set up environment variables**
-   ```bash
-   # Copy the example environment file
-   cp env.example .env
-   
-   # Edit .env and add your OpenAI API key
-   # OPENAI_API_KEY=your_api_key_here
-   ```
+# Windows
+ai_research_venv\Scripts\activate
+# macOS/Linux
+source ai_research_venv/bin/activate
 
-5. **Launch the application**
-   ```bash
-   # Option 1: Use the batch file (Windows) - Recommended
-   start_react.bat
-   
-   # Option 2: Start services separately
-   # Backend
-   cd backend && run_api.bat
-   # Frontend (in new terminal)
-   cd frontend && run_frontend.bat
-   ```
+# Install dependencies
+pip install -r requirements.txt
+```
 
-The application will open in your default browser at `http://localhost:3000` (React version) or `http://localhost:8000` (Backend API)
+**3. Install Node.js dependencies**
+```bash
+cd frontend
+npm install
+cd ..
+```
+
+**4. Set up environment variables**
+```bash
+# Copy the example environment file
+cp env.example .env
+
+# Edit .env and add your API keys
+OPENAI_API_KEY=sk-your-openai-api-key-here
+SEMANTIC_SCHOLAR_API_KEY=your-semantic-scholar-key-here  # Optional
+```
+
+**5. Launch the application**
+
+**Windows (Recommended):**
+```bash
+# One-click start (starts both backend and frontend)
+simple_setup.bat
+
+# Or start manually:
+run_backend.bat    # Start backend first
+start_react.bat    # Then start frontend
+```
+
+**All Platforms:**
+```bash
+# Backend (Terminal 1)
+python backend/main.py
+
+# Frontend (Terminal 2)
+cd frontend
+npm run dev
+```
+
+**🌐 Access the application:**
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs
 
 ---
 

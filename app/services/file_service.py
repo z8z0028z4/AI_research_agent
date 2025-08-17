@@ -26,8 +26,8 @@ class FileService:
         "images": [".png", ".jpg", ".jpeg", ".gif"]
     }
     
-    # 文件大小限制 (MB)
-    MAX_FILE_SIZE = 100
+    # 文件大小限制 (MB) - 已移除限制
+    # MAX_FILE_SIZE = 100  # removed
     
     def __init__(self):
         self.valid_extensions = []
@@ -50,10 +50,9 @@ class FileService:
             if not os.path.exists(file_path):
                 raise ValidationError(f"文件不存在: {file_path}")
             
-            # 檢查文件大小
+            # 檢查文件大小 - 限制已移除
             file_size = os.path.getsize(file_path)
-            if file_size > self.MAX_FILE_SIZE * 1024 * 1024:
-                raise ValidationError(f"文件過大: {file_size / 1024 / 1024:.2f}MB > {self.MAX_FILE_SIZE}MB")
+            # File size check removed - no limit
             
             # 檢查文件擴展名
             file_ext = os.path.splitext(file_path)[1].lower()
