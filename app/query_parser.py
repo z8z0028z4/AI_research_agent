@@ -76,7 +76,7 @@ def extract_keywords(question: str) -> List[str]:
         response = client.chat.completions.create(
             model=llm_params["model"],
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=llm_params.get("max_tokens", 4000),
+            max_completion_tokens=llm_params.get("max_tokens", 4000),
             timeout=llm_params.get("timeout", 120),
         )
         
@@ -154,7 +154,7 @@ def parse_query_intent(query: str) -> Dict[str, any]:
         response = client.chat.completions.create(
             model=llm_params["model"],
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=llm_params.get("max_tokens", 4000),
+            max_completion_tokens=llm_params.get("max_tokens", 4000),
             timeout=llm_params.get("timeout", 120),
         )
         
@@ -209,7 +209,7 @@ def optimize_search_query(original_query: str, context: List[str] = None) -> str
         response = client.chat.completions.create(
             model=llm_params["model"],
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=llm_params.get("max_tokens", 4000),
+            max_completion_tokens=llm_params.get("max_tokens", 4000),
             timeout=llm_params.get("timeout", 120),
         )
         
@@ -258,7 +258,7 @@ def extract_chemical_entities(query: str) -> List[str]:
         response = client.chat.completions.create(
             model=llm_params["model"],
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=llm_params.get("max_tokens", 4000),
+            max_completion_tokens=llm_params.get("max_tokens", 4000),
             timeout=llm_params.get("timeout", 120),
         )
         
