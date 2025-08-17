@@ -73,8 +73,8 @@ PARSED_CHEMICAL_DIR = os.path.join(BASE_DIR, "experiment_data", "parsed_chemical
 # 定義系統使用的AI模型參數
 
 # 嵌入模型：用於將文本轉換為向量表示
-# 使用Nomic AI的嵌入模型進行語義搜索
-EMBEDDING_MODEL_NAME = "nomic-ai/nomic-embed-text-v1.5"
+# Switched to a more stable model to resolve startup issues.
+EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
 # 大語言模型：用於生成回答和文本處理
 LLM_MODEL_NAME = "gpt-5-mini"

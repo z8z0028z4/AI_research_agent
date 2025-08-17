@@ -64,7 +64,8 @@ class SettingsManager:
     
     def get_embedding_model(self) -> str:
         """獲取當前嵌入模型"""
-        return self.get_setting('embedding_model', 'BAAI/bge-small-zh-v1.5')
+        # Switched to a more stable model to resolve startup issues.
+        return self.get_setting('embedding_model', 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
 
     def get_current_model(self) -> str:
         """獲取當前LLM模型"""
