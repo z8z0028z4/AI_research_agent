@@ -217,7 +217,7 @@ research_agent/
 - **Knowledge Agent**: Document processing and Q&A
 - **GUI**: Streamlit-based user interface
 - **Vector Database**: ChromaDB for embeddings
-- **Search Integration**: Perplexity and Europe PMC
+- **Search Integration**: Europe PMC
 
 ## 🤝 Community Guidelines
 

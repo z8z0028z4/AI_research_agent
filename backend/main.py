@@ -164,10 +164,44 @@ async def startup_event():
     """
     logger.info("🚀 AI Research Assistant 後端服務啟動中...")
     
+    # 檢查並創建 .env 檔案
+    await check_and_create_env_file()
+    
     # 初始化向量統計信息
     initialize_vector_stats()
     
     logger.info("✅ 後端服務啟動完成")
+
+async def check_and_create_env_file():
+    """
+    檢查 .env 檔案是否存在，如果不存在則創建 dummy 檔案
+    """
+    try:
+        from backend.core.env_manager import env_manager
+        
+        env_status = env_manager.get_env_file_status()
+        
+        if not env_status["exists"]:
+            logger.warning("📁 .env 檔案不存在，正在創建 dummy 檔案...")
+            
+            success = env_manager.create_dummy_env_file()
+            if success:
+                logger.info("✅ Dummy .env 檔案創建成功")
+                logger.info("💡 請在設定頁面配置真實的 API Key")
+            else:
+                logger.error("❌ 創建 dummy .env 檔案失敗")
+        else:
+            logger.info("📁 .env 檔案已存在")
+            
+            # 檢查 API Key 是否已配置
+            if not env_status["openai_key_configured"]:
+                logger.warning("⚠️ OpenAI API Key 未配置，請在設定頁面進行配置")
+            else:
+                logger.info("✅ OpenAI API Key 已配置")
+                
+    except Exception as e:
+        logger.error(f"❌ 檢查 .env 檔案時發生錯誤: {e}")
+        logger.warning("💡 系統將繼續啟動，但某些功能可能無法正常運作")
 
 @app.get("/")
 async def root():

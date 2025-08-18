@@ -53,7 +53,6 @@ class Settings(BaseSettings):
     pubchem_base_url: str = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
     
     # 文獻搜尋配置
-    perplexity_api_key: Optional[str] = None
     europepmc_base_url: str = "https://www.ebi.ac.uk/europepmc/webservices/rest"
     
     # 安全配置
@@ -69,4 +68,37 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # 確保上傳目錄存在
-os.makedirs(settings.upload_dir, exist_ok=True) 
+os.makedirs(settings.upload_dir, exist_ok=True)
+
+def reload_config():
+    """
+    重新載入配置
+    用於在 .env 檔案更新後重新載入配置
+    """
+    global settings
+    
+    # 重新載入環境變量
+    from dotenv import load_dotenv
+    load_dotenv(override=True)
+    
+    # 重新創建配置實例
+    settings = Settings()
+    
+    return settings
+
+def validate_config():
+    """
+    驗證配置是否完整
+    """
+    validation_result = {
+        "openai_api_key_configured": bool(settings.openai_api_key and 
+                                          settings.openai_api_key != "sk-dummy-key-placeholder" and
+                                          not settings.openai_api_key.startswith("sk-dummy")),
+        "config_complete": True
+    }
+    
+    # 檢查必要的配置
+    if not validation_result["openai_api_key_configured"]:
+        validation_result["config_complete"] = False
+    
+    return validation_result 

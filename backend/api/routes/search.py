@@ -15,7 +15,6 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../app'))
 
 from search_agent import search_and_download_only
-from perplexity_search_fallback import ask_perplexity
 
 router = APIRouter()
 
@@ -31,15 +30,7 @@ class SearchResponse(BaseModel):
     results: List[Dict[str, Any]]
     total_count: int
 
-class PerplexityRequest(BaseModel):
-    """Perplexity 搜尋請求模型"""
-    question: str
 
-class PerplexityResponse(BaseModel):
-    """Perplexity 搜尋響應模型"""
-    answer: str
-    sources: List[Dict[str, str]]
-    error: Optional[str] = None
 
 @router.post("/search/literature", response_model=SearchResponse)
 async def search_literature(request: SearchRequest):
@@ -74,45 +65,7 @@ async def search_literature(request: SearchRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"文獻搜尋失敗: {str(e)}")
 
-@router.post("/search/perplexity", response_model=PerplexityResponse)
-async def search_with_perplexity(request: PerplexityRequest):
-    """
-    使用 Perplexity 搜尋文獻
-    
-    Args:
-        request: Perplexity 搜尋請求
-        
-    Returns:
-        搜尋結果和引用來源
-    """
-    try:
-        # 調用 Perplexity 搜尋功能
-        result = ask_perplexity(request.question)
-        
-        if result.get("error"):
-            return PerplexityResponse(
-                answer="",
-                sources=[],
-                error=result["error"]
-            )
-        
-        # 解析引用來源
-        sources = []
-        if result.get("sources"):
-            for source in result["sources"]:
-                sources.append({
-                    "title": source.get("title", ""),
-                    "url": source.get("url", ""),
-                    "snippet": source.get("snippet", "")
-                })
-        
-        return PerplexityResponse(
-            answer=result.get("answer", ""),
-            sources=sources
-        )
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Perplexity 搜尋失敗: {str(e)}")
+
 
 @router.get("/search/history")
 async def get_search_history():

@@ -2,7 +2,7 @@
 設定管理API路由
 ==============
 
-提供系統設定的管理功能，包括LLM模型選擇等
+提供系統設定的管理功能，包括LLM模型選擇和API Key管理等
 """
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -21,8 +21,10 @@ project_root = Path(__file__).parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from backend.core.config import settings
+from backend.core.config import settings, reload_config, validate_config
 from backend.core.settings_manager import settings_manager
+from backend.core.env_manager import env_manager
+from backend.utils.api_key_validator import api_key_validator
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
@@ -63,6 +65,16 @@ class ModelParametersInfo(BaseModel):
     """模型參數資訊回應模型"""
     supported_parameters: dict
     current_parameters: dict
+
+class OpenAIKeySettings(BaseModel):
+    """OpenAI API Key 設定模型"""
+    openai_api_key: str
+
+class EnvFileStatus(BaseModel):
+    """環境檔案狀態回應模型"""
+    exists: bool
+    path: str
+    openai_key_configured: bool
 
 @router.get("/model", response_model=ModelSettingsResponse)
 async def get_model_settings():
@@ -228,4 +240,78 @@ async def get_system_settings():
             "allowed_file_types": settings.allowed_file_types
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"獲取系統設定失敗: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"獲取系統設定失敗: {str(e)}")
+
+# ==================== API Key 管理端點 ====================
+
+@router.get("/env-status", response_model=EnvFileStatus)
+async def get_env_file_status():
+    """獲取 .env 檔案狀態"""
+    try:
+        status = env_manager.get_env_file_status()
+        return EnvFileStatus(**status)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"獲取環境檔案狀態失敗: {str(e)}")
+
+@router.post("/api-keys/openai")
+async def set_openai_api_key(settings: OpenAIKeySettings):
+    """設定 OpenAI API Key"""
+    try:
+        # API 驗證
+        is_valid_api, api_message = await api_key_validator.validate_openai_api_key(
+            settings.openai_api_key
+        )
+        if not is_valid_api:
+            raise HTTPException(status_code=400, detail=api_message)
+        
+        # 3. 更新 .env 檔案
+        success = env_manager.update_env_variable("OPENAI_API_KEY", settings.openai_api_key)
+        if not success:
+            raise HTTPException(status_code=500, detail="更新 .env 檔案失敗")
+        
+        # 4. 重新載入配置
+        reload_config()
+        
+        return {
+            "message": "OpenAI API Key 設定成功",
+            "status": "success"
+        }
+        
+    except HTTPException:
+        # 重新拋出 HTTP 異常
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"設定 API Key 失敗: {str(e)}")
+
+@router.post("/env-file/create-dummy")
+async def create_dummy_env_file():
+    """創建 dummy .env 檔案"""
+    try:
+        success = env_manager.create_dummy_env_file()
+        if not success:
+            raise HTTPException(status_code=500, detail="創建 dummy .env 檔案失敗")
+        
+        return {
+            "message": "Dummy .env 檔案創建成功",
+            "status": "success"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"創建 dummy .env 檔案失敗: {str(e)}")
+
+@router.get("/config-status")
+async def get_config_status():
+    """獲取配置狀態"""
+    try:
+        config_validation = validate_config()
+        env_status = env_manager.get_env_file_status()
+        
+        return {
+            "config_validation": config_validation,
+            "env_status": env_status,
+            "system_ready": config_validation["config_complete"]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"獲取配置狀態失敗: {str(e)}") 

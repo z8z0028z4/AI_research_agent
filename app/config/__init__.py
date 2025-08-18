@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 # ==================== 環境變量載入 ====================
 # 載入 .env 檔案，用於管理敏感信息（如API密鑰）
-# .env文件應該包含：OPENAI_API_KEY, PERPLEXITY_API_KEY 等
+# .env文件應該包含：OPENAI_API_KEY 等
 load_dotenv()
 
 # ==================== SSL 證書配置 ====================
@@ -44,7 +44,7 @@ os.environ["HF_DATASETS_OFFLINE"] = "0"
 # 從環境變量中獲取API密鑰，確保安全性
 # 如果環境變量未設置，這些值將為None
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # OpenAI API密鑰，用於GPT模型調用
-PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")  # Perplexity API密鑰，用於搜索功能
+
 
 def validate_api_keys() -> Dict[str, bool]:
     """
@@ -54,8 +54,7 @@ def validate_api_keys() -> Dict[str, bool]:
         Dict[str, bool]: 各API密鑰的驗證結果
     """
     validation_results = {
-        "openai": bool(OPENAI_API_KEY),
-        "perplexity": bool(PERPLEXITY_API_KEY)
+        "openai": bool(OPENAI_API_KEY)
     }
     
     missing_keys = [key for key, valid in validation_results.items() if not valid]

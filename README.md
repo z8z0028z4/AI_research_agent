@@ -192,7 +192,6 @@ Create a `.env` file in the project root directory:
 ```env
 # Required API Keys
 OPENAI_API_KEY=sk-your-openai-api-key-here
-PERPLEXITY_API_KEY (optional)=pplx-your-perplexity-api-key-here
 ```
 
 ---
@@ -474,7 +473,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 Acknowledgments
 
 - **OpenAI** for GPT models and API
-- **Perplexity** for academic search capabilities
+- **Europe PMC** for academic search capabilities
 - **ChromaDB** for vector database functionality
 - **React** and **Ant Design** for the modern UI framework
 - **FastAPI** for the backend API framework
