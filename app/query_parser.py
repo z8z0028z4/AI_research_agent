@@ -20,7 +20,7 @@ from typing import List, Literal, Dict, Optional
 import re
 from openai import OpenAI
 import os
-from config import LLM_MODEL_NAME, LLM_PARAMS
+from config import LLM_MODEL_NAME
 import ast
 
 # ==================== OpenAI客戶端初始化 ====================
@@ -68,13 +68,16 @@ def extract_keywords(question: str) -> List[str]:
 
     # ==================== GPT模型調用 ====================
     # 使用OpenAI GPT模型進行關鍵詞提取
-    # 使用配置文件中統一的LLM參數
+    # 使用動態模型參數
     try:
+        from model_config_bridge import get_model_params
+        llm_params = get_model_params()
+        
         response = client.chat.completions.create(
-            model=LLM_PARAMS["model"],  # 使用 "model" 而不是 "model_name"
+            model=llm_params["model"],
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=LLM_PARAMS.get("max_tokens", 4000),  # 使用 "max_tokens" 而不是 "max_completion_tokens"
-            timeout=LLM_PARAMS.get("timeout", 120),
+            max_completion_tokens=llm_params.get("max_tokens", 4000),
+            timeout=llm_params.get("timeout", 120),
         )
         
         # 獲取模型返回的原始文本
@@ -145,11 +148,14 @@ def parse_query_intent(query: str) -> Dict[str, any]:
     """
     
     try:
+        from model_config_bridge import get_model_params
+        llm_params = get_model_params()
+        
         response = client.chat.completions.create(
-            model=LLM_PARAMS["model"],
+            model=llm_params["model"],
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=LLM_PARAMS.get("max_tokens", 4000),
-            timeout=LLM_PARAMS.get("timeout", 120),
+            max_completion_tokens=llm_params.get("max_tokens", 4000),
+            timeout=llm_params.get("timeout", 120),
         )
         
         # 解析JSON結果
@@ -197,11 +203,14 @@ def optimize_search_query(original_query: str, context: List[str] = None) -> str
     """
     
     try:
+        from model_config_bridge import get_model_params
+        llm_params = get_model_params()
+        
         response = client.chat.completions.create(
-            model=LLM_PARAMS["model"],
+            model=llm_params["model"],
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=LLM_PARAMS.get("max_tokens", 4000),
-            timeout=LLM_PARAMS.get("timeout", 120),
+            max_completion_tokens=llm_params.get("max_tokens", 4000),
+            timeout=llm_params.get("timeout", 120),
         )
         
         optimized_query = response.choices[0].message.content.strip()
@@ -243,11 +252,14 @@ def extract_chemical_entities(query: str) -> List[str]:
     """
     
     try:
+        from model_config_bridge import get_model_params
+        llm_params = get_model_params()
+        
         response = client.chat.completions.create(
-            model=LLM_PARAMS["model"],
+            model=llm_params["model"],
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=LLM_PARAMS.get("max_tokens", 4000),
-            timeout=LLM_PARAMS.get("timeout", 120),
+            max_completion_tokens=llm_params.get("max_tokens", 4000),
+            timeout=llm_params.get("timeout", 120),
         )
         
         raw = response.choices[0].message.content.strip()

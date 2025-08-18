@@ -41,8 +41,9 @@ PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")  # Perplexity API密鑰，�
 
 # ==================== 項目路徑配置 ====================
 # 設置基礎目錄路徑，確保跨平台兼容性
-# BASE_DIR 指向項目根目錄的上一級目錄
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+# BASE_DIR 應指向專案根目錄 AI-research-agent
+# 原先設為上上層導致寫入到父資料夾（如 d:\OneDrive\3. tool\coding），現修正為上一層（專案根目錄）
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 # ==================== 數據目錄配置 ====================
 # 定義各種數據存儲目錄，用於組織和管理數據文件
@@ -65,18 +66,18 @@ REGISTRY_PATH = os.path.join(BASE_DIR, "experiment_data", "metadata_registry.xls
 
 # 化學品解析目錄：存儲從PubChem下載的化學品數據
 # 用於存儲化學品的JSON格式數據和元數據
-PARSED_CHEMICAL_DIR = os.path.join(BASE_DIR, "research_agent", "app", "experiment_data", "chemicals")
+PARSED_CHEMICAL_DIR = os.path.join(BASE_DIR, "experiment_data", "parsed_chemicals")
 
 
 # ==================== 模型配置 ====================
 # 定義系統使用的AI模型參數
 
 # 嵌入模型：用於將文本轉換為向量表示
-# 使用Nomic AI的嵌入模型進行語義搜索
-EMBEDDING_MODEL_NAME = "nomic-ai/nomic-embed-text-v1.5"
+# Switched to a more stable model to resolve startup issues.
+EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
 # 大語言模型：用於生成回答和文本處理
-LLM_MODEL_NAME = "gpt-4-1106-preview"
+LLM_MODEL_NAME = "gpt-5-mini"
 
 # ==================== LLM參數配置 ====================
 # 修復 LLM 參數配置，移除有問題的參數
@@ -84,10 +85,24 @@ LLM_MODEL_NAME = "gpt-4-1106-preview"
 # LLM調用參數（適用於所有LLM調用）
 LLM_PARAMS = {
     "model": LLM_MODEL_NAME,  # 使用 "model" 而不是 "model_name"
-    "temperature": 0.3,  # 溫度參數
     "max_tokens": 4000,  # 使用 max_tokens 而不是 max_completion_tokens
     "timeout": 120,  # 超時時間（秒）
 }
+
+# ==================== 文本處理參數配置 ====================
+# 用於文檔分塊和向量化的參數
+
+# 最大 token 數量：控制 AI 模型回應的最大長度
+# 這個參數用於限制模型輸出的 token 數量，避免回應過長
+MAX_TOKENS = 4000
+
+# 文檔分塊大小：將長文檔分割成較小的塊進行處理
+# 較大的塊可以保留更多上下文，但會增加處理時間
+CHUNK_SIZE = 1000
+
+# 文檔分塊重疊：相鄰塊之間的重疊 token 數量
+# 重疊可以幫助保持上下文連貫性，避免重要信息被分割
+CHUNK_OVERLAP = 200
 
 
 # ==================== 配置驗證函數 ====================

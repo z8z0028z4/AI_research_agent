@@ -1,110 +1,123 @@
 # Changelog
 
-All notable changes to the AI Research Assistant project will be documented in this file.
+## [Model Selector Edition v3.1 - 2025-01-XX]
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+### 🎉 重大更新：模型選擇器系統 v1.0
 
-## [Unreleased]
+#### ✨ 新增功能
+- **模型選擇器系統 v1.0**：完整的模型選擇和管理功能
+  - 支援 GPT-5、GPT-5-nano、GPT-5-mini 三種模型
+  - 動態參數配置（max_tokens、timeout、reasoning_effort、verbosity）
+  - 即時模型切換，無需重啟應用
+  - 參數驗證和持久化設定
+- **最新 Responses API + JSON Schema**：結構化輸出確保提案格式固定
+  - 使用最新的 OpenAI Responses API
+  - JSON Schema 結構化輸出，提高重現性和沿用性
+  - 固定的提案格式，確保一致性
+- **文獻查詢功能恢復**：重新啟用學術文獻搜尋
+  - Europe PMC 整合
+  - Perplexity API 支援
+  - 引用管理和追蹤
+- **UI 功能調整**：多項使用者介面改進
+  - 增強的側邊欄導航
+  - 改進的頁面轉換效果
+  - 更好的響應式設計
 
-### Added
-- Comprehensive documentation updates
-- Installation scripts for Windows and Unix systems
-- Setup.py for pip installation
-- Contributing guidelines
-- License file (MIT)
-- Gitignore file for sensitive data protection
+#### 🔧 技術改進
+- **設定管理系統重構**：統一的設定管理架構
+  - `backend/core/settings_manager.py` 集中化設定管理
+  - `settings.json` 持久化設定儲存
+  - 完整的設定管理 API
+- **模型配置橋接**：`app/model_config_bridge.py` 連接前後端
+  - 自動參數檢測和適配
+  - 錯誤處理和 fallback 機制
+  - 無縫的模型配置整合
+- **依賴管理優化**：清理和更新依賴
+  - 移除過時的安裝腳本
+  - 更新 requirements.txt 到最新版本
+  - 新增診斷工具
 
-### Changed
-- Updated requirements.txt with all missing dependencies
-- Improved README.md with comprehensive documentation
-- Enhanced project structure documentation
+#### 🐛 修復
+- 修復模型參數驗證問題
+- 修復設定持久化問題
+- 修復前端設定頁面顯示問題
+- 修復文獻搜尋功能整合問題
 
-## [2.0.0] - 2025-01-XX
+#### 📦 依賴更新
+- 更新 langchain 相關套件到最新版本
+- 更新 FastAPI 和相關後端依賴
+- 更新前端 React 依賴
+- 新增模型參數檢測相關套件
 
-### Added
-- **Experimental Reasoning Mode**: Dual retriever architecture combining literature and experimental data
-- **Chemical Safety Integration**: PubChem data integration with NFPA hazard codes
-- **Enhanced Document Processing**: Support for Excel files and experimental data
-- **Academic Search**: Perplexity API integration for real-time literature search
-- **Europe PMC Integration**: Direct access to biomedical literature
-- **Citation Tracking**: Numbered references with source document links
-- **Vector Database**: ChromaDB integration for semantic search
-- **Streamlit GUI**: Modern web interface with tabbed navigation
-- **CLI Mode**: Command-line interface for automation
-- **File Upload**: Drag-and-drop support for documents
-- **Real-time Processing**: Live status updates and progress indicators
+#### 🚀 部署改進
+- 簡化啟動腳本：`start_react.bat`
+- 移除冗餘的啟動檔案
+- 改進虛擬環境設置
+- 新增跨平台支援
 
-### Changed
-- **Embedding Model**: Upgraded to `nomic-ai/nomic-embed-text-v1.5` for academic content
-- **LLM Integration**: Enhanced GPT-4 integration with better prompting
-- **Document Chunking**: Improved chunking with metadata preservation
-- **Error Handling**: Comprehensive error handling and user feedback
-- **Performance**: Optimized vector search and document processing
-
-### Fixed
-- SSL certificate handling for enterprise environments
-- Memory optimization for large document sets
-- Cross-platform compatibility issues
-- API rate limiting and error recovery
-
-## [1.0.0] - 2024-XX-XX
-
-### Added
-- Initial release of AI Research Assistant
-- Basic document processing capabilities
-- Simple Q&A functionality
-- PDF and Word document support
-- Basic vector embedding
-- Streamlit web interface
-
----
-
-## Version History
-
-- **v2.0.0**: Major feature release with experimental reasoning, chemical safety, and academic search
-- **v1.0.0**: Initial release with basic document processing and Q&A capabilities
-
-## Migration Guide
-
-### From v1.0.0 to v2.0.0
-
-1. **Update Dependencies**
-   ```bash
-   pip install -r research_agent/requirements.txt --upgrade
-   ```
-
-2. **Environment Variables**
-   - Add `PERPLEXITY_API_KEY` to your `.env` file
-   - Update to new embedding model configuration
-
-3. **Vector Database**
-   - Existing embeddings may need regeneration with new model
-   - Run document processing again for optimal performance
-
-4. **Configuration**
-   - Review `config.py` for new options
-   - Update any custom configurations
-
-## Deprecation Notices
-
-- **v2.2.0**: Old vector database format will be deprecated
-
-## Breaking Changes
-
-### v2.0.0
-- Updated vector database schema
-- Modified configuration file structure
-- Changed API response format for citations
-
-## Security Updates
-
-### v2.0.0
-- Enhanced SSL certificate handling
-- Improved API key security
-- Added input validation
-- Implemented rate limiting
+#### 📋 未來工作規劃
+- **提高文章檢索能力**：改善 retriever 的檢索相關性
+- **OSS-20B 本地 LLM**：更新和整合本地模型運行模組
+- **選字反白高光偵測**：連動 LLM 進行解釋和修改
+- **歷史對話功能**：增加對話歷史管理
+- **Research Advisor 功能**：數據接收、顯示、AI 輔助分析
+- **儀錶板功能**：啟動和改進儀錶板
 
 ---
 
-For detailed information about each release, see the [GitHub releases page](https://github.com/yourusername/AI-research-agent/releases). 
+## [React Version - 2024-01-XX]
+
+### 🎉 重大更新：從 Streamlit 遷移到 React 前端
+
+#### ✨ 新增功能
+- **React 前端架構**：使用 React 18 + Vite + Ant Design
+- **現代化 UI/UX**：響應式設計，流暢動畫，更好的用戶體驗
+- **智能文本清理**：自動移除 markdown 格式，確保 DOCX 輸出乾淨
+- **提案修訂功能**：支持基於用戶反饋的提案修訂
+- **實驗細節生成**：獨立的實驗細節生成功能
+- **DOCX 下載**：完整的 Word 文檔生成和下載
+- **化學品查詢**：完整的化學品信息顯示和安全圖標
+
+#### 🔧 技術改進
+- **後端 API 重構**：使用 FastAPI 提供 RESTful API
+- **模塊化架構**：組件化開發，更好的代碼組織
+- **狀態管理**：使用 React Hooks 進行狀態管理
+- **開發體驗**：熱重載，TypeScript 支持，ESLint 檢查
+- **性能優化**：更快的加載速度和響應性
+
+#### 🐛 修復
+- 修復了 markdown 格式在 DOCX 中的顯示問題
+- 修復了文本換行和寬度適配問題
+- 修復了實驗細節生成的格式問題
+
+#### 📦 依賴更新
+- 新增 Node.js 16+ 依賴
+- 新增 React 18 和相關前端依賴
+- 更新 Python 依賴到最新穩定版本
+- 新增 svglib 用於 SVG 到 PNG 轉換
+
+#### 🚀 部署改進
+- 跨平台虛擬環境設置：`venv_setup.bat`
+- 跨平台啟動腳本：`start.py`
+- Windows 專用啟動腳本：`run.bat`
+- 自動依賴檢查和安裝
+- 開發和生產環境配置
+
+#### 📋 待實現功能
+- 文獻助理頁面（RAG 模式選擇）
+- 儀錶板功能恢復
+- 文獻搜尋功能恢復
+- 文件上傳處理
+- 實驗顧問功能
+- 數據顯示和比較
+- 提案選擇器
+
+---
+
+## [Previous Versions]
+
+### [0.1.0] - 2024-01-XX
+- Initial Streamlit version
+- Basic research proposal generation
+- Chemical information lookup
+- Document processing capabilities 

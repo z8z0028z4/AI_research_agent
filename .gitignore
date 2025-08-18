@@ -27,13 +27,17 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Virtual environments
+# Virtual environments (exclude from version control)
 venv/
 env/
 ENV/
 env.bak/
 venv.bak/
-venv_company/**
+venv_company/
+.venv/
+.venv_*/
+venv_*/
+env_*/
 
 # IDE and editor files
 .vscode/
@@ -86,6 +90,7 @@ log/
 # Vector database files (can be regenerated)
 experiment_data/vector_index/
 experiment_data/index_old/
+experiment_data/parsed_chemicals/
 testing_material/**
 
 
@@ -94,7 +99,9 @@ testing_material/**
 *.docx
 *.xlsx
 *.csv
-*.json
+# Exclude package.json from being ignored
+!package.json
+!**/package.json
 experiment_data/papers/
 experiment_data/old-paper/
 experiment_data/experiment/
@@ -174,4 +181,7 @@ docker-compose.yml
 
 # Local configuration
 config.local.py
-settings.local.py 
+settings.local.py
+
+# Virtual environment configuration
+.venv_config 

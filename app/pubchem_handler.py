@@ -57,12 +57,37 @@ def download_and_store(result: Dict, storage_dir: str) -> str:
     return ""
 
 def extract_json_chemical_list_from_llm(text: str) -> list:
-    match = re.search(r"```json\s*(\[[^\]]+\])\s*```", text, re.DOTALL)
-    if match:
+    # 首先嘗試提取完整的 JSON 物件
+    json_match = re.search(r"```json\s*(\{.*?\})\s*```", text, re.DOTALL)
+    if json_match:
         try:
-            return json.loads(match.group(1))
+            json_obj = json.loads(json_match.group(1))
+            if 'materials_list' in json_obj and isinstance(json_obj['materials_list'], list):
+                print(f"✅ 從完整 JSON 物件中提取到 materials_list: {json_obj['materials_list']}")
+                return json_obj['materials_list']
+        except Exception as e:
+            print(f"❌ 完整 JSON 物件解析失敗：{e}")
+    
+    # 如果沒有找到完整 JSON 物件，嘗試提取單獨的陣列
+    array_match = re.search(r"```json\s*(\[[^\]]+\])\s*```", text, re.DOTALL)
+    if array_match:
+        try:
+            return json.loads(array_match.group(1))
         except Exception as e:
             print("❌ JSON chemical list 解析失敗：", e)
+    
+    # 如果都沒有找到，嘗試直接解析整個文本為 JSON
+    try:
+        # 移除可能的 markdown 格式
+        cleaned_text = re.sub(r"```json\s*", "", text)
+        cleaned_text = re.sub(r"\s*```", "", cleaned_text)
+        json_obj = json.loads(cleaned_text)
+        if 'materials_list' in json_obj and isinstance(json_obj['materials_list'], list):
+            print(f"✅ 從清理後的文本中提取到 materials_list: {json_obj['materials_list']}")
+            return json_obj['materials_list']
+    except Exception as e:
+        print(f"❌ 直接 JSON 解析失敗：{e}")
+    
     return []
 
 def parse_pubchem_json(json_data: dict) -> dict:
@@ -98,9 +123,16 @@ def parse_pubchem_json(json_data: dict) -> dict:
         cleaned = cleaned.replace('\x0f', '')  # SI
         return cleaned
 
+    # 優先使用IUPAC名稱，如果沒有則使用其他名稱
+    iupac_name = find_prop("IUPAC Name", "Preferred") or find_prop("IUPAC Name", "Traditional")
+    if not iupac_name:
+        # 如果沒有IUPAC名稱，嘗試其他名稱
+        iupac_name = find_prop("IUPAC Name") or find_prop("Title") or "Unknown"
+    
     return {
         "cid": cid,
-        "name": clean_text_for_xml(find_prop("IUPAC Name", "Preferred") or find_prop("IUPAC Name", "Traditional")),
+        "name": clean_text_for_xml(iupac_name),
+        "iupac_name": clean_text_for_xml(iupac_name),  # 明確標記IUPAC名稱
         "formula": clean_text_for_xml(find_prop("Molecular Formula")),
         "weight": clean_text_for_xml(find_prop("Molecular Weight")),
         "smiles": clean_text_for_xml(find_prop("SMILES", "Absolute") or find_prop("SMILES", "Connectivity")),
@@ -203,6 +235,8 @@ def get_safety_info(cid: int) -> dict:
         ghs_urls = set()
         nfpa_url = None
         cas_number = None
+        hazard_statements = []
+        precautionary_statements = []
 
         def clean_text_for_xml(text):
             """清理文本以確保XML兼容性"""
@@ -227,7 +261,7 @@ def get_safety_info(cid: int) -> dict:
             return cleaned
 
         def walk(sections):
-            nonlocal ghs_urls, nfpa_url, cas_number
+            nonlocal ghs_urls, nfpa_url, cas_number, hazard_statements, precautionary_statements
             for sec in sections:
                 heading = sec.get("TOCHeading", "")
 
@@ -259,6 +293,23 @@ def get_safety_info(cid: int) -> dict:
                                     cas_number = clean_text_for_xml(maybe_cas)
                                     break
 
+                # Hazard Statements
+                elif heading == "GHS Hazard Statements":
+                    for info in sec.get("Information", []):
+                        val = info.get("Value", {}).get("StringWithMarkup", [])
+                        if val:
+                            for entry in val:
+                                hazard_statements.append(clean_text_for_xml(entry.get("String", "")))
+
+                # Precautionary Statements
+                elif "Precautionary Statement" in heading:
+                    for info in sec.get("Information", []):
+                        val = info.get("Value", {}).get("StringWithMarkup", [])
+                        if val:
+                            for entry in val:
+                                precautionary_statements.append(clean_text_for_xml(entry.get("String", "")))
+
+
                 # 遞迴深入子區塊
                 if "Section" in sec:
                     walk(sec["Section"])
@@ -268,7 +319,9 @@ def get_safety_info(cid: int) -> dict:
         return {
             "ghs_icons": sorted(ghs_urls),
             "nfpa_image": nfpa_url,
-            "cas": cas_number
+            "cas": cas_number,
+            "hazard_statements": hazard_statements,
+            "precautionary_statements": precautionary_statements,
         }
 
     except Exception as e:
@@ -327,6 +380,8 @@ def extract_and_fetch_chemicals(name_list: List[str], save_dir=PARSED_CHEMICAL_D
                 "nfpa_image": safety_info.get("nfpa_image")
             }
             parsed["cas"] = safety_info.get("cas")
+            parsed["hazard_statements"] = safety_info.get("hazard_statements", [])
+            parsed["precautionary_statements"] = safety_info.get("precautionary_statements", [])
 
             # Step 4: 儲存乾淨版本
             save_path = os.path.join(save_dir, f"parsed_cid{cid}.json")
@@ -361,6 +416,6 @@ def chemical_metadata_extractor(proposal_text: str):
         else:
             print("❌ 沒有找到 JSON 格式的化學品列表")
     
-    metadata_list, not_found_list = extract_and_fetch_chemicals(name_list)
+    summaries, not_found = extract_and_fetch_chemicals(name_list)
     cleaned_proposal_text = remove_json_chemical_block(proposal_text)
-    return metadata_list, not_found_list, cleaned_proposal_text
+    return summaries, not_found, cleaned_proposal_text

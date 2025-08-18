@@ -1,17 +1,13 @@
-# Core AI and ML dependencies
-langchain-openai>=0.1.6
+# Core AI and ML dependencies (OpenAI version)
+langchain-openai>=0.2.0
 langchain==0.3.26
 langchain_community==0.3.27
 langchain_core==0.3.70
-openai==1.97.0
+langchain-chroma>=0.1.0
+openai>=1.97.0
 
-# Vector database and embeddings
-chromadb==1.0.11
-sentence-transformers==5.0.0
-transformers==4.53.2
-tokenizers==0.21.2
-huggingface-hub==0.33.4
-einops==0.8.1
+# Vector database
+chromadb>=1.0.0
 
 # Document processing
 PyMuPDF==1.26.0
@@ -22,37 +18,49 @@ PyYAML==6.0.2
 # Data processing and analysis
 pandas==2.3.1
 scikit-learn==1.6.1
-numpy>=1.24.0
+numpy>=1.24.0,<2.0.0
 
 # Web framework and UI
 streamlit==1.45.1
 
+# FastAPI and backend
+fastapi>=0.115.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+
 # HTTP requests and networking
 requests==2.32.4
-certifi==2025.1.31
+certifi>=2024.0.0
 
-# Image processing and visualization
+# Image processing
 Pillow>=10.0.0
-cairosvg>=2.8.0
-svglib>=1.5.1
+svglib>=1.5.0
 reportlab>=4.0.0
 
-# Web automation (for chemical data scraping)
+# Web automation
 selenium>=4.15.0
-
-# Environment and configuration
-python-dotenv==1.1.1
-
-# Progress tracking and utilities
-tqdm==4.67.1
-
-# PyTorch (with CUDA support for GPU acceleration)
-torch>=2.0.0
-torchaudio==2.5.1+cu121
---extra-index-url https://download.pytorch.org/whl/cu121
-
-# Additional utilities
-urllib3>=2.0.0
 beautifulsoup4>=4.12.0
 lxml>=4.9.0
 
+# Environment and configuration
+python-dotenv>=1.0.0
+pydantic-settings>=2.0.0
+
+# Utilities
+tqdm>=4.67.0
+urllib3>=2.0.0
+scipy>=1.11.0
+aiofiles>=23.0.0
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+colorlog>=6.8.0
+
+# Token counting for OpenAI
+tiktoken>=0.5.0
+
+# Code quality tools (optional)
+black
+flake8
+
+# NOTE: We're NOT installing sentence-transformers, transformers, or huggingface-hub
+# since we're using OpenAI embeddings instead

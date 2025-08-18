@@ -153,7 +153,7 @@ def extract_links(text: str) -> list:
         list: URL連結列表
     
     技術細節：
-    - 使用正則表達式 r'(https?://[^\s\)\]\}]+)' 匹配URL
+    - 使用正則表達式 r'(https?://[^\\s\\)\\]\\}]+)' 匹配URL
     - 支持HTTP和HTTPS協議
     - 自動過濾無效的URL格式
     """

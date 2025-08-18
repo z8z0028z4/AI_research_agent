@@ -21,12 +21,14 @@ from rag_core import (
     load_paper_vectorstore, build_proposal_prompt, build_detail_experimental_plan_prompt, 
     build_iterative_proposal_prompt, load_experiment_vectorstore, preview_chunks, 
     retrieve_chunks_multi_query, build_prompt, call_llm, build_inference_prompt, 
-    build_dual_inference_prompt, expand_query
+    build_dual_inference_prompt, expand_query, generate_proposal_with_fallback,
+    generate_iterative_structured_proposal, generate_structured_experimental_detail,
+    generate_structured_revision_explain, generate_structured_revision_proposal
 )
 from config import EXPERIMENT_DIR
 import os
 
-def agent_answer(question: str, mode: str = "default", **kwargs):
+def agent_answer(question: str, mode: str = "make proposal", **kwargs):
     """
     知識代理的主要回答函數
     
@@ -39,7 +41,7 @@ def agent_answer(question: str, mode: str = "default", **kwargs):
     參數：
         question (str): 用戶問題
         mode (str): 處理模式，支持多種模式
-        **kwargs: 額外參數，如chunks、proposal等
+        **kwargs: 額外參數，如chunks、proposal、k等
     
     返回：
         dict: 包含回答、引用和相關文檔塊的字典
@@ -52,6 +54,35 @@ def agent_answer(question: str, mode: str = "default", **kwargs):
     - "expand to experiment detail": 擴展實驗細節
     - "generate new idea": 生成新想法
     """
+    
+    import time
+    import uuid
+    import traceback
+    
+    # 生成唯一的請求 ID
+    request_id = str(uuid.uuid4())[:8]
+    start_time = time.time()
+    
+    # 獲取調用堆疊信息
+    stack_info = traceback.extract_stack()
+    caller_info = stack_info[-2] if len(stack_info) > 1 else stack_info[-1]
+    
+    print(f"🧠 [AGENT-{request_id}] ========== agent_answer 被調用 ==========")
+    print(f"🧠 [AGENT-{request_id}] 時間戳: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"🧠 [AGENT-{request_id}] 調用位置: {caller_info.filename}:{caller_info.lineno}")
+    print(f"🧠 [AGENT-{request_id}] 調用函數: {caller_info.name}")
+    print(f"🧠 [AGENT-{request_id}] question = '{question}'")
+    print(f"🧠 [AGENT-{request_id}] mode = '{mode}'")
+    print(f"🧠 [AGENT-{request_id}] kwargs = {kwargs}")
+    
+    # 獲取檢索參數
+    k = kwargs.get("k", 10)  # 預設檢索 10 個文檔
+    fetch_k = k * 2  # fetch_k 自動設為 k 的 2 倍
+    
+    print(f"🧠 [AGENT-{request_id}] k = {k}, fetch_k = {fetch_k}")
+    print(f"🧠 [AGENT-{request_id}] mode type = {type(mode)}")
+    print(f"🧠 [AGENT-{request_id}] mode == 'make proposal' = {mode == 'make proposal'}")
+    print(f"🧠 [AGENT-{request_id}] mode == 'default' = {mode == 'default'}")
     
     # ==================== 模式1：納入實驗資料，進行推論與建議 ====================
     if mode == "納入實驗資料，進行推論與建議":
@@ -94,11 +125,32 @@ def agent_answer(question: str, mode: str = "default", **kwargs):
         - 基於文獻生成研究提案
         - 使用較多的檢索結果（k=10）
         - 專注於提案結構化生成
+        - 優先使用結構化輸出，失敗時回退到傳統格式
         """
+        print(f"📝 [AGENT-{request_id}] 啟用模式：make proposal (結構化輸出)")
         paper_vectorstore = load_paper_vectorstore()
-        print("📦 Paper 向量庫：", paper_vectorstore._collection.count())
-        chunks = retrieve_chunks_multi_query(paper_vectorstore, [question], k=10)
-        prompt, citations = build_proposal_prompt(chunks, question)
+        print(f"📦 [AGENT-{request_id}] Paper 向量庫：{paper_vectorstore._collection.count()}")
+        chunks = retrieve_chunks_multi_query(paper_vectorstore, [question], k=k, fetch_k=fetch_k)
+        print(f"📄 [AGENT-{request_id}] 檢索到 {len(chunks)} 個文檔塊")
+        
+        # 使用新的結構化提案生成功能
+        text_proposal, structured_data = generate_proposal_with_fallback(chunks, question)
+        
+        end_time = time.time()
+        duration = end_time - start_time
+        
+        print(f"✅ [AGENT-{request_id}] ========== make proposal 完成 ==========")
+        print(f"✅ [AGENT-{request_id}] 總耗時: {duration:.2f} 秒")
+        print(f"✅ [AGENT-{request_id}] 文本提案長度: {len(text_proposal)}")
+        print(f"✅ [AGENT-{request_id}] 結構化數據鍵: {list(structured_data.keys()) if structured_data else 'None'}")
+        
+        # 返回結構化結果
+        return {
+            "answer": text_proposal,
+            "citations": structured_data.get('citations', []),
+            "chunks": chunks,
+            "structured_proposal": structured_data
+        }
 
     # ==================== 模式3：允許延伸與推論 ====================
     elif mode == "允許延伸與推論":
@@ -142,11 +194,26 @@ def agent_answer(question: str, mode: str = "default", **kwargs):
         - 基於提案和文獻塊生成詳細實驗計劃
         - 需要外部提供chunks和proposal
         - 專注於實驗設計細節
+        - 使用結構化輸出
         """
-        print("🔬 啟用模式：expand to experiment detail")
+        print("🔬 啟用模式：expand to experiment detail (結構化輸出)")
         chunks = kwargs.get("chunks", [])
         proposal = kwargs.get("proposal", "")
-        prompt, citations = build_detail_experimental_plan_prompt(chunks, proposal)
+        
+        # 使用新的結構化實驗細節生成功能
+        structured_data = generate_structured_experimental_detail(chunks, proposal)
+        
+        # 轉換為文本格式
+        from rag_core import structured_experimental_detail_to_text
+        text_experiment = structured_experimental_detail_to_text(structured_data)
+        
+        # 返回結構化結果
+        return {
+            "answer": text_experiment,
+            "citations": structured_data.get('citations', []),
+            "chunks": chunks,
+            "structured_experiment": structured_data
+        }
 
     # ==================== 模式6：生成新想法 ====================
     elif mode == "generate new idea":
@@ -157,29 +224,89 @@ def agent_answer(question: str, mode: str = "default", **kwargs):
         - 基於現有提案生成新的研究想法
         - 使用迭代式提案生成
         - 需要外部提供old_chunks和proposal
+        - 使用結構化輸出
+        - 新增：包含修訂說明
         """
-        print("💡 啟用模式：generate new idea")
+        print("💡 啟用模式：generate new idea (結構化輸出)")
         paper_vectorstore = load_paper_vectorstore()
         print("📦 Paper 向量庫：", paper_vectorstore._collection.count())
         query_list = expand_query(question)  # 語義擴展
-        chunks = retrieve_chunks_multi_query(paper_vectorstore, query_list, k=5)
+        new_chunks = retrieve_chunks_multi_query(paper_vectorstore, query_list, k=5)
         old_chunks = kwargs.get("old_chunks", [])
         proposal = kwargs.get("proposal", "")
-        prompt, citations = build_iterative_proposal_prompt(question, chunks, old_chunks, proposal)
+        
+        # 使用新的單次 LLM 調用生成修訂提案 (包含修訂說明)
+        structured_data = generate_structured_revision_proposal(question, new_chunks, old_chunks, proposal)
+        
+        # 轉換為文本格式
+        from rag_core import structured_revision_proposal_to_text
+        text_proposal = structured_revision_proposal_to_text(structured_data)
+        
+        # 返回結構化結果
+        return {
+            "answer": text_proposal,
+            "citations": structured_data.get('citations', []),
+            "chunks": new_chunks + old_chunks,
+            "structured_proposal": structured_data,
+            "materials_list": structured_data.get('materials_list', [])  # 直接傳遞材料列表
+        }
 
     # ==================== 錯誤處理 ====================
     else:
+        print(f"❌ DEBUG: 未知的模式：'{mode}'")
+        print(f"❌ DEBUG: 可用的模式：{get_available_modes()}")
         raise ValueError(f"❌ 未知的模式：{mode}")
 
     # ==================== 調用LLM生成回答 ====================
+    # 檢查是否已經有直接返回的結果（結構化模式）
+    if 'prompt' not in locals():
+        print(f"🔍 [AGENT-{request_id}] 檢測到結構化模式，已直接返回結果")
+        result = locals().get('result', {})
+        
+        end_time = time.time()
+        duration = end_time - start_time
+        print(f"✅ [AGENT-{request_id}] ========== agent_answer 完成 (結構化模式) ==========")
+        print(f"✅ [AGENT-{request_id}] 總耗時: {duration:.2f} 秒")
+        return result
+    
+    print(f"🔍 [AGENT-{request_id}] 準備調用 call_llm")
+    print(f"🔍 [AGENT-{request_id}] prompt 長度: {len(prompt)}")
+    print(f"🔍 [AGENT-{request_id}] prompt 前200字符: {prompt[:200]}...")
+    
     response = call_llm(prompt)
+    
+    print(f"🔍 [AGENT-{request_id}] call_llm 返回結果")
+    print(f"🔍 [AGENT-{request_id}] response 類型: {type(response)}")
+    print(f"🔍 [AGENT-{request_id}] response 長度: {len(response) if response else 0}")
+    print(f"🔍 [AGENT-{request_id}] response 內容: {response[:500] if response else 'None'}...")
+    
+    # ==================== 獲取使用的模型信息 ====================
+    try:
+        from model_config_bridge import get_current_model
+        used_model = get_current_model()
+        print(f"🔍 [AGENT-{request_id}] 使用的模型: {used_model}")
+    except Exception as e:
+        print(f"❌ [AGENT-{request_id}] 獲取模型信息失敗: {e}")
+        used_model = "unknown"
 
     # ==================== 返回結果 ====================
-    return {
+    result = {
         "answer": response,      # AI生成的回答
         "citations": citations,  # 相關引用信息
-        "chunks": chunks        # 檢索到的相關文檔塊
+        "chunks": chunks,       # 檢索到的相關文檔塊
+        "used_model": used_model  # 使用的模型信息
     }
+    
+    end_time = time.time()
+    duration = end_time - start_time
+    
+    print(f"✅ [AGENT-{request_id}] ========== agent_answer 完成 (傳統模式) ==========")
+    print(f"✅ [AGENT-{request_id}] 總耗時: {duration:.2f} 秒")
+    print(f"✅ [AGENT-{request_id}] answer 長度: {len(result['answer'])}")
+    print(f"✅ [AGENT-{request_id}] citations 數量: {len(result['citations'])}")
+    print(f"✅ [AGENT-{request_id}] chunks 數量: {len(result['chunks'])}")
+    
+    return result
 
 
 # ==================== 輔助函數 ====================
