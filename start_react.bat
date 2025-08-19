@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 echo ========================================
-echo AI Research Assistant - React Version (修復版)
+echo AI Research Assistant - React Version
 echo ========================================
 echo 修復內容：
 echo - 修復 ChromaDB 配置問題

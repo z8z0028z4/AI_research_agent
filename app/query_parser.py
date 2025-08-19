@@ -31,7 +31,19 @@ import ast
 # ==================== OpenAI客戶端初始化 ====================
 # 創建OpenAI API客戶端，用於調用GPT模型進行關鍵詞提取
 # 使用環境變量中的API密鑰確保安全性
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# 延遲初始化以避免在環境變量未載入時失敗
+client = None
+
+def get_openai_client():
+    """獲取 OpenAI 客戶端，延遲初始化"""
+    global client
+    if client is None:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if api_key and api_key != "sk-dummy-key-placeholder":
+            client = OpenAI(api_key=api_key)
+        else:
+            raise ValueError("OpenAI API Key 未配置或為 dummy key")
+    return client
 
 def extract_keywords(question: str) -> List[str]:
     """
@@ -78,7 +90,7 @@ def extract_keywords(question: str) -> List[str]:
         from model_config_bridge import get_model_params
         llm_params = get_model_params()
         
-        response = client.chat.completions.create(
+        response = get_openai_client().chat.completions.create(
             model=llm_params["model"],
             messages=[{"role": "user", "content": prompt}],
             max_tokens=llm_params.get("max_tokens", 4000),
@@ -156,7 +168,7 @@ def parse_query_intent(query: str) -> Dict[str, any]:
         from model_config_bridge import get_model_params
         llm_params = get_model_params()
         
-        response = client.chat.completions.create(
+        response = get_openai_client().chat.completions.create(
             model=llm_params["model"],
             messages=[{"role": "user", "content": prompt}],
             max_tokens=llm_params.get("max_tokens", 4000),
@@ -211,7 +223,7 @@ def optimize_search_query(original_query: str, context: List[str] = None) -> str
         from model_config_bridge import get_model_params
         llm_params = get_model_params()
         
-        response = client.chat.completions.create(
+        response = get_openai_client().chat.completions.create(
             model=llm_params["model"],
             messages=[{"role": "user", "content": prompt}],
             max_tokens=llm_params.get("max_tokens", 4000),
@@ -260,7 +272,7 @@ def extract_chemical_entities(query: str) -> List[str]:
         from model_config_bridge import get_model_params
         llm_params = get_model_params()
         
-        response = client.chat.completions.create(
+        response = get_openai_client().chat.completions.create(
             model=llm_params["model"],
             messages=[{"role": "user", "content": prompt}],
             max_tokens=llm_params.get("max_tokens", 4000),

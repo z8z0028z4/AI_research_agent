@@ -18,6 +18,44 @@ from dotenv import load_dotenv
 # 添加原項目路徑到 sys.path
 sys.path.append(os.path.join(os.path.dirname(__file__), '../app'))
 
+# ==================== 啟動前 .env 檔案檢查 ====================
+def check_and_create_env_file_before_startup():
+    """
+    在 FastAPI 應用啟動前檢查並創建 .env 檔案
+    """
+    try:
+        # 獲取項目根目錄（backend 的父目錄）
+        current_file = os.path.abspath(__file__)
+        backend_dir = os.path.dirname(current_file)
+        project_root = os.path.dirname(backend_dir)  # backend 的父目錄
+        env_file = os.path.join(project_root, ".env")
+        
+        print(f"🔍 檢查 .env 檔案路徑: {env_file}")
+        
+        # 檢查 .env 檔案是否存在
+        if not os.path.exists(env_file):
+            print("📁 .env 檔案不存在，正在創建 dummy 檔案...")
+            
+            # 創建 dummy .env 檔案
+            dummy_content = "OPENAI_API_KEY=sk-dummy-key-placeholder\n"
+            
+            try:
+                with open(env_file, 'w', encoding='utf-8') as f:
+                    f.write(dummy_content)
+                print("✅ Dummy .env 檔案創建成功")
+                print("💡 請在設定頁面配置真實的 API Key")
+            except Exception as e:
+                print(f"❌ 創建 dummy .env 檔案失敗: {e}")
+        else:
+            print("📁 .env 檔案已存在")
+            
+    except Exception as e:
+        print(f"❌ 檢查 .env 檔案時發生錯誤: {e}")
+        print("💡 系統將繼續啟動，但某些功能可能無法正常運作")
+
+# 在載入環境變量前先檢查 .env 檔案
+check_and_create_env_file_before_startup()
+
 # 載入環境變量
 load_dotenv()
 
@@ -164,44 +202,10 @@ async def startup_event():
     """
     logger.info("🚀 AI Research Assistant 後端服務啟動中...")
     
-    # 檢查並創建 .env 檔案
-    await check_and_create_env_file()
-    
     # 初始化向量統計信息
     initialize_vector_stats()
     
     logger.info("✅ 後端服務啟動完成")
-
-async def check_and_create_env_file():
-    """
-    檢查 .env 檔案是否存在，如果不存在則創建 dummy 檔案
-    """
-    try:
-        from backend.core.env_manager import env_manager
-        
-        env_status = env_manager.get_env_file_status()
-        
-        if not env_status["exists"]:
-            logger.warning("📁 .env 檔案不存在，正在創建 dummy 檔案...")
-            
-            success = env_manager.create_dummy_env_file()
-            if success:
-                logger.info("✅ Dummy .env 檔案創建成功")
-                logger.info("💡 請在設定頁面配置真實的 API Key")
-            else:
-                logger.error("❌ 創建 dummy .env 檔案失敗")
-        else:
-            logger.info("📁 .env 檔案已存在")
-            
-            # 檢查 API Key 是否已配置
-            if not env_status["openai_key_configured"]:
-                logger.warning("⚠️ OpenAI API Key 未配置，請在設定頁面進行配置")
-            else:
-                logger.info("✅ OpenAI API Key 已配置")
-                
-    except Exception as e:
-        logger.error(f"❌ 檢查 .env 檔案時發生錯誤: {e}")
-        logger.warning("💡 系統將繼續啟動，但某些功能可能無法正常運作")
 
 @app.get("/")
 async def root():

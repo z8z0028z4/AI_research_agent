@@ -1,15 +1,21 @@
-import { InfoCircleOutlined, ReloadOutlined, SaveOutlined, SettingOutlined } from '@ant-design/icons'
-import { Alert, Button, Card, Col, Divider, Form, InputNumber, message, Row, Select, Slider, Space, Typography } from 'antd'
+import { InfoCircleOutlined, KeyOutlined, ReloadOutlined, SaveOutlined, SettingOutlined } from '@ant-design/icons'
+import { Alert, Button, Card, Col, Divider, Form, Input, InputNumber, message, Row, Select, Slider, Space, Typography } from 'antd'
 import React, { useEffect, useState } from 'react'
 
 const { Title, Text } = Typography
 const { Option } = Select
+const { Password } = Input
 
 const Settings = () => {
   const [form] = Form.useForm()
+  const [apiKeyForm] = Form.useForm()
   const [loading, setLoading] = useState(false)
   const [currentModel, setCurrentModel] = useState('')
   const [selectedModel, setSelectedModel] = useState('') // 新增：追蹤當前選擇的模型
+  const [envStatus, setEnvStatus] = useState({
+    exists: false,
+    openai_key_configured: false
+  })
   const [llmParams, setLlmParams] = useState({
     max_tokens: 4000,
     timeout: 120,
@@ -47,6 +53,7 @@ const Settings = () => {
   useEffect(() => {
     loadCurrentSettings()
     loadJsonSchemaParametersInfo()
+    loadEnvStatus()
   }, [])
 
   // 當選擇的模型改變時重新載入參數資訊
@@ -153,6 +160,57 @@ const Settings = () => {
       }
     } catch (error) {
       console.error('載入JSON Schema參數資訊錯誤:', error)
+    }
+  }
+
+  const loadEnvStatus = async () => {
+    try {
+      const response = await fetch('/api/v1/settings/env-status', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setEnvStatus(data)
+      } else {
+        message.error('載入環境狀態失敗')
+      }
+    } catch (error) {
+      console.error('載入環境狀態錯誤:', error)
+      message.error('載入環境狀態時發生錯誤')
+    }
+  }
+
+  const handleSaveOpenAIKey = async (values) => {
+    try {
+      setLoading(true)
+      
+      const response = await fetch('/api/v1/settings/api-keys/openai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          openai_api_key: values.openai_api_key
+        }),
+      })
+
+      if (response.ok) {
+        message.success('OpenAI API Key 設定成功')
+        apiKeyForm.resetFields()
+        loadEnvStatus() // 重新載入狀態
+      } else {
+        const errorData = await response.json()
+        message.error(errorData.detail || '設定 API Key 失敗')
+      }
+    } catch (error) {
+      console.error('設定 API Key 錯誤:', error)
+      message.error('設定 API Key 時發生錯誤')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -535,6 +593,67 @@ const Settings = () => {
                 重置為預設 (GPT-5 Mini)
               </Button>
             </Space>
+          </Form.Item>
+        </Form>
+      </Card>
+
+      {/* API 金鑰設定 */}
+      <Card style={{ marginBottom: 16 }}>
+        <Title level={4}>
+          <KeyOutlined style={{ marginRight: 8 }} />
+          API 金鑰設定
+        </Title>
+        <Text type="secondary">
+          配置 OpenAI API Key 以啟用 AI 功能。系統會自動驗證 API Key 的有效性。
+        </Text>
+
+        <Divider />
+
+        {/* 環境狀態顯示 */}
+        <Alert
+          message="環境狀態"
+          description={
+            <div>
+              <p><strong>.env 檔案：</strong> {envStatus.exists ? '✅ 已存在' : '❌ 不存在'}</p>
+              <p><strong>OpenAI API Key：</strong> {envStatus.openai_key_configured ? '✅ 已配置' : '❌ 未配置'}</p>
+            </div>
+          }
+          type={envStatus.openai_key_configured ? "success" : "warning"}
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+
+        {/* API Key 設定表單 */}
+        <Form
+          form={apiKeyForm}
+          layout="vertical"
+          onFinish={handleSaveOpenAIKey}
+        >
+          <Form.Item
+            label="OpenAI API Key"
+            name="openai_api_key"
+            rules={[
+              {
+                required: true,
+                message: '請輸入 OpenAI API Key',
+              },
+            ]}
+          >
+            <Password
+              placeholder="sk-..."
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={loading}
+              icon={<SaveOutlined />}
+            >
+              驗證並儲存 API Key
+            </Button>
           </Form.Item>
         </Form>
       </Card>
