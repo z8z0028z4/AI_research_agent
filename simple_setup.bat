@@ -1,10 +1,10 @@
 @echo off
 REM =================================================================
-REM AI Research Assistant - One-Click Setup Script
-REM Automatically completes all environment setup, no user selection required
+REM AI Research Assistant - Smart Setup Script
+REM Automatically completes environment setup with user choice for existing venv
 REM 
 REM Features:
-REM 1. Create virtual environment at C:\ai_research_venv
+REM 1. Create virtual environment at C:\ai_research_venv (with user choice if exists)
 REM 2. Generate .venv_config for correct environment reference
 REM 3. Install all backend Python dependencies
 REM 4. Install frontend Node.js dependencies
@@ -26,21 +26,45 @@ REM =================================================================
 echo [1/5] Creating Python virtual environment...
 set VENV_PATH=C:\ai_research_venv
 
+set choice=
 if exist "%VENV_PATH%" (
-    echo Virtual environment already exists, removing old environment...
-    rmdir /s /q "%VENV_PATH%"
+    echo Virtual environment already exists at %VENV_PATH%
+    echo.
+    echo Please choose an option:
+    echo [1] Delete existing virtual environment and create a new one
+    echo [2] Continue with existing virtual environment
+    echo.
+    set /p choice="Enter your choice (1 or 2): "
+    
+    if "!choice!"=="1" (
+        echo Removing existing virtual environment...
+        rmdir /s /q "%VENV_PATH%"
+        echo Creating new virtual environment at %VENV_PATH%...
+        python -m venv "%VENV_PATH%"
+        if errorlevel 1 (
+            echo ERROR: Failed to create virtual environment! Please make sure Python is installed.
+            pause
+            exit /b 1
+        )
+        echo ✅ Virtual environment created successfully!
+    ) else if "!choice!"=="2" (
+        echo Continuing with existing virtual environment...
+        echo ✅ Using existing virtual environment!
+    ) else (
+        echo Invalid choice. Please run the script again and select 1 or 2.
+        pause
+        exit /b 1
+    )
+) else (
+    echo Creating new virtual environment at %VENV_PATH%...
+    python -m venv "%VENV_PATH%"
+    if errorlevel 1 (
+        echo ERROR: Failed to create virtual environment! Please make sure Python is installed.
+        pause
+        exit /b 1
+    )
+    echo ✅ Virtual environment created successfully!
 )
-
-echo Creating new virtual environment at %VENV_PATH%...
-python -m venv "%VENV_PATH%"
-
-if errorlevel 1 (
-    echo ERROR: Failed to create virtual environment! Please make sure Python is installed.
-    pause
-    exit /b 1
-)
-
-echo ✅ Virtual environment created successfully!
 
 REM =================================================================
 REM Step 2: Create .venv_config File
