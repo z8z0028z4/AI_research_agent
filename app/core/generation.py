@@ -61,10 +61,10 @@ def _call_gpt5_responses_api(prompt: str, llm_params: Dict[str, Any], **kwargs) 
     try:
         client = OpenAI()
         
-        # 構建 Responses API 參數
+        # 構建 Responses API 參數 - 使用 input 而不是 prompt
         responses_params = {
             "model": llm_params.get("model", "gpt-5"),
-            "prompt": prompt,
+            "input": [{"role": "user", "content": prompt}],  # 修正：使用 input 而不是 prompt
             "max_output_tokens": llm_params.get("max_output_tokens", 2000),
             "timeout": llm_params.get("timeout", 60)
         }

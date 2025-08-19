@@ -47,7 +47,7 @@ async def query_knowledge(request: KnowledgeQueryRequest):
             search_documents,
             build_prompt,
             build_inference_prompt,
-            get_default_llm_manager
+            call_llm  # 使用動態配置的 call_llm 而不是 get_default_llm_manager
         )
         
         # 載入文獻向量數據庫
@@ -75,9 +75,8 @@ async def query_knowledge(request: KnowledgeQueryRequest):
         else:
             raise HTTPException(status_code=400, detail="無效的回答模式")
         
-        # 調用LLM生成回答
-        llm_manager = get_default_llm_manager()
-        answer = llm_manager.generate_response(system_prompt)
+        # 使用動態配置的 call_llm 而不是靜態的 LLM 管理器
+        answer = call_llm(system_prompt)
         
         if not answer:
             raise HTTPException(status_code=500, detail="生成回答失敗")
