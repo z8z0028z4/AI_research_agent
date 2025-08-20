@@ -1,14 +1,22 @@
-# 🧪 AI Research Assistant v4.0 - Production Release
+# 🧪 AI Research Assistant v4.1 - Enhanced Production Release
 
-A comprehensive AI-powered research assistant system designed for materials science and chemistry research workflows. **Production Release: Complete system with enhanced document processing, intelligent deduplication, and robust file upload capabilities.**
+A comprehensive AI-powered research assistant system designed for materials science and chemistry research workflows. **Enhanced Production Release: Complete system with API key management, graceful startup, and improved user experience.**
 
-This production-ready tool combines document ingestion, vector embedding, GPT-based QA with source tracking, experimental data analysis, and intelligent content management.
+This production-ready tool combines document ingestion, vector embedding, GPT-based QA with source tracking, experimental data analysis, intelligent content management, and robust configuration management.
 
 ---
 
-## 🎉 Production Release Highlights
+## 🎉 v4.1 Enhanced Production Release Highlights
 
-This marks the **first production-ready release** of AI Research Assistant, featuring comprehensive document management, intelligent deduplication, and robust file processing capabilities.
+This marks the **enhanced production-ready release** of AI Research Assistant, featuring comprehensive document management, intelligent deduplication, robust file processing capabilities, and **new API key management system**.
+
+### 🆕 **v4.1 New Features**
+- **🔑 API Key Management**: Integrated OpenAI API key configuration through the settings interface
+- **🚀 Graceful Startup**: System automatically creates dummy `.env` file if missing, ensuring smooth startup
+- **⚙️ Smart Setup**: Enhanced `simple_setup.bat` with user choice for existing virtual environments
+- **🧹 Perplexity Removal**: Completely removed Perplexity functionality for streamlined operation
+- **🔧 Dynamic Configuration**: Improved LLM configuration system with real-time parameter adjustment
+- **📚 Knowledge Base Enhancement**: Fixed GPT-5 Responses API integration for better query performance
 
 ---
 
@@ -24,13 +32,15 @@ This marks the **first production-ready release** of AI Research Assistant, feat
 - **Citation Tracking**: Every proposal includes numbered references linking to source documents
 - **Smart Text Cleaning**: Automatic markdown format removal for clean document output
 
-### 🤖 **Model Selector System** *(NEW - v1.0)*
+### 🤖 **Model Selector System** *(Enhanced - v4.1)*
 - **Multi-Model Support**: Choose from GPT-5, GPT-5 Nano, GPT-5 Mini with real-time switching
 - **Dynamic Parameter Configuration**: Adjust max_tokens, timeout, reasoning_effort, verbosity
 - **Parameter Validation**: Automatic validation of model-specific parameters and constraints
 - **Settings Persistence**: Model preferences and parameters are saved and restored automatically
 - **GPT-5 Advanced Features**: Support for reasoning_effort and verbosity controls for enhanced reasoning
 - **Bridge Architecture**: Seamless integration between app and backend model configurations
+- **🔑 API Key Integration**: Direct API key management through settings interface
+- **🔄 Real-time Validation**: Instant API key validation and configuration updates
 
 ### 🔍 **Intelligent Document Management** *(Production Ready)*
 - **Smart Upload System**: Automatic file classification and metadata extraction
@@ -137,11 +147,15 @@ simple_setup.bat
 ```
 
 This script will:
-- ✅ Create Python virtual environment
+- ✅ Create Python virtual environment (with user choice for existing environments)
 - ✅ Install all Python dependencies
 - ✅ Install Node.js dependencies
 - ✅ Start backend and frontend services
 - ✅ Open the application in your browser
+
+**🆕 Smart Environment Management**: If a virtual environment already exists, the script will ask whether to:
+- **Option 1**: Delete existing environment and create a fresh one
+- **Option 2**: Continue with the existing environment
 
 ### Manual Installation (All Platforms)
 
@@ -159,13 +173,14 @@ double click simple_setup.bat to install venv and all packages
 
 **3. Set up environment variables**
 ```bash
-# Copy the example environment file
-cp env.example .env
+# The system will automatically create a .env file if missing
+# You can configure API keys through the Settings page in the web interface
 
-# Edit .env and add your API keys
+# Or manually create .env file:
 OPENAI_API_KEY=sk-your-openai-api-key-here
-SEMANTIC_SCHOLAR_API_KEY=your-semantic-scholar-key-here  # Optional
 ```
+
+**🆕 Automatic Environment Management**: The system now automatically creates a dummy `.env` file if missing, allowing you to start the application and configure API keys through the web interface.
 
 **4. Launch the application**
 
@@ -185,14 +200,28 @@ run_backend.bat    # Start backend first
 
 ---
 
-## 🔑 Environment Configuration
+## 🔑 Environment Configuration *(Enhanced)*
 
+The system now supports automatic environment management:
+
+### **Automatic Setup**
+- **Graceful Startup**: System automatically creates a dummy `.env` file if missing
+- **Web Interface Configuration**: Configure API keys directly through the Settings page
+- **Real-time Validation**: API keys are validated immediately upon entry
+
+### **Manual Setup** (Optional)
 Create a `.env` file in the project root directory:
 
 ```env
 # Required API Keys
 OPENAI_API_KEY=sk-your-openai-api-key-here
 ```
+
+### **API Key Management Features**
+- **🔑 Direct Input**: Enter API keys through the web interface
+- **✅ Instant Validation**: Real-time API key validation using actual API calls
+- **🔄 Automatic Updates**: API key changes take effect immediately
+- **📊 Status Display**: View current environment configuration status
 
 ---
 
@@ -242,12 +271,17 @@ Access academic literature and research papers:
 2. **Citation Management**: Automatic citation formatting and reference tracking
 3. **Integration**: Search results can be used in proposal generation
 
-### ⚙️ **Settings & Model Configuration**
+### ⚙️ **Settings & Model Configuration** *(Enhanced)*
 Configure your AI models and parameters:
 
-1. **Model Selection**: Choose your preferred GPT model
-2. **Parameter Tuning**: Adjust max_tokens, timeout, and GPT-5-specific parameters
+1. **🔑 API Key Management**: 
+   - Enter and validate OpenAI API key directly in settings
+   - Real-time API key validation with actual API calls
+   - Automatic `.env` file creation and management
+2. **Model Selection**: Choose your preferred GPT model
+3. **Parameter Tuning**: Adjust max_tokens, timeout, and GPT-5-specific parameters
 4. **Real-time Updates**: Changes take effect immediately
+5. **Environment Status**: View current `.env` file and API key configuration status
 
 ### 📥 **Document Upload** (Fixed)
 
@@ -396,6 +430,8 @@ app/                     # Legacy Streamlit components
 1. **ECONNREFUSED errors**: Normal when frontend starts before backend
 2. **Empty venue fields**: Some papers lack venue data in Semantic Scholar
 3. **Duplicate detection**: Ensure consistent document type classification
+4. **Missing .env file**: System automatically creates dummy file - configure API keys in Settings
+5. **API key validation**: Use the Settings page to validate and configure API keys
 
 ### **Getting Help**
 - **Documentation**: Check README.md and USAGE_GUIDE.md
@@ -437,7 +473,7 @@ app/                     # Legacy Streamlit components
 - **Research Progress Tracking**: Monitor proposal and experiment progress
 - **Analytics Dashboard**: Visualize research metrics and trends
 - **Project Management**: Organize and track multiple research projects
-- **API Key setting function**: Import API key from setting page
+- **🔑 API Key Management**: Integrated API key configuration and validation system
 
 ---
 
@@ -498,4 +534,4 @@ This version is stable, tested, and ready for production research workflows.
 
 ---
 
-*Last updated: Augest 2025 - Production Release v4.0*
+*Last updated: December 2024 - Enhanced Production Release v4.1*
