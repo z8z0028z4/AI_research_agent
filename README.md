@@ -118,8 +118,8 @@ This marks the **enhanced production-ready release** of AI Research Assistant, f
 ### Model Parameters
 - **Max Tokens**: Maximum response length (1-32,000)
 - **Timeout**: Request timeout in seconds (10-600)
-- **Reasoning Effort** (GPT-5 only): Controls reasoning depth (minimal/low/medium/high)
-- **Verbosity** (GPT-5 only): Controls response detail level (low/medium/high)
+- **Reasoning Effort**: Controls reasoning depth (minimal/low/medium/high)
+- **Verbosity**: Controls response detail level (low/medium/high)
 
 ### Configuration
 Access the Settings page in the React interface to:
