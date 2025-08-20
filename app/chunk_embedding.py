@@ -26,6 +26,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 import chromadb
+from chromadb.config import Settings
 # 兼容性導入：支持相對導入和絕對導入
 try:
     from .pdf_read_and_chunk_page_get import load_and_parse_file, get_page_number_for_chunk
@@ -78,7 +79,8 @@ def get_chroma_instance(vectorstore_type: str = "paper"):
             
             # 使用新的 ChromaDB 1.0+ 客戶端配置
             client = chromadb.PersistentClient(
-                path=vector_dir
+                path=vector_dir,
+                settings=Settings(anonymized_telemetry=False)
             )
             
             _chroma_instances[vectorstore_type] = Chroma(

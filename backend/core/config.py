@@ -7,7 +7,7 @@
 
 import os
 from typing import Optional
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import load_dotenv
 
 # 載入環境變量
@@ -15,12 +15,20 @@ load_dotenv()
 
 class Settings(BaseSettings):
     """應用程序配置類"""
-    
+
+    # V2 Pydantic Configuration:
+    # This combines the old 'class Config' and the 'model_config' into one.
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=False,
+        extra='ignore'  # This is crucial to ignore ANONYMIZED_TELEMETRY
+    )
+
     # 應用基本信息
     app_name: str = "AI Research Assistant"
     app_version: str = "1.0.0"
     debug: bool = False
-    
+
     # API 配置
     api_prefix: str = "/api/v1"
     cors_origins: list = [
@@ -29,40 +37,35 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
     ]
-    
+
     # 數據庫配置
     database_url: str = "sqlite:///./ai_research.db"
-    
+
     # Redis 配置
     redis_url: str = "redis://localhost:6379"
-    
+
     # 文件存儲配置
     upload_dir: str = "uploads"
-    # max_file_size: removed - no file size limit
     allowed_file_types: list = [
-        ".pdf", ".docx", ".xlsx", ".txt", 
+        ".pdf", ".docx", ".xlsx", ".txt",
         ".png", ".jpg", ".jpeg", ".gif"
     ]
-    
+
     # AI 服務配置
     openai_api_key: Optional[str] = None
-    openai_model: str = "gpt-5o-mini"  # 更新為 GPT-5 系列
+    openai_model: str = "gpt-5o-mini"
     openai_max_tokens: int = 4000
-    
+
     # 化學品查詢配置
     pubchem_base_url: str = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
-    
+
     # 文獻搜尋配置
     europepmc_base_url: str = "https://www.ebi.ac.uk/europepmc/webservices/rest"
-    
+
     # 安全配置
     secret_key: str = "your-secret-key-here"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
 
 # 創建全局配置實例
 settings = Settings()
@@ -76,14 +79,14 @@ def reload_config():
     用於在 .env 檔案更新後重新載入配置
     """
     global settings
-    
+
     # 重新載入環境變量
     from dotenv import load_dotenv
     load_dotenv(override=True)
-    
+
     # 重新創建配置實例
     settings = Settings()
-    
+
     return settings
 
 def validate_config():
@@ -91,14 +94,14 @@ def validate_config():
     驗證配置是否完整
     """
     validation_result = {
-        "openai_api_key_configured": bool(settings.openai_api_key and 
+        "openai_api_key_configured": bool(settings.openai_api_key and
                                           settings.openai_api_key != "sk-dummy-key-placeholder" and
                                           not settings.openai_api_key.startswith("sk-dummy")),
         "config_complete": True
     }
-    
+
     # 檢查必要的配置
     if not validation_result["openai_api_key_configured"]:
         validation_result["config_complete"] = False
-    
-    return validation_result 
+
+    return validation_result

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Input, Button, Table, Typography, Space, message, Tag } from 'antd';
+import { Card, Input, Button, Table, Typography, Space, message, Tag, List } from 'antd';
 import { SearchOutlined, ExperimentOutlined } from '@ant-design/icons';
 
 const { Title, Paragraph } = Typography;
@@ -86,10 +86,12 @@ const Chemical = () => {
             marginBottom: 16,
             fontSize: '16px'
           }}
-          headStyle={{
-            fontSize: '18px',
-            fontWeight: 'bold',
-            color: '#1890ff'
+          styles={{
+            header: {
+              fontSize: '18px',
+              fontWeight: 'bold',
+              color: '#1890ff'
+            }
           }}
         >
           <Table
@@ -109,10 +111,12 @@ const Chemical = () => {
             marginBottom: 16,
             fontSize: '16px'
           }}
-          headStyle={{
-            fontSize: '18px',
-            fontWeight: 'bold',
-            color: '#1890ff'
+          styles={{
+            header: {
+              fontSize: '18px',
+              fontWeight: 'bold',
+              color: '#1890ff'
+            }
           }}
         >
           <Space direction="vertical" style={{ width: '100%' }}>
