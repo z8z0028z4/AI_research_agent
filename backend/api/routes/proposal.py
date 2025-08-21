@@ -36,9 +36,14 @@ import json
 # 添加原項目路徑到 sys.path
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../app'))
 
-# 延遲導入以避免循環導入問題
-# from knowledge_agent import agent_answer
-from pubchem_handler import chemical_metadata_extractor
+# 修正導入方式
+try:
+    from pubchem_handler import chemical_metadata_extractor
+except ImportError:
+    # 如果直接導入失敗，嘗試使用完整路徑
+    sys.path.append(os.path.join(os.path.dirname(__file__), '../../../'))
+    from app.pubchem_handler import chemical_metadata_extractor
+from app.services.chemical_service import chemical_service
 from langchain_core.documents import Document
 
 # SVG 轉換依賴檢查
@@ -153,12 +158,12 @@ async def generate_proposal(request: ProposalRequest):
         print(f"🔍 [DEBUG-{request_id}] result['answer'] 長度: {len(result.get('answer', ''))}")
         print(f"🔍 [DEBUG-{request_id}] result['answer'] 內容: {result.get('answer', '')[:200]}...")
 
-        # 從回答中抽取化學品資訊與提案正文
-        print(f"🔍 [DEBUG-{request_id}] 準備調用 chemical_metadata_extractor")
-        chemical_metadata_list, not_found_list, proposal_answer = chemical_metadata_extractor(
+        # 從回答中抽取化學品資訊與提案正文（包含 SMILES 繪製的結構圖）
+        print(f"🔍 [DEBUG-{request_id}] 準備調用化學服務提取化學品並添加結構圖")
+        chemical_metadata_list, not_found_list, proposal_answer = chemical_service.extract_chemicals_with_drawings(
             result.get("answer", "")
         )
-        print(f"🔍 [DEBUG-{request_id}] chemical_metadata_extractor 完成")
+        print(f"🔍 [DEBUG-{request_id}] 化學品提取和結構圖生成完成")
         print(f"🔍 [DEBUG-{request_id}] proposal_answer 長度: {len(proposal_answer)}")
         print(f"🔍 [DEBUG-{request_id}] chemical_metadata_list 數量: {len(chemical_metadata_list)}")
 
@@ -444,21 +449,35 @@ async def generate_docx(request: DocxRequest):
         for chem in request.chemicals:
             row = table.add_row().cells
 
-            # 結構圖片
-            img_url = chem.get("image_url")
-            if img_url:
+            # 優先使用 SMILES 繪製的結構圖
+            if chem.get("png_structure"):
                 try:
-                    response = requests.get(img_url, verify=False, timeout=5)
+                    # 從 Base64 轉換為圖片流
+                    import base64
+                    img_data = base64.b64decode(chem["png_structure"].split(",")[1])
+                    img_stream = BytesIO(img_data)
+                    row[0].paragraphs[0].add_run().add_picture(img_stream, width=Inches(1))
+                    print(f"✅ 使用 SMILES 繪製的結構圖: {chem.get('name', 'Unknown')}")
+                except Exception as e:
+                    print(f"⚠️ SMILES 圖片插入失敗: {chem.get('name', 'Unknown')}, {e}")
+                    row[0].text = "SMILES image error"
+            elif chem.get("image_url"):
+                # 備用方案：使用原有的 URL 圖片
+                try:
+                    response = requests.get(chem["image_url"], verify=False, timeout=5)
                     if response.status_code == 200:
                         img_stream = BytesIO(response.content)
                         row[0].paragraphs[0].add_run().add_picture(img_stream, width=Inches(1))
+                        print(f"✅ 使用 URL 圖片: {chem.get('name', 'Unknown')}")
                     else:
                         row[0].text = "Image not found"
+                        print(f"⚠️ URL 圖片下載失敗: {chem.get('name', 'Unknown')}")
                 except Exception as e:
-                    print(f"⚠️ 圖片下載失敗: {img_url}, {e}")
+                    print(f"⚠️ 圖片下載失敗: {chem['image_url']}, {e}")
                     row[0].text = "Image error"
             else:
                 row[0].text = "No image"
+                print(f"⚠️ 沒有圖片資料: {chem.get('name', 'Unknown')}")
 
             # 文字欄位 - 使用清理函數
             row[1].text = clean_text_for_xml(chem.get("name", "-") or "-")

@@ -1,9 +1,8 @@
 import requests
 import os
 import json
-from typing import List, Dict
+from typing import List, Dict, Tuple
 import re
-from typing import Optional
 # 兼容性導入：支持相對導入和絕對導入
 try:
     from .config import PARSED_CHEMICAL_DIR
@@ -134,13 +133,16 @@ def parse_pubchem_json(json_data: dict) -> dict:
         # 如果沒有IUPAC名稱，嘗試其他名稱
         iupac_name = find_prop("IUPAC Name") or find_prop("Title") or "Unknown"
     
+    # 確保 iupac_name 不為 None
+    iupac_name = iupac_name or "Unknown"
+    
     return {
         "cid": cid,
         "name": clean_text_for_xml(iupac_name),
         "iupac_name": clean_text_for_xml(iupac_name),  # 明確標記IUPAC名稱
-        "formula": clean_text_for_xml(find_prop("Molecular Formula")),
-        "weight": clean_text_for_xml(find_prop("Molecular Weight")),
-        "smiles": clean_text_for_xml(find_prop("SMILES", "Absolute") or find_prop("SMILES", "Connectivity")),
+        "formula": clean_text_for_xml(find_prop("Molecular Formula") or ""),
+        "weight": clean_text_for_xml(find_prop("Molecular Weight") or ""),
+        "smiles": clean_text_for_xml((find_prop("SMILES", "Absolute") or find_prop("SMILES", "Connectivity")) or ""),
         "image_url": f"https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid={cid}&t=l"
     }
 
@@ -315,16 +317,41 @@ def get_safety_info(cid: int) -> dict:
 
 
 
-def extract_and_fetch_chemicals(name_list: List[str], save_dir=PARSED_CHEMICAL_DIR) -> List[dict]:
+def extract_and_fetch_chemicals(name_list: List[str], save_dir=PARSED_CHEMICAL_DIR) -> Tuple[List[dict], List[str]]:
     """
     接收一組 GPT 傳回的化學品名稱清單，逐一查詢、擷取、儲存乾淨的 JSON。
-    僅留下 parse 過的 parsed_cid{cid}.json
+    優先使用線下檔案，避免重複 API 查詢。
+    
+    Returns:
+        Tuple[List[dict], List[str]]: (化學品資料列表, 未找到的化學品名稱列表)
     """
     os.makedirs(save_dir, exist_ok=True)
     summaries = []
     not_found = []
+    
+    # 建立線下檔案快取
+    cached_chemicals = {}
+    for filename in os.listdir(save_dir):
+        if filename.startswith("parsed_cid") and filename.endswith(".json"):
+            try:
+                file_path = os.path.join(save_dir, filename)
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    chemical_data = json.load(f)
+                    cached_chemicals[chemical_data.get('name', '').lower()] = chemical_data
+            except Exception as e:
+                print(f"⚠️ 讀取快取檔案失敗: {filename}, {e}")
 
     for name in name_list:
+        # 檢查線下檔案快取
+        name_lower = name.lower()
+        if name_lower in cached_chemicals:
+            cached_data = cached_chemicals[name_lower]
+            print(f"✅ 使用線下快取: {name} (CID: {cached_data.get('cid')})")
+            summaries.append(cached_data)
+            continue
+        
+        # 線下檔案不存在，進行 API 查詢
+        print(f"🔍 線下檔案不存在，開始 API 查詢: {name}")
         results = search_source([name], limit=2)
         if not results:
             print(f"❌ 找不到化學品：{name}")
@@ -369,13 +396,14 @@ def extract_and_fetch_chemicals(name_list: List[str], save_dir=PARSED_CHEMICAL_D
             save_path = os.path.join(save_dir, f"parsed_cid{cid}.json")
             with open(save_path, "w", encoding="utf-8") as f:
                 json.dump(parsed, f, indent=2)
-            # print(f"✅ Saved parsed info: {save_path}")
+            print(f"✅ 新增 API 查詢並儲存: {name} (CID: {cid})")
             summaries.append(parsed)
 
         except Exception as e:
             print(f"❌ Failed to process {name} (CID {cid}): {e}")
             not_found.append(name)
 
+    print(f"📊 查詢統計: 線下快取 {len([s for s in summaries if s.get('name', '').lower() in cached_chemicals])} 個, API 查詢 {len([s for s in summaries if s.get('name', '').lower() not in cached_chemicals])} 個")
     return summaries, not_found
 
 def remove_json_chemical_block(text: str) -> str:

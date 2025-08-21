@@ -11,8 +11,9 @@ from typing import List, Dict, Any, Optional, Tuple
 from functools import lru_cache
 
 from ..utils.logger import get_logger
-from ..utils.exceptions import ChemicalQueryError, APIError
+from ..utils.exceptions import APIRequestError
 from ..pubchem_handler import chemical_metadata_extractor
+from .smiles_drawer import smiles_drawer
 
 logger = get_logger(__name__)
 
@@ -90,11 +91,11 @@ class ChemicalService:
                 self.cache[chemical_name] = (time.time(), result)
                 return result
             else:
-                raise ChemicalQueryError(f"未找到化學品: {chemical_name}")
+                raise APIRequestError(f"未找到化學品: {chemical_name}")
                 
         except Exception as e:
             logger.error(f"化學品查詢失敗: {e}")
-            raise ChemicalQueryError(f"化學品查詢失敗: {str(e)}")
+            raise APIRequestError(f"化學品查詢失敗: {str(e)}")
     
     def batch_get_chemicals(self, chemical_names: List[str]) -> Dict[str, Any]:
         """
@@ -113,7 +114,7 @@ class ChemicalService:
             for name in chemical_names:
                 try:
                     results[name] = self.get_chemical_info(name)
-                except ChemicalQueryError as e:
+                except APIRequestError as e:
                     logger.warning(f"化學品 {name} 查詢失敗: {e}")
                     results[name] = {"error": str(e)}
             
@@ -121,7 +122,7 @@ class ChemicalService:
             
         except Exception as e:
             logger.error(f"批量化學品查詢失敗: {e}")
-            raise ChemicalQueryError(f"批量化學品查詢失敗: {str(e)}")
+            raise APIRequestError(f"批量化學品查詢失敗: {str(e)}")
     
     def clear_cache(self):
         """清除快取"""
@@ -146,6 +147,95 @@ class ChemicalService:
             "expired_entries": expired_entries,
             "cache_ttl": self.cache_ttl
         }
+    
+    def add_smiles_drawing(self, chemical_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        為化學品數據添加 SMILES 繪製的分子結構圖
+        
+        Args:
+            chemical_data: 化學品數據字典
+            
+        Returns:
+            添加了結構圖的化學品數據
+        """
+        try:
+            smiles = chemical_data.get('smiles', '')
+            if not smiles:
+                logger.warning("化學品沒有 SMILES 數據，無法繪製結構圖")
+                return chemical_data
+            
+            # 驗證 SMILES
+            if not smiles_drawer.validate_smiles(smiles):
+                logger.warning(f"無效的 SMILES: {smiles}")
+                return chemical_data
+            
+            # 生成 SVG 結構圖
+            svg_structure = smiles_drawer.smiles_to_svg(smiles, width=300, height=300)
+            if svg_structure:
+                chemical_data['svg_structure'] = svg_structure
+                logger.info(f"成功為化學品 {chemical_data.get('name', 'Unknown')} 生成 SVG 結構圖")
+            
+            # 生成 PNG 結構圖（Base64）
+            png_structure = smiles_drawer.smiles_to_png_base64(smiles, width=300, height=300)
+            if png_structure:
+                chemical_data['png_structure'] = png_structure
+                logger.info(f"成功為化學品 {chemical_data.get('name', 'Unknown')} 生成 PNG 結構圖")
+            
+            return chemical_data
+            
+        except Exception as e:
+            logger.error(f"SMILES 繪製失敗: {e}")
+            return chemical_data
+    
+    def extract_chemicals_with_drawings(self, text: str) -> Tuple[List[Dict[str, Any]], List[str], str]:
+        """
+        從文本中提取化學品信息並添加分子結構圖
+        
+        Args:
+            text: 包含化學品信息的文本
+            
+        Returns:
+            Tuple[List[Dict], List[str], str]: (化學品列表, 未找到的化學品, 處理後的文本)
+        """
+        try:
+            # 先提取化學品信息
+            chemicals, not_found, cleaned_text = self.extract_chemicals_from_text(text)
+            
+            # 為每個化學品添加結構圖
+            enhanced_chemicals = []
+            for chemical in chemicals:
+                enhanced_chemical = self.add_smiles_drawing(chemical)
+                enhanced_chemicals.append(enhanced_chemical)
+            
+            logger.info(f"成功為 {len(enhanced_chemicals)} 個化學品添加結構圖")
+            return enhanced_chemicals, not_found, cleaned_text
+            
+        except Exception as e:
+            logger.error(f"化學品提取和繪製失敗: {e}")
+            raise APIRequestError(f"化學品提取和繪製失敗: {str(e)}")
+    
+    def batch_add_drawings(self, chemicals_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        批量為化學品列表添加結構圖
+        
+        Args:
+            chemicals_list: 化學品數據列表
+            
+        Returns:
+            添加了結構圖的化學品列表
+        """
+        try:
+            enhanced_chemicals = []
+            for chemical in chemicals_list:
+                enhanced_chemical = self.add_smiles_drawing(chemical)
+                enhanced_chemicals.append(enhanced_chemical)
+            
+            logger.info(f"批量添加結構圖完成: {len(enhanced_chemicals)} 個化學品")
+            return enhanced_chemicals
+            
+        except Exception as e:
+            logger.error(f"批量添加結構圖失敗: {e}")
+            return chemicals_list  # 返回原始數據，不拋出異常
 
 
 # 全局服務實例
