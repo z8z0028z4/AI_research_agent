@@ -15,6 +15,19 @@ import time
 import logging
 from dotenv import load_dotenv
 
+
+# ----------------------------------------------------------------
+# Get the specific logger that's causing the noise
+telemetry_logger = logging.getLogger("chromadb.telemetry.product.posthog")
+
+# Prevent its messages from propagating to the root logger
+telemetry_logger.propagate = False
+
+# Add a handler that does nothing (sends the logs to nowhere)
+telemetry_logger.addHandler(logging.NullHandler())
+# ----------------------------------------------------------------
+
+
 # 添加原項目路徑到 sys.path
 sys.path.append(os.path.join(os.path.dirname(__file__), '../app'))
 
