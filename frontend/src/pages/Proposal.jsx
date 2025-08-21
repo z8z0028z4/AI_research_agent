@@ -1,5 +1,6 @@
 import { Button, Card, Collapse, Divider, Form, Input, List, message, Select, Space, Typography } from 'antd';
 import React, { useMemo, useRef, useState } from 'react';
+import SmilesDrawer from '../components/SmilesDrawer';
 
 const { Title, Paragraph, Text } = Typography;
 const { TextArea } = Input;
@@ -709,15 +710,19 @@ const Proposal = () => {
                         <List.Item style={{ padding: '16px 0', borderBottom: '1px solid #f0f0f0' }}>
                           <div style={{ width: '100%' }}>
                             <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                              {/* Structure Image */}
+                              {/* Structure Image - 優先使用 SMILES 繪製的結構圖 */}
                               <div style={{ flex: '0 0 150px' }}>
-                                {c.image_url && (
-                                  <img
-                                    src={c.image_url}
-                                    alt="structure"
-                                    style={{ width: '120px', height: '120px', objectFit: 'contain' }}
-                                  />
-                                )}
+                                <SmilesDrawer
+                                  svgStructure={c.svg_structure}
+                                  pngStructure={c.png_structure}
+                                  smiles={c.smiles}
+                                  name={c.name}
+                                  width={120}
+                                  height={120}
+                                  showSmiles={false}
+                                  loading={false}
+                                  error={null}
+                                />
                               </div>
 
                               {/* Chemical Name and Properties */}

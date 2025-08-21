@@ -14,7 +14,13 @@ import os
 # 添加原項目路徑到 sys.path
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../app'))
 
-from pubchem_handler import chemical_metadata_extractor
+# 修正導入方式
+try:
+    from pubchem_handler import chemical_metadata_extractor
+except ImportError:
+    # 如果直接導入失敗，嘗試使用完整路徑
+    sys.path.append(os.path.join(os.path.dirname(__file__), '../../../'))
+    from app.pubchem_handler import chemical_metadata_extractor
 
 router = APIRouter()
 
