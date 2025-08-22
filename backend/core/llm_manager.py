@@ -12,7 +12,15 @@ from typing import Dict, Any, Optional, List
 from langchain_openai import ChatOpenAI
 import openai
 
-from ..config import OPENAI_API_KEY, LLM_PARAMS
+from .config import settings
+
+# 為了向後兼容，定義舊的變量名
+OPENAI_API_KEY = settings.openai_api_key
+LLM_PARAMS = {
+    "model": settings.openai_model,
+    "max_tokens": settings.openai_max_tokens,
+    "timeout": 120
+}
 from ..utils import safe_json_loads
 from ..utils.exceptions import LLMError, APIKeyError
 

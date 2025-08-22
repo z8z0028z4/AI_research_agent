@@ -11,7 +11,7 @@ from typing import List, Dict, Any, Optional
 from langchain.schema import Document
 from langchain_chroma import Chroma
 
-from ..chunk_embedding import get_chroma_instance
+from ..services.embedding_service import get_chroma_instance
 from ..utils import extract_text_snippet
 
 # 配置日誌
@@ -96,7 +96,7 @@ def get_vectorstore_stats(vectorstore_type: str = "paper") -> Dict[str, Any]:
         Dict[str, Any]: 統計信息
     """
     try:
-        from ..chunk_embedding import get_vectorstore_stats as get_stats
+        from ..services.embedding_service import get_vectorstore_stats as get_stats
         return get_stats(vectorstore_type)
     except Exception as e:
         logger.error(f"獲取向量數據庫統計失敗: {e}")

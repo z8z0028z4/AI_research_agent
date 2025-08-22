@@ -32,7 +32,7 @@ try:
     from .pdf_read_and_chunk_page_get import load_and_parse_file, get_page_number_for_chunk
 except ImportError:
     # 當作為模組導入時使用絕對導入
-    from pdf_read_and_chunk_page_get import load_and_parse_file, get_page_number_for_chunk
+    from .pdf_read_and_chunk_page_get import load_and_parse_file, get_page_number_for_chunk
 import torch
 
 # 配置日誌

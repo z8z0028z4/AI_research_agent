@@ -17,33 +17,76 @@ AI 研究助理 - 知識代理模塊
 """
 
 import pandas as pd
-# 導入核心模組
-from backend.core import (
-    # 向量數據庫操作
-    load_paper_vectorstore,
-    load_experiment_vectorstore,
-    retrieve_chunks_multi_query,
-    preview_chunks,
-    
-    # 提示詞構建
+# 導入核心模組 - 直接從具體模塊導入避免循環導入
+from ..core.vector_store import load_paper_vectorstore, load_experiment_vectorstore
+from ..core.prompt_builder import (
     build_prompt,
     build_proposal_prompt,
     build_detail_experimental_plan_prompt,
     build_inference_prompt,
     build_dual_inference_prompt,
-    build_iterative_proposal_prompt,
-    
-    # LLM 生成
-    call_llm,
-    
-    # 查詢擴展
-    expand_query,
-    
-    # 格式轉換
+    build_iterative_proposal_prompt
+)
+from ..core.generation import call_llm
+from ..core.query_expander import expand_query
+from ..core.format_converter import (
     structured_proposal_to_text,
     structured_experimental_detail_to_text,
     structured_revision_proposal_to_text
 )
+
+# 直接定義檢索函數，避免循環導入
+def retrieve_chunks_multi_query(
+    vectorstore, 
+    query_list: list[str], 
+    k: int = 10, 
+    fetch_k: int = 20, 
+    score_threshold: float = 0.35
+) -> list:
+    """
+    多查詢文檔檢索功能
+    """
+    from langchain.schema import Document
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        retriever = vectorstore.as_retriever(
+            search_type="mmr",
+            search_kwargs={"k": k, "fetch_k": fetch_k, "score_threshold": score_threshold}
+        )
+
+        # 使用字典進行去重
+        chunk_dict = {}
+        logger.info(f"開始多查詢檢索，查詢列表：{query_list}")
+        
+        # 對每個查詢進行檢索
+        for q in query_list:
+            docs = retriever.get_relevant_documents(q)
+            for doc in docs:
+                # 使用唯一標識符進行去重
+                chunk_id = doc.metadata.get("chunk_id", doc.page_content[:50])
+                if chunk_id not in chunk_dict:
+                    chunk_dict[chunk_id] = doc
+        
+        result = list(chunk_dict.values())
+        logger.info(f"檢索完成，共找到 {len(result)} 個唯一文檔塊")
+        return result
+        
+    except Exception as e:
+        logger.error(f"多查詢檢索失敗: {e}")
+        return []
+
+def preview_chunks(chunks: list, title: str, max_preview: int = 5) -> None:
+    """
+    預覽文檔塊內容
+    """
+    print(f"\n📄 {title} (顯示前 {min(max_preview, len(chunks))} 個):")
+    for i, chunk in enumerate(chunks[:max_preview]):
+        print(f"  {i+1}. {chunk.page_content[:100]}...")
+        print(f"     來源: {chunk.metadata.get('source', 'Unknown')}")
+        print(f"     頁碼: {chunk.metadata.get('page', 'Unknown')}")
+        print()
 
 # 導入便捷函數
 from backend.services.rag_service import (
@@ -54,11 +97,8 @@ from backend.services.rag_service import (
     generate_structured_proposal
 )
 
-# 兼容性導入：支持相對導入和絕對導入
-try:
-    from .config import EXPERIMENT_DIR
-except ImportError:
-    from config import EXPERIMENT_DIR
+# 直接定義配置變量，避免循環導入
+EXPERIMENT_DIR = "experiment_data/experiment"
 import os
 
 def agent_answer(question: str, mode: str = "make proposal", **kwargs):

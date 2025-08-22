@@ -12,42 +12,31 @@ import os
 import json
 from typing import List, Dict, Any, Optional, Tuple
 
-# 導入核心模組
-from backend.core import (
-    # Schema 管理
+# 導入核心模組 - 直接從具體模塊導入避免循環導入
+from ..core.schema_manager import (
     get_dynamic_schema_params,
     create_research_proposal_schema,
     create_experimental_detail_schema,
-
     create_revision_proposal_schema,
-    get_schema_by_type,
-    
-    # 向量數據庫操作
-    load_paper_vectorstore,
-    load_experiment_vectorstore,
-    retrieve_chunks_multi_query,
-    preview_chunks,
-    
-    # 提示詞構建
+    get_schema_by_type
+)
+from ..core.vector_store import load_paper_vectorstore, load_experiment_vectorstore
+from ..core.prompt_builder import (
     build_prompt,
     build_proposal_prompt,
     build_detail_experimental_plan_prompt,
     build_inference_prompt,
     build_dual_inference_prompt,
-    build_iterative_proposal_prompt,
-    
-    # LLM 生成
+    build_iterative_proposal_prompt
+)
+from ..core.generation import (
     call_llm,
     call_llm_structured_proposal,
     call_llm_structured_experimental_detail,
-
-    call_llm_structured_revision_proposal,
-    
-    # 查詢擴展
-    expand_query,
-    expand_query_with_fallback,
-    
-    # 格式轉換
+    call_llm_structured_revision_proposal
+)
+from ..core.query_expander import expand_query, expand_query_with_fallback
+from ..core.format_converter import (
     structured_proposal_to_text,
     structured_experimental_detail_to_text,
     structured_revision_proposal_to_text
@@ -160,7 +149,7 @@ def generate_structured_experimental_detail(chunks: List, proposal: str) -> Dict
     
     # 調用結構化LLM（使用正確的實驗細節schema）
     from backend.core.schema_manager import create_experimental_detail_schema
-from backend.core.generation import call_structured_llm
+    from backend.core.generation import call_structured_llm
     
     # 構建完整的提示詞
     full_prompt = f"{system_prompt}\n\n{user_prompt}"
@@ -342,18 +331,11 @@ __all__ = [
     'create_experimental_detail_schema',
     
     'create_revision_proposal_schema',
-    'validate_schema',
-    'get_schema_by_name',
-    'RESEARCH_PROPOSAL_SCHEMA',
-    'EXPERIMENTAL_DETAIL_SCHEMA',
-    
-    'REVISION_PROPOSAL_SCHEMA',
+    'get_schema_by_type',
     
     # 向量數據庫操作
     'load_paper_vectorstore',
     'load_experiment_vectorstore',
-    'retrieve_chunks_multi_query',
-    'preview_chunks',
     
     # 提示詞構建
     'build_prompt',
@@ -398,7 +380,7 @@ __all__ = [
     'call_llm_compat',
     'call_llm_structured_proposal_compat',
     'call_llm_structured_experimental_detail_compat',
-    'call_llm_structured_revision_explain_compat',
+
     'call_llm_structured_revision_proposal_compat',
     'expand_query_compat',
     'expand_query_with_fallback_compat',

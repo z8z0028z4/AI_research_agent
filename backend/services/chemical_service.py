@@ -12,7 +12,7 @@ from functools import lru_cache
 
 from ..utils.logger import get_logger
 from ..utils.exceptions import APIRequestError
-from ..pubchem_handler import chemical_metadata_extractor
+from .pubchem_service import chemical_metadata_extractor
 from .smiles_drawer import smiles_drawer
 
 logger = get_logger(__name__)

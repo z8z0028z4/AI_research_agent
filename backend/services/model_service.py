@@ -20,7 +20,7 @@ try:
     from backend.core.settings_manager import settings_manager
     # 嘗試導入參數檢測器
     try:
-        from .model_parameter_detector import adapt_parameters, detect_model_parameters
+        from .model_parameter_service import adapt_parameters, detect_model_parameters
         HAS_PARAMETER_DETECTOR = True
     except ImportError:
         HAS_PARAMETER_DETECTOR = False

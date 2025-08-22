@@ -19,7 +19,26 @@ from typing import List, Dict, Any, Optional, Union
 from datetime import datetime
 
 from .exceptions import FileNotFoundError, UnsupportedFileFormatError, ValidationError
-from ..config import SUPPORTED_FORMATS, get_supported_extensions
+
+# 支持的文件格式 - 直接定義在這裡避免循環導入
+SUPPORTED_FORMATS = {
+    "pdf": [".pdf"],
+    "word": [".docx", ".doc"],
+    "excel": [".xlsx", ".xls"],
+    "text": [".txt"]
+}
+
+def get_supported_extensions() -> list:
+    """
+    獲取所有支持的文件擴展名
+    
+    Returns:
+        list: 支持的文件擴展名列表
+    """
+    extensions = []
+    for format_exts in SUPPORTED_FORMATS.values():
+        extensions.extend(format_exts)
+    return extensions
 
 # 配置日誌
 logger = logging.getLogger(__name__)
