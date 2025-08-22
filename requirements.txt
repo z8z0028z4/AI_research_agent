@@ -65,6 +65,9 @@ urllib3>=2.0.0
 beautifulsoup4>=4.12.0
 lxml>=4.9.0
 
+# Chemical informatics and molecular processing
+rdkit>=2025.3.5
+
 # Additional dependencies for sentence-transformers
 scipy>=1.11.0
 

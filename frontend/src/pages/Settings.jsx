@@ -785,7 +785,7 @@ const Settings = () => {
             <Form.Item>
               <Alert
                 message="JSON Schema 參數說明"
-                description="這些參數會影響結構化輸出的質量控制。建議根據具體任務需求調整：研究提案標題建議使用較短的長度限制，而詳細描述可以使用較長的限制。"
+                description="這些參數會影響結構化輸出的文字數上限，不會影響LLM輸出量，若過低會有截斷的現象，建議維持>3000字以上。若要調整輸出量，請調整verbosity。"
                 type="info"
                 showIcon
                 icon={<InfoCircleOutlined />}

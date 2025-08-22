@@ -3,7 +3,7 @@
   "llm_max_tokens": 9000,
   "llm_timeout": 75,
   "llm_reasoning_effort": "medium",
-  "llm_verbosity": "medium",
+  "llm_verbosity": "low",
   "llm_min_length": 10,
-  "llm_max_length": 2000
+  "llm_max_length": 3000
 }
