@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
 """
-測試運行腳本
-==========
+AI研究助理 - 統一測試入口
+========================
 
 提供多種測試運行選項：
-1. 快速測試 - 只運行單元測試
-2. 完整測試 - 運行所有測試
-3. 覆蓋率測試 - 生成覆蓋率報告
-4. 特定模組測試 - 測試特定功能
+- quick: 快速測試（核心功能）
+- all: 完整測試（所有功能）
+- coverage: 覆蓋率測試
+- api: API端點測試
+- e2e: 端到端測試
 """
 
-import os
 import sys
 import subprocess
 import argparse
-from pathlib import Path
 
 def run_command(command, description):
     """運行命令並顯示結果"""
@@ -42,50 +41,27 @@ def run_command(command, description):
             print(e.stderr)
         return False
 
-def run_quick_tests():
-    """運行快速測試（單元測試）"""
-    command = "pytest tests/test_core_modules.py -v --tb=short"
-    return run_command(command, "快速測試 - 核心模組單元測試")
-
-def run_integration_tests():
-    """運行整合測試"""
-    command = "pytest tests/test_services.py -v --tb=short"
-    return run_command(command, "整合測試 - 服務層測試")
-
-def run_api_tests():
-    """運行 API 測試"""
-    command = "pytest tests/test_api.py -v --tb=short"
-    return run_command(command, "API 測試 - 端點功能測試")
-
-def run_e2e_tests():
-    """運行端到端測試"""
-    command = "pytest tests/test_e2e.py -v --tb=short"
-    return run_command(command, "端到端測試 - 完整流程測試")
-
-def run_all_tests():
-    """運行所有測試"""
-    command = "pytest tests/ -v --tb=short"
-    return run_command(command, "完整測試 - 所有測試套件")
-
-def run_coverage_tests():
-    """運行覆蓋率測試"""
-    command = "pytest tests/ --cov=backend --cov-report=html --cov-report=term-missing -v"
-    return run_command(command, "覆蓋率測試 - 生成覆蓋率報告")
-
-def run_specific_test(test_path):
-    """運行特定測試"""
-    command = f"pytest {test_path} -v --tb=short"
-    return run_command(command, f"特定測試 - {test_path}")
-
-def run_performance_tests():
-    """運行性能測試"""
-    command = "pytest tests/test_e2e.py::TestPerformance -v --tb=short"
-    return run_command(command, "性能測試 - 系統性能測試")
-
-def run_security_tests():
-    """運行安全測試"""
-    command = "pytest tests/test_e2e.py::TestSecurity -v --tb=short"
-    return run_command(command, "安全測試 - 安全性測試")
+def run_tests(test_type="quick"):
+    """根據類型運行對應的測試"""
+    test_commands = {
+        "quick": ("pytest tests/test_core_modules.py -v --tb=short", "快速測試 - 核心功能"),
+        "all": ("pytest tests/ -v --tb=short", "完整測試 - 所有功能"),
+        "coverage": ("pytest tests/ --cov=backend --cov-report=html --cov-report=term-missing -v", "覆蓋率測試"),
+        "api": ("pytest tests/test_api.py -v --tb=short", "API測試"),
+        "e2e": ("pytest tests/test_e2e_real.py -v --tb=short", "端到端測試"),
+        "services": ("pytest tests/ -k \"test_services\" -v --tb=short", "服務層測試"),
+        "core": ("pytest tests/ -k \"test_core\" -v --tb=short", "核心模組測試"),
+        "utils": ("pytest tests/test_utils.py -v --tb=short", "工具函數測試"),
+        "frontend": ("pytest tests/ -k \"test_frontend\" -v --tb=short", "前端組件測試")
+    }
+    
+    if test_type in test_commands:
+        command, description = test_commands[test_type]
+        return run_command(command, description)
+    else:
+        # 自定義測試路徑
+        command = f"pytest {test_type} -v --tb=short"
+        return run_command(command, f"自定義測試 - {test_type}")
 
 def check_dependencies():
     """檢查測試依賴"""
@@ -118,46 +94,32 @@ def check_dependencies():
 
 def main():
     """主函數"""
-    parser = argparse.ArgumentParser(description="AI Research Agent 測試運行器")
-    parser.add_argument("--type", choices=["quick", "integration", "api", "e2e", "all", "coverage", "performance", "security"], 
+    parser = argparse.ArgumentParser(description="AI研究助理 - 統一測試入口")
+    parser.add_argument("--type", choices=["quick", "all", "coverage", "api", "e2e", "services", "core", "utils", "frontend"], 
                        default="quick", help="測試類型")
     parser.add_argument("--test", help="運行特定測試文件或測試函數")
     parser.add_argument("--check-deps", action="store_true", help="檢查測試依賴")
     
     args = parser.parse_args()
     
-    print("🧪 AI Research Agent 測試運行器")
-    print("=" * 60)
+    print("🧪 AI研究助理 - 統一測試入口")
+    print("=" * 50)
     
     # 檢查依賴
-    if args.check_deps or not check_dependencies():
-        if not check_dependencies():
-            return 1
+    if args.check_deps:
+        return 0 if check_dependencies() else 1
     
-    # 根據參數運行測試
-    success = True
+    if not check_dependencies():
+        return 1
     
+    # 運行測試
     if args.test:
-        success = run_specific_test(args.test)
-    elif args.type == "quick":
-        success = run_quick_tests()
-    elif args.type == "integration":
-        success = run_integration_tests()
-    elif args.type == "api":
-        success = run_api_tests()
-    elif args.type == "e2e":
-        success = run_e2e_tests()
-    elif args.type == "all":
-        success = run_all_tests()
-    elif args.type == "coverage":
-        success = run_coverage_tests()
-    elif args.type == "performance":
-        success = run_performance_tests()
-    elif args.type == "security":
-        success = run_security_tests()
+        success = run_tests(args.test)
+    else:
+        success = run_tests(args.type)
     
     # 顯示結果
-    print("\n" + "=" * 60)
+    print("\n" + "=" * 50)
     if success:
         print("🎉 測試完成！")
         print("✅ 所有測試通過")
@@ -165,7 +127,7 @@ def main():
         print("💥 測試失敗！")
         print("❌ 請檢查錯誤信息並修復問題")
     
-    print("=" * 60)
+    print("=" * 50)
     
     return 0 if success else 1
 

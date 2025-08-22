@@ -4,59 +4,59 @@ setlocal enabledelayedexpansion
 
 echo.
 echo ========================================
-echo 🧪 AI Research Agent 測試套件
+echo 🧪 AI Research Agent Test Suite
 echo ========================================
 echo.
 
-:: 檢查是否在正確的目錄
+:: Check if in the correct directory
 if not exist "test_core_modules.py" (
-    echo ❌ 錯誤：請在 tests/ 目錄中運行此腳本
-    echo 當前目錄：%CD%
-    echo 請執行：cd tests
+    echo ❌ Error: Please run this script in the tests/ directory
+    echo Current directory: %CD%
+    echo Please run: cd tests
     pause
     exit /b 1
 )
 
-:: 檢查 backend 目錄
+:: Check for backend directory
 if not exist "..\backend" (
-    echo ❌ 錯誤：找不到 backend 目錄
-    echo 請確保在正確的項目根目錄中運行
+    echo ❌ Error: backend directory not found
+    echo Please make sure you are running in the correct project root
     pause
     exit /b 1
 )
 
-:: 檢查 Python 環境
+:: Check Python environment
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo ❌ 錯誤：找不到 Python
-    echo 請確保 Python 已安裝並在 PATH 中
+    echo ❌ Error: Python not found
+    echo Please make sure Python is installed and in your PATH
     pause
     exit /b 1
 )
 
-:: 檢查 pytest
+:: Check pytest
 python -c "import pytest" >nul 2>&1
 if errorlevel 1 (
-    echo ❌ 錯誤：找不到 pytest
-    echo 請安裝 pytest：pip install pytest
+    echo ❌ Error: pytest not found
+    echo Please install pytest: pip install pytest
     pause
     exit /b 1
 )
 
 :menu
-echo 請選擇測試類型：
+echo Please select a test type:
 echo.
-echo 1. 🚀 快速測試 (單元測試)
-echo 2. 🔍 完整測試 (所有測試)
-echo 3. 📊 覆蓋率測試 (生成報告)
-echo 4. 🎯 特定測試 (自定義)
-echo 5. 🔧 修復測試 (修復失敗的測試)
-echo 6. 📋 測試狀態 (查看測試結果)
-echo 7. 🧹 清理測試 (清理測試數據)
-echo 8. ❌ 退出
+echo 1. 🚀 Quick Test (Unit Tests)
+echo 2. 🔍 Full Test (All Tests)
+echo 3. 📊 Coverage Test (Generate Report)
+echo 4. 🎯 Custom Test (Specify)
+echo 5. 🔧 Fix Tests (Repair Failed Tests)
+echo 6. 📋 Test Status (View Results)
+echo 7. 🧹 Clean Up Tests (Remove Test Data)
+echo 8. ❌ Exit
 echo.
 
-set /p choice="請輸入選項 (1-8): "
+set /p choice="Enter your choice (1-8): "
 
 if "%choice%"=="1" goto quick_test
 if "%choice%"=="2" goto full_test
@@ -70,64 +70,64 @@ goto invalid_choice
 
 :quick_test
 echo.
-echo 🚀 執行快速測試...
+echo 🚀 Running Quick Test...
 echo ========================================
 python -m pytest test_core_modules.py -v --tb=short -m "not slow"
 if errorlevel 1 (
     echo.
-    echo ❌ 快速測試失敗！
-    echo 請檢查錯誤信息並修復問題
+    echo ❌ Quick Test Failed!
+    echo Please check the error messages and fix the issues
 ) else (
     echo.
-    echo ✅ 快速測試通過！
+    echo ✅ Quick Test Passed!
 )
 goto end_test
 
 :full_test
 echo.
-echo 🔍 執行完整測試...
+echo 🔍 Running Full Test...
 echo ========================================
 python -m pytest . -v --tb=short
 if errorlevel 1 (
     echo.
-    echo ❌ 完整測試失敗！
-    echo 請檢查錯誤信息並修復問題
+    echo ❌ Full Test Failed!
+    echo Please check the error messages and fix the issues
 ) else (
     echo.
-    echo ✅ 完整測試通過！
+    echo ✅ Full Test Passed!
 )
 goto end_test
 
 :coverage_test
 echo.
-echo 📊 執行覆蓋率測試...
+echo 📊 Running Coverage Test...
 echo ========================================
 python -m pytest . --cov=..\backend --cov-report=html --cov-report=term-missing -v
 if errorlevel 1 (
     echo.
-    echo ❌ 覆蓋率測試失敗！
+    echo ❌ Coverage Test Failed!
 ) else (
     echo.
-    echo ✅ 覆蓋率測試完成！
-    echo 📁 報告位置：..\htmlcov\index.html
+    echo ✅ Coverage Test Completed!
+    echo 📁 Report location: ..\htmlcov\index.html
 )
 goto end_test
 
 :custom_test
 echo.
-echo 🎯 自定義測試
+echo 🎯 Custom Test
 echo ========================================
-echo 可用的測試文件：
+echo Available test files:
 dir /b test_*.py
 echo.
-set /p test_file="請輸入測試文件名 (例如: test_core_modules.py): "
+set /p test_file="Enter test file name (e.g., test_core_modules.py): "
 if "%test_file%"=="" goto menu
 
-set /p test_class="請輸入測試類名 (可選，例如: TestConfigManagement): "
+set /p test_class="Enter test class name (optional, e.g., TestConfigManagement): "
 if "%test_class%"=="" (
     python -m pytest %test_file% -v --tb=short
 ) else (
-    set /p test_method="請輸入測試方法名 (可選): "
+    set /p test_method="Enter test method name (optional): "
     if "%test_method%"=="" (
         python -m pytest %test_file%::%test_class% -v --tb=short
     ) else (
@@ -138,89 +138,89 @@ goto end_test
 
 :fix_tests
 echo.
-echo 🔧 修復測試
+echo 🔧 Fix Tests
 echo ========================================
-echo 正在檢查測試環境...
+echo Checking test environment...
 python -c "import backend.core.config" 2>nul
 if errorlevel 1 (
-    echo ❌ 無法導入 backend 模組
-    echo 請檢查 Python 路徑設置
+    echo ❌ Unable to import backend module
+    echo Please check your Python path settings
 ) else (
-    echo ✅ backend 模組導入正常
+    echo ✅ backend module imported successfully
 )
 
 echo.
-echo 正在運行診斷測試...
+echo Running diagnostic test...
 python -m pytest test_core_modules.py::TestConfigManagement::test_settings_loading -v
 if errorlevel 1 (
-    echo ❌ 基礎配置測試失敗
-    echo 請檢查 conftest.py 中的 mock 設置
+    echo ❌ Basic config test failed
+    echo Please check mock settings in conftest.py
 ) else (
-    echo ✅ 基礎配置測試通過
+    echo ✅ Basic config test passed
 )
 goto end_test
 
 :test_status
 echo.
-echo 📋 測試狀態
+echo 📋 Test Status
 echo ========================================
-echo 最後測試結果：
+echo Last test results:
 if exist "..\test_results.txt" (
     type "..\test_results.txt"
 ) else (
-    echo 沒有找到測試結果文件
+    echo No test results file found
 )
 echo.
-echo 測試覆蓋率：
+echo Test coverage:
 if exist "..\htmlcov\index.html" (
-    echo ✅ 覆蓋率報告已生成：..\htmlcov\index.html
+    echo ✅ Coverage report generated: ..\htmlcov\index.html
 ) else (
-    echo ❌ 沒有覆蓋率報告
+    echo ❌ No coverage report found
 )
 goto end_test
 
 :cleanup_tests
 echo.
-echo 🧹 清理測試數據
+echo 🧹 Cleaning Up Test Data
 echo ========================================
-echo 正在清理測試文件...
+echo Removing test files...
 
-:: 清理測試數據目錄
+:: Remove test data directory
 if exist "test_data" (
     rmdir /s /q "test_data"
-    echo ✅ 清理 test_data 目錄
+    echo ✅ test_data directory cleaned
 )
 
 if exist "test_vectors" (
     rmdir /s /q "test_vectors"
-    echo ✅ 清理 test_vectors 目錄
+    echo ✅ test_vectors directory cleaned
 )
 
-:: 清理 pytest 緩存
+:: Remove pytest cache
 if exist ".pytest_cache" (
     rmdir /s /q ".pytest_cache"
-    echo ✅ 清理 pytest 緩存
+    echo ✅ pytest cache cleaned
 )
 
-:: 清理覆蓋率報告
+:: Remove coverage report
 if exist "..\htmlcov" (
     rmdir /s /q "..\htmlcov"
-    echo ✅ 清理覆蓋率報告
+    echo ✅ coverage report cleaned
 )
 
 echo.
-echo ✅ 測試數據清理完成！
+echo ✅ Test data cleanup completed!
 goto end_test
 
 :invalid_choice
 echo.
-echo ❌ 無效選項，請重新選擇
+echo ❌ Invalid option, please select again
 goto menu
 
 :end_test
 echo.
 echo ========================================
-echo 測試完成！
+echo Test Finished!
 echo ========================================
 echo.
 pause
@@ -228,6 +228,6 @@ goto menu
 
 :exit
 echo.
-echo 👋 再見！
+echo 👋 Goodbye!
 echo.
 exit /b 0 
