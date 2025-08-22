@@ -38,12 +38,12 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../../../app'))
 
 # 修正導入方式
 try:
-    from pubchem_handler import chemical_metadata_extractor
+    from backend.services.pubchem_service import chemical_metadata_extractor
 except ImportError:
-    # 如果直接導入失敗，嘗試使用完整路徑
-    sys.path.append(os.path.join(os.path.dirname(__file__), '../../../'))
-    from app.pubchem_handler import chemical_metadata_extractor
-from app.services.chemical_service import chemical_service
+    # 如果直接導入失敗，嘗試使用完整路徑 (已重組，不再需要)
+    # sys.path.append(os.path.join(os.path.dirname(__file__), '../../../'))
+    from backend.services.pubchem_service import chemical_metadata_extractor
+from backend.services.chemical_service import chemical_service
 from langchain_core.documents import Document
 
 # SVG 轉換依賴檢查
@@ -147,7 +147,7 @@ async def generate_proposal(request: ProposalRequest):
         print(f"🔍 [DEBUG-{request_id}] 準備調用 agent_answer with mode='make proposal'")
         
         # 延遲導入以避免循環導入問題
-        from knowledge_agent import agent_answer
+        from backend.services.knowledge_service import agent_answer
         
         # 與 Streamlit Tab1 對齊：使用模式 make proposal 生成提案
         result = agent_answer(request.research_goal, mode="make proposal", k=request.retrieval_count)
@@ -222,7 +222,7 @@ async def revise_proposal(request: ProposalRevisionRequest):
     """
     try:
         # 延遲導入以避免循環導入問題
-        from knowledge_agent import agent_answer
+        from backend.services.knowledge_service import agent_answer
         
         # 與 Streamlit Tab1 對齊：採用 generate new idea 模式，並帶入原始提案與 chunks
         result = agent_answer(
@@ -236,7 +236,7 @@ async def revise_proposal(request: ProposalRevisionRequest):
         if result.get("materials_list"):
             print(f"🔍 [DEBUG] 使用結構化數據中的材料列表: {result['materials_list']}")
             # 直接使用結構化數據中的材料列表
-            from pubchem_handler import extract_and_fetch_chemicals, remove_json_chemical_block
+            from backend.services.pubchem_service import extract_and_fetch_chemicals, remove_json_chemical_block
             chemical_metadata_list, not_found_list = extract_and_fetch_chemicals(result["materials_list"])
             # 清理文本中的 JSON 化學品塊
             proposal_answer = remove_json_chemical_block(result.get("answer", ""))
@@ -288,7 +288,7 @@ async def generate_experiment_detail(request: ExperimentDetailRequest):
     """
     try:
         # 延遲導入以避免循環導入問題
-        from knowledge_agent import agent_answer
+        from backend.services.knowledge_service import agent_answer
         
         # 與 Streamlit Tab1 對齊：由 agent 以指定模式展開實驗細節
         result = agent_answer(

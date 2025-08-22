@@ -12,9 +12,9 @@ import sys
 import os
 
 # 添加原項目路徑到 sys.path
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../../app'))
+# sys.path.append(os.path.join(os.path.dirname(__file__), '../../../app'))  # 已重組，不再需要
 
-from search_agent import search_and_download_only
+from backend.services.search_service import search_and_download_only
 
 router = APIRouter()
 

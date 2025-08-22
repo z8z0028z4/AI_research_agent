@@ -25,12 +25,12 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../../../app'))
 # 使用絕對導入來避免相對導入問題
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../app'))
+# sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../app'))  # 已重組，不再需要
 
-from file_upload import process_uploaded_files
-from chunk_embedding import embed_documents_from_metadata, embed_experiment_txt_batch, get_vectorstore_stats
-from excel_to_txt_by_row import export_new_experiments_to_txt
-from app.config import EXPERIMENT_DIR
+from backend.services.file_service import process_uploaded_files
+from backend.services.embedding_service import embed_documents_from_metadata, embed_experiment_txt_batch, get_vectorstore_stats
+from backend.services.excel_service import export_new_experiments_to_txt
+from backend.config import EXPERIMENT_DIR
 
 # 配置日誌
 logging.basicConfig(level=logging.DEBUG)

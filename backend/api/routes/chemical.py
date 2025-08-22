@@ -16,11 +16,11 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../../../app'))
 
 # 修正導入方式
 try:
-    from pubchem_handler import chemical_metadata_extractor
+    from backend.services.pubchem_service import chemical_metadata_extractor
 except ImportError:
-    # 如果直接導入失敗，嘗試使用完整路徑
-    sys.path.append(os.path.join(os.path.dirname(__file__), '../../../'))
-    from app.pubchem_handler import chemical_metadata_extractor
+    # 如果直接導入失敗，嘗試使用完整路徑 (已重組，不再需要)
+    # sys.path.append(os.path.join(os.path.dirname(__file__), '../../../'))
+    from backend.services.pubchem_service import chemical_metadata_extractor
 
 router = APIRouter()
 
