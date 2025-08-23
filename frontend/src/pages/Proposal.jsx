@@ -204,6 +204,9 @@ const Proposal = () => {
         setStructuredExperiment(null);
       }
 
+      // ✅ 修復：保留原有的citations狀態，不覆蓋
+      console.log('🔍 保留原有citations數量:', citations.length);
+
       // 顯示重試信息
       if (data.retry_info) {
         console.log('🔄 重試信息:', data.retry_info);

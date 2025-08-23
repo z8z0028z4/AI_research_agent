@@ -247,6 +247,15 @@ async def revise_proposal(request: ProposalRevisionRequest):
                 result.get("answer", "")
             )
 
+        # ✅ 修復：為化學品添加SMILES繪製的結構圖
+        print(f"🔍 [DEBUG] 為修訂提案的化學品添加SMILES繪製")
+        from backend.services.chemical_service import chemical_service
+        enhanced_chemicals = []
+        for chemical in chemical_metadata_list:
+            enhanced_chemical = chemical_service.add_smiles_drawing(chemical)
+            enhanced_chemicals.append(enhanced_chemical)
+        chemical_metadata_list = enhanced_chemicals
+
         # 修復 citations 中的 page 欄位類型問題
         fixed_citations = []
         for citation in result.get("citations", []):
