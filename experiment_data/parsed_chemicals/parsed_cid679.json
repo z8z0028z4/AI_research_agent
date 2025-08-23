@@ -1,6 +1,7 @@
 {
   "cid": 679,
   "name": "methylsulfinylmethane",
+  "iupac_name": "methylsulfinylmethane",
   "formula": "C2H6OS",
   "weight": "78.14",
   "smiles": "CS(=O)C",

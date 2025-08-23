@@ -49,6 +49,7 @@ def run_tests(test_type="quick"):
         "coverage": ("pytest tests/ --cov=backend --cov-report=html --cov-report=term-missing -v", "覆蓋率測試"),
         "api": ("pytest tests/test_api.py -v --tb=short", "API測試"),
         "e2e": ("pytest tests/test_e2e_real.py -v --tb=short", "端到端測試"),
+        "proposal": ("pytest tests/test_e2e_proposal_workflow.py -v --tb=short", "提案功能E2E測試"),
         "services": ("pytest tests/ -k \"test_services\" -v --tb=short", "服務層測試"),
         "core": ("pytest tests/ -k \"test_core\" -v --tb=short", "核心模組測試"),
         "utils": ("pytest tests/test_utils.py -v --tb=short", "工具函數測試"),
@@ -95,7 +96,7 @@ def check_dependencies():
 def main():
     """主函數"""
     parser = argparse.ArgumentParser(description="AI研究助理 - 統一測試入口")
-    parser.add_argument("--type", choices=["quick", "all", "coverage", "api", "e2e", "services", "core", "utils", "frontend"], 
+    parser.add_argument("--type", choices=["quick", "all", "coverage", "api", "e2e", "proposal", "services", "core", "utils", "frontend"], 
                        default="quick", help="測試類型")
     parser.add_argument("--test", help="運行特定測試文件或測試函數")
     parser.add_argument("--check-deps", action="store_true", help="檢查測試依賴")

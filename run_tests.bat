@@ -2,146 +2,152 @@
 chcp 65001 >nul 2>&1
 
 echo.
-echo 🧪 AI研究助理 - 統一測試入口
+echo 🧪 AI Research Assistant - Unified Test Entry
 echo ===============================
 echo.
 
-:: 如果有參數，直接執行對應的測試
+:: If there is a parameter, run the corresponding test directly
 if not "%1"=="" (
     call :run_test_by_param %1
     goto :end
 )
 
-:: 顯示選單
+:: Show menu
 :show_menu
-echo 請選擇測試類型：
+echo Please select a test type:
 echo.
-echo [1] 快速測試 - 核心功能
-echo [2] 完整測試 - 所有功能
-echo [3] 覆蓋率測試
-echo [4] API測試
-echo [5] 端到端測試
-echo [6] 服務測試
-echo [7] 核心測試
-echo [8] 工具測試
-echo [9] 前端測試
-echo [0] 檢查依賴
+echo [1] Quick Test - Core Functions
+echo [2] Full Test - All Functions
+echo [3] Coverage Test
+echo [4] API Test
+echo [5] End-to-End Test
+echo [6] Proposal Feature E2E Test
+echo [7] Service Layer Test
+echo [8] Core Module Test
+echo [9] Utility Test
+echo [10] Frontend Test
+echo [0] Check Dependencies
 echo.
-set /p choice="請輸入選項數字 (1-9, 0): "
+set /p choice="Enter option number (1-10, 0): "
 
-:: 根據選擇執行對應測試
+:: Run the corresponding test based on selection
 if "%choice%"=="1" (
-    echo 快速測試 - 核心功能
+    echo Quick Test - Core Functions
     python tests\run_tests.py --type quick
     goto :end
 )
 if "%choice%"=="2" (
-    echo 完整測試 - 所有功能
+    echo Full Test - All Functions
     python tests\run_tests.py --type all
     goto :end
 )
 if "%choice%"=="3" (
-    echo 覆蓋率測試
+    echo Coverage Test
     python tests\run_tests.py --type coverage
     goto :end
 )
 if "%choice%"=="4" (
-    echo API測試
+    echo API Test
     python tests\run_tests.py --type api
     goto :end
 )
 if "%choice%"=="5" (
-    echo 端到端測試
+    echo End-to-End Test
     python tests\run_tests.py --type e2e
     goto :end
 )
 if "%choice%"=="6" (
-    echo 服務測試
-    python tests\run_tests.py --type services
+    echo Proposal Feature E2E Test
+    python tests\run_tests.py --type proposal
     goto :end
 )
 if "%choice%"=="7" (
-    echo 核心測試
-    python tests\run_tests.py --type core
+    echo Service Layer Test
+    python tests\run_tests.py --type services
     goto :end
 )
 if "%choice%"=="8" (
-    echo 工具測試
-    python tests\run_tests.py --type utils
+    echo Core Module Test
+    python tests\run_tests.py --type core
     goto :end
 )
 if "%choice%"=="9" (
-    echo 前端測試
+    echo Utility Test
+    python tests\run_tests.py --type utils
+    goto :end
+)
+if "%choice%"=="10" (
+    echo Frontend Test
     python tests\run_tests.py --type frontend
     goto :end
 )
 if "%choice%"=="0" (
-    echo 檢查依賴
+    echo Check Dependencies
     python tests\run_tests.py --check-deps
     goto :end
 )
 
-echo ❌ 無效的選項，請重新選擇
+echo ❌ Invalid option, please select again.
 echo.
 goto :show_menu
 
-:: 處理命令行參數的函數
+:: Function to handle command line parameters
 :run_test_by_param
 if "%1"=="all" (
-    echo 完整測試 - 所有功能
+    echo Full Test - All Functions
     python tests\run_tests.py --type all
     exit /b
 )
 if "%1"=="coverage" (
-    echo 覆蓋率測試
+    echo Coverage Test
     python tests\run_tests.py --type coverage
     exit /b
 )
 if "%1"=="api" (
-    echo API測試
+    echo API Test
     python tests\run_tests.py --type api
     exit /b
 )
 if "%1"=="e2e" (
-    echo 端到端測試
+    echo End-to-End Test
     python tests\run_tests.py --type e2e
     exit /b
 )
 if "%1"=="deps" (
-    echo 檢查依賴
+    echo Check Dependencies
     python tests\run_tests.py --check-deps
     exit /b
 )
 if "%1"=="services" (
-    echo 服務測試
+    echo Service Layer Test
     python tests\run_tests.py --type services
     exit /b
 )
 if "%1"=="core" (
-    echo 核心測試
+    echo Core Module Test
     python tests\run_tests.py --type core
     exit /b
 )
 if "%1"=="utils" (
-    echo 工具測試
+    echo Utility Test
     python tests\run_tests.py --type utils
     exit /b
 )
 if "%1"=="frontend" (
-    echo 前端測試
+    echo Frontend Test
     python tests\run_tests.py --type frontend
     exit /b
 )
-:: 預設執行快速測試
-echo 快速測試 - 核心功能
+:: Default: run quick test
+echo Quick Test - Core Functions
 python tests\run_tests.py --type quick
 exit /b
 
 :end
 echo.
 if errorlevel 1 (
-    echo ❌ 測試失敗！
+    echo ❌ Test Failed!
 ) else (
-    echo ✅ 測試完成！
+    echo ✅ Test Completed!
 )
 pause

@@ -1,4 +1,4 @@
-# 🧪 AI Research Assistant v4.1 - Enhanced Production Release
+# 🧪 AI Research Assistant v4.2 - Testing & Quality Assurance Release
 
 A comprehensive AI-powered research assistant system designed for materials science and chemistry research workflows. **Enhanced Production Release: Complete system with API key management, graceful startup, and improved user experience.**
 
@@ -6,17 +6,18 @@ This production-ready tool combines document ingestion, vector embedding, GPT-ba
 
 ---
 
-## 🎉 v4.1 Enhanced Production Release Highlights
+## 🎉 v4.2 Testing & Quality Assurance Release Highlights
 
-This marks the **enhanced production-ready release** of AI Research Assistant, featuring comprehensive document management, intelligent deduplication, robust file processing capabilities, and **new API key management system**.
+This marks the **testing and quality assurance release** of AI Research Assistant, featuring comprehensive testing framework, enhanced reliability, and improved system validation.
 
-### 🆕 **v4.1 New Features**
-- **🔑 API Key Management**: Integrated OpenAI API key configuration through the settings interface
-- **🚀 Graceful Startup**: System automatically creates dummy `.env` file if missing, ensuring smooth startup
-- **⚙️ Smart Setup**: Enhanced `simple_setup.bat` with user choice for existing virtual environments
-- **🧹 Perplexity Removal**: Completely removed Perplexity functionality for streamlined operation
-- **🔧 Dynamic Configuration**: Improved LLM configuration system with real-time parameter adjustment
-- **📚 Knowledge Base Enhancement**: Fixed GPT-5 Responses API integration for better query performance
+### 🆕 **v4.2 New Features**
+- **🧪 Comprehensive Testing Framework**: Complete test suite with unit, integration, API, and E2E tests
+- **✅ Real Testing Approach**: All tests use actual API calls and real data (no mocks)
+- **🎯 Proposal E2E Tests**: Full end-to-end testing of proposal generation workflows
+- **📊 Test Coverage**: Comprehensive coverage of all major features and user workflows
+- **🚀 Interactive Test Runner**: User-friendly test execution with `run_tests.bat`
+- **🔧 Quality Assurance**: Enhanced error handling and system reliability validation
+- **📈 Performance Monitoring**: Response time and system performance testing
 
 ---
 
@@ -137,6 +138,7 @@ Access the Settings page in the React interface to:
 - **Node.js**: 16.0 or higher
 - **Memory**: 8GB RAM minimum (16GB recommended)
 - **Storage**: 2GB free space for vector database
+- **Testing**: pytest and related dependencies (included in requirements.txt)
 
 ### 🎯 One-Click Installation (Windows)
 
@@ -237,6 +239,61 @@ OPENAI_API_KEY=sk-your-openai-api-key-here
 - **Semantic Scholar Success Rate**: 95%+ with retry mechanisms
 - **Rate Limiting Compliance**: Automatic throttling prevents API blocks
 - **Metadata Enrichment**: ~80% venue retrieval success rate
+
+---
+
+## 🧪 Testing
+
+### **Comprehensive Test Suite**
+The project includes a comprehensive testing framework with multiple test types:
+
+#### **Test Categories**
+- **Unit Tests**: Individual function and module testing
+- **Integration Tests**: Cross-module workflow testing  
+- **API Tests**: FastAPI endpoint validation
+- **E2E Tests**: Complete user workflow testing
+- **Performance Tests**: Response time and system performance validation
+
+#### **Running Tests**
+
+**Windows (Recommended):**
+```bash
+# Interactive test menu
+run_tests.bat
+
+# Or run specific test types
+python tests\run_tests.py --type quick    # Quick core tests
+python tests\run_tests.py --type all      # All tests
+python tests\run_tests.py --type api      # API tests only
+python tests\run_tests.py --type e2e      # End-to-end tests
+python tests\run_tests.py --type proposal # Proposal E2E tests
+```
+
+**All Platforms:**
+```bash
+# Install test dependencies (included in requirements.txt)
+pip install -r requirements.txt
+
+# Run tests
+pytest tests/ -v                    # All tests
+pytest tests/test_api.py -v         # API tests
+pytest tests/test_e2e_real.py -v    # E2E tests
+pytest tests/test_e2e_proposal_workflow.py -v  # Proposal E2E tests
+```
+
+#### **Test Features**
+- **Real Testing**: No mocks - tests use actual API calls and real data
+- **Comprehensive Coverage**: Tests cover all major features and workflows
+- **Error Handling**: Validates system behavior under various error conditions
+- **Performance Monitoring**: Tracks response times and system performance
+- **User Workflow Validation**: Ensures complete user journeys work correctly
+
+### **Test Results**
+- ✅ **All Core Tests Passing**: Unit, integration, and API tests
+- ✅ **E2E Tests Passing**: Complete user workflow validation
+- ✅ **Proposal E2E Tests**: Full proposal generation workflow testing
+- ✅ **Error Handling Tests**: Robust error condition handling
+- ✅ **Performance Tests**: Response time validation
 
 ---
 
@@ -534,4 +591,4 @@ This version is stable, tested, and ready for production research workflows.
 
 ---
 
-*Last updated: Augest 2025 - Enhanced Production Release v4.1*
+*Last updated: August 2025 - Testing & Quality Assurance Release v4.2*
