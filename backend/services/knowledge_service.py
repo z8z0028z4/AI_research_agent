@@ -306,7 +306,12 @@ def agent_answer(question: str, mode: str = "make proposal", **kwargs):
         paper_vectorstore = load_paper_vectorstore()
         print("📦 Paper 向量庫：", paper_vectorstore._collection.count())
         query_list = expand_query(question)  # 語義擴展
-        new_chunks = retrieve_chunks_multi_query(paper_vectorstore, query_list, k=5)
+        
+        # 可調整的檢索參數
+        k_new_chunks = kwargs.get("k_new_chunks", 3)  # 每個查詢檢索的chunks數量，預設3（降低查詢量）
+        print(f"🔍 新chunks檢索參數: k={k_new_chunks}")
+        
+        new_chunks = retrieve_chunks_multi_query(paper_vectorstore, query_list, k=k_new_chunks)
         old_chunks = kwargs.get("old_chunks", [])
         proposal = kwargs.get("proposal", "")
         
@@ -316,10 +321,32 @@ def agent_answer(question: str, mode: str = "make proposal", **kwargs):
         # 轉換為文本格式
         text_proposal = structured_revision_proposal_to_text(structured_data)
         
+        # ✅ 修復：將新檢索到的chunks轉換為citations格式
+        def chunks_to_citations(chunks_list):
+            """將chunks轉換為citations格式"""
+            citations_list = []
+            for chunk in chunks_list:
+                citation = {
+                    "source": chunk.metadata.get("source", "Unknown"),
+                    "page": str(chunk.metadata.get("page", "Unknown")),
+                    "content": chunk.page_content[:200] + "..." if len(chunk.page_content) > 200 else chunk.page_content
+                }
+                citations_list.append(citation)
+            return citations_list
+        
+        # 合併結構化數據中的citations和新chunks轉換的citations
+        structured_citations = structured_data.get('citations', [])
+        new_chunks_citations = chunks_to_citations(new_chunks)
+        all_citations = structured_citations + new_chunks_citations
+        
+        print(f"🔍 [DEBUG] 結構化citations數量: {len(structured_citations)}")
+        print(f"🔍 [DEBUG] 新chunks轉換的citations數量: {len(new_chunks_citations)}")
+        print(f"🔍 [DEBUG] 總citations數量: {len(all_citations)}")
+        
         # 返回結構化結果
         return {
             "answer": text_proposal,
-            "citations": structured_data.get('citations', []),
+            "citations": all_citations,  # ✅ 修復：返回合併後的citations
             "chunks": new_chunks + old_chunks,
             "structured_proposal": structured_data,
             "materials_list": structured_data.get('materials_list', [])  # 直接傳遞材料列表

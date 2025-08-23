@@ -94,6 +94,8 @@ class ProposalRevisionRequest(BaseModel):
     user_feedback: str
     # 來自前端的可序列化 chunks
     chunks: List[Dict[str, Any]]
+    # 可選的檢索參數
+    k_new_chunks: Optional[int] = 3  # 新chunks檢索數量，預設3（降低查詢量）
 
 
 def _serialize_chunks(chunks: List[Any]) -> List[Dict[str, Any]]:
@@ -224,12 +226,20 @@ async def revise_proposal(request: ProposalRevisionRequest):
         # 延遲導入以避免循環導入問題
         from backend.services.knowledge_service import agent_answer
         
+        # 檢查開發模式狀態
+        from backend.core.settings_manager import settings_manager
+        is_dev_mode = settings_manager.get_dev_mode_status()
+        
+        # 根據開發模式決定檢索參數
+        k_new_chunks = 1 if is_dev_mode else (request.k_new_chunks or 3)
+        
         # 與 Streamlit Tab1 對齊：採用 generate new idea 模式，並帶入原始提案與 chunks
         result = agent_answer(
             request.user_feedback,
             mode="generate new idea",
             old_chunks=_deserialize_chunks(request.chunks),
             proposal=request.original_proposal,
+            k_new_chunks=k_new_chunks,  # 傳遞檢索參數
         )
 
         # 檢查是否有直接的材料列表（來自結構化輸出）
@@ -307,9 +317,15 @@ async def generate_experiment_detail(request: ExperimentDetailRequest):
             proposal=request.proposal,
         )
 
+        # ✅ 修復：添加citations字段到返回結果
+        # 從result中獲取citations，如果沒有則返回空列表
+        citations = result.get("citations", [])
+        print(f"🔍 [DEBUG] generate_experiment_detail 返回的citations數量: {len(citations)}")
+        
         return {
             "experiment_detail": result.get("answer", ""),
             "structured_experiment": result.get("structured_experiment", {}),
+            "citations": citations,  # ✅ 修復：添加citations字段
             "success": True,
             "retry_info": {
                 "retry_count": getattr(result, 'retry_count', 0),
@@ -413,7 +429,7 @@ class DocxRequest(BaseModel):
     chemicals: List[Dict[str, Any]]
     not_found: List[str]
     experiment_detail: Optional[str] = ""
-    citations: List[Dict[str, str]]
+    citations: List[Dict[str, Any]]  # ✅ 修復：改為 Any 以支持數字類型的 page 字段
 
 @router.post("/proposal/generate-docx")
 async def generate_docx(request: DocxRequest):

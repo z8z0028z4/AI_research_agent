@@ -29,6 +29,7 @@ const Settings = () => {
     max_length: 100
   })
   const [jsonSchemaSupportedParams, setJsonSchemaSupportedParams] = useState({})
+  const [isDevMode, setIsDevMode] = useState(false) // 開發模式狀態
 
   // 可用的LLM模型選項
   const modelOptions = [
@@ -54,6 +55,7 @@ const Settings = () => {
     loadCurrentSettings()
     loadJsonSchemaParametersInfo()
     loadEnvStatus()
+    loadDevModeStatus()
   }, [])
 
   // 當選擇的模型改變時重新載入參數資訊
@@ -181,6 +183,53 @@ const Settings = () => {
     } catch (error) {
       console.error('載入環境狀態錯誤:', error)
       message.error('載入環境狀態時發生錯誤')
+    }
+  }
+
+  const loadDevModeStatus = async () => {
+    try {
+      const response = await fetch('/api/v1/settings/dev-mode', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setIsDevMode(data.is_dev_mode || false)
+      }
+    } catch (error) {
+      console.error('載入開發模式狀態錯誤:', error)
+    }
+  }
+
+  const handleToggleDevMode = async () => {
+    try {
+      setLoading(true)
+      const newDevMode = !isDevMode
+      
+      const response = await fetch('/api/v1/settings/dev-mode', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          is_dev_mode: newDevMode
+        }),
+      })
+
+      if (response.ok) {
+        setIsDevMode(newDevMode)
+        message.success(`開發模式已${newDevMode ? '開啟' : '關閉'}`)
+      } else {
+        message.error('切換開發模式失敗')
+      }
+    } catch (error) {
+      console.error('切換開發模式錯誤:', error)
+      message.error('切換開發模式時發生錯誤')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -794,6 +843,45 @@ const Settings = () => {
           </Form>
         </Card>
       )}
+
+      {/* 開發模式設定 */}
+      <Card style={{ marginTop: 16 }}>
+        <Title level={4}>開發模式設定</Title>
+        <Text type="secondary">
+          開發模式用於快速測試和調試，會影響系統的檢索行為和響應速度。
+        </Text>
+
+        <Divider />
+
+        <Row gutter={24} style={{ marginBottom: 24 }}>
+          <Col span={12}>
+            <Form.Item label="開發模式">
+              <Button
+                type={isDevMode ? "primary" : "default"}
+                onClick={handleToggleDevMode}
+                loading={loading}
+                style={{ width: 200 }}
+              >
+                {isDevMode ? "🔧 Dev Mode ON" : "🔧 Dev Mode OFF"}
+              </Button>
+            </Form.Item>
+          </Col>
+
+          <Col span={12}>
+            <Form.Item label="開發模式說明" style={{ marginBottom: 0 }}>
+              <div>
+                <p><strong>開發模式功能：</strong></p>
+                <ul>
+                  <li><strong>快速檢索：</strong> 修訂提案時每個查詢只檢索1個chunk（正常模式為3個）</li>
+                  <li><strong>快速測試：</strong> 減少API調用次數，加快響應速度</li>
+                  <li><strong>調試友好：</strong> 便於開發和測試新功能</li>
+                </ul>
+                <p><strong>注意：</strong> 開發模式會影響檢索的完整性和準確性，僅建議在開發和測試時使用。</p>
+              </div>
+            </Form.Item>
+          </Col>
+        </Row>
+      </Card>
 
       {/* 模型特性說明 */}
       {selectedModel && (
