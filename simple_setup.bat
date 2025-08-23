@@ -78,9 +78,9 @@ echo. >> .venv_config
 echo ✅ .venv_config file created!
 
 REM =================================================================
-REM Step 3: Upgrade pip and Install Backend Dependencies
+REM Step 3: Choose Installation Type and Install Backend Dependencies
 REM =================================================================
-echo [3/5] Activating virtual environment and installing backend dependencies...
+echo [3/5] Choosing installation type and installing backend dependencies...
 
 call "%VENV_PATH%\Scripts\activate.bat"
 
@@ -93,17 +93,51 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo Installing backend Python dependencies (this may take a few minutes)...
-pip install -r requirements.txt
+REM Ask user for CPU or GPU version
+echo.
+echo Please choose your installation type:
+echo [1] CPU version (Smaller download, works on all systems)
+echo [2] GPU version with CUDA support (Larger download, requires NVIDIA GPU with CUDA)
+echo.
+set /p gpu_choice="Enter your choice (1 or 2): "
 
-if errorlevel 1 (
-    echo ERROR: Failed to install Python dependencies!
-    echo Please check the requirements.txt file and your network connection.
+if "!gpu_choice!"=="1" (
+    echo Installing CPU version dependencies...
+    pip install -r requirements.txt
+    if errorlevel 1 (
+        echo ERROR: Failed to install CPU version dependencies!
+        echo Please check the requirements.txt file and your network connection.
+        pause
+        exit /b 1
+    )
+    echo ✅ CPU version dependencies installed!
+) else if "!gpu_choice!"=="2" (
+    echo Installing GPU version dependencies with CUDA support...
+    echo This may take longer due to larger download size...
+    
+    REM Install basic requirements first
+    pip install -r requirements.txt
+    if errorlevel 1 (
+        echo ERROR: Failed to install basic dependencies!
+        pause
+        exit /b 1
+    )
+    
+    REM Install GPU versions of PyTorch packages
+    echo Installing CUDA-enabled PyTorch packages...
+    pip install torch>=2.5.1+cu121 torchaudio>=2.5.1+cu121 --extra-index-url https://download.pytorch.org/whl/cu121
+    if errorlevel 1 (
+        echo ERROR: Failed to install GPU dependencies!
+        echo Please check your network connection and CUDA compatibility.
+        pause
+        exit /b 1
+    )
+    echo ✅ GPU version dependencies with CUDA support installed!
+) else (
+    echo Invalid choice. Please run the script again and select 1 or 2.
     pause
     exit /b 1
 )
-
-echo ✅ Backend dependencies installed!
 
 REM =================================================================
 REM Step 4: Install Frontend Dependencies
@@ -157,6 +191,11 @@ echo Verifying key Python packages...
 python -c "import fastapi; print('✅ FastAPI:', fastapi.__version__)" 2>nul || echo "❌ FastAPI not installed"
 python -c "import langchain; print('✅ LangChain:', langchain.__version__)" 2>nul || echo "❌ LangChain not installed"
 python -c "import openai; print('✅ OpenAI:', openai.__version__)" 2>nul || echo "❌ OpenAI not installed"
+
+echo.
+echo Verifying PyTorch installation...
+python -c "import torch; print('✅ PyTorch:', torch.__version__)" 2>nul || echo "❌ PyTorch not installed"
+python -c "import torch; print('✅ CUDA available:', torch.cuda.is_available()); print('CUDA version:', torch.version.cuda if torch.cuda.is_available() else 'CPU only')" 2>nul || echo "❌ PyTorch CUDA check failed"
 
 echo.
 echo Verifying frontend environment...
