@@ -1,4 +1,4 @@
-# 🧪 AI Research Assistant v4.2 - Testing & Quality Assurance Release
+# 🧪 AI Research Assistant v4.3 - SMILES Integration & Bug Fixes Release
 
 A comprehensive AI-powered research assistant system designed for materials science and chemistry research workflows. **Enhanced Production Release: Complete system with API key management, graceful startup, and improved user experience.**
 
@@ -6,11 +6,11 @@ This production-ready tool combines document ingestion, vector embedding, GPT-ba
 
 ---
 
-## 🎉 v4.2 Testing & Quality Assurance Release Highlights
+## 🎉 v4.3 SMILES Integration & Bug Fixes Release Highlights
 
-This marks the **testing and quality assurance release** of AI Research Assistant, featuring comprehensive testing framework, enhanced reliability, and improved system validation.
+This release focuses on **SMILES chemical structure integration**, **bug fixes**, and **enhanced installation experience** with comprehensive testing framework and improved system reliability.
 
-### 🆕 **v4.2 New Features**
+### 🆕 **v4.3 New Features**
 - **🧪 Comprehensive Testing Framework**: Complete test suite with unit, integration, API, and E2E tests
 - **✅ Real Testing Approach**: All tests use actual API calls and real data (no mocks)
 - **🎯 Proposal E2E Tests**: Full end-to-end testing of proposal generation workflows
@@ -18,6 +18,10 @@ This marks the **testing and quality assurance release** of AI Research Assistan
 - **🚀 Interactive Test Runner**: User-friendly test execution with `run_tests.bat`
 - **🔧 Quality Assurance**: Enhanced error handling and system reliability validation
 - **📈 Performance Monitoring**: Response time and system performance testing
+- **🧪 SMILES Chemical Structure Integration**: Enhanced chemical structure visualization and DOCX integration
+- **🔧 Development Mode**: Configurable chunk retrieval for faster testing and development
+- **⚡ CPU/GPU Installation Options**: Smart setup script with CPU vs CUDA version selection
+- **🐛 Bug Fixes**: Comprehensive fixes for citation management and proposal revision workflows
 
 ---
 
@@ -70,6 +74,19 @@ This marks the **testing and quality assurance release** of AI Research Assistan
 - **Excel Integration**: Processes experimental data from `.xlsx` files and converts to searchable text
 - **Synthesis Suggestions**: Provides creative and practical synthesis recommendations based on both literature and experimental data
 - **Chemical Safety**: Integrates PubChem data for chemical safety information and NFPA hazard codes
+
+### 🧪 **SMILES Chemical Structure Integration** *(v4.3)*
+- **Chemical Structure Visualization**: Automatic SMILES to PNG conversion for chemical structures
+- **DOCX Integration**: Chemical structures embedded directly in generated Word documents
+- **PubChem Integration**: Automatic chemical information retrieval with safety data
+- **Enhanced Chemical Tables**: Rich chemical tables with structure images and metadata
+- **SMILES Drawer Service**: Dedicated service for chemical structure rendering
+
+### 🔧 **Development Mode & Performance Optimization** *(v4.3)*
+- **Configurable Chunk Retrieval**: Adjustable chunk retrieval quantity for different use cases
+- **Development Mode**: Fast testing mode with reduced chunk retrieval (k=1)
+- **Settings Integration**: Development mode toggle in Settings page
+- **Performance Monitoring**: Enhanced response time tracking and optimization
 
 ---
 
@@ -131,6 +148,25 @@ Access the Settings page in the React interface to:
 
 ---
 
+## 🐛 v4.3 Bug Fixes & Improvements
+
+### **Fixed Issues**
+- **Citation Management**: Fixed citation cards disappearing after experiment detail generation
+- **Proposal Revision**: Fixed chunks from document expansion not being added to citation cards
+- **SMILES Integration**: Fixed SMILES drawer failing after proposal revision
+- **DOCX Generation**: Fixed chemical table using URL embedding instead of SMILES-drawn structures
+- **API Compatibility**: Fixed citations format compatibility in DOCX generation requests
+
+### **Performance Improvements**
+- **Reduced Chunk Retrieval**: Default chunk retrieval reduced from 10 to 3 for better performance
+- **Development Mode**: Added k=1 chunk retrieval option for faster testing
+- **Smart Caching**: Enhanced citation and chunk management for better user experience
+
+### **Installation Enhancements**
+- **CPU/GPU Selection**: Smart setup script with installation type selection
+- **Error Handling**: Improved error messages and recovery mechanisms
+- **Verification**: Enhanced installation verification with PyTorch and CUDA status checks
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -150,14 +186,19 @@ simple_setup.bat
 
 This script will:
 - ✅ Create Python virtual environment (with user choice for existing environments)
-- ✅ Install all Python dependencies
+- ✅ **Choose CPU or GPU installation** (CPU for compatibility, GPU for performance)
+- ✅ Install all Python dependencies with selected version
 - ✅ Install Node.js dependencies
-- ✅ Start backend and frontend services
+- ✅ Verify installation and show system status
 - ✅ Open the application in your browser
 
 **🆕 Smart Environment Management**: If a virtual environment already exists, the script will ask whether to:
 - **Option 1**: Delete existing environment and create a fresh one
 - **Option 2**: Continue with the existing environment
+
+**🆕 CPU vs GPU Installation Options**:
+- **CPU Version**: Smaller download, works on all systems (recommended for most users)
+- **GPU Version**: Larger download, requires NVIDIA GPU with CUDA support (for performance)
 
 ### Manual Installation (All Platforms)
 
