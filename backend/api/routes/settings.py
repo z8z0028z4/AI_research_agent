@@ -76,6 +76,10 @@ class EnvFileStatus(BaseModel):
     path: str
     openai_key_configured: bool
 
+class DevModeSettings(BaseModel):
+    """開發模式設定模型"""
+    is_dev_mode: bool
+
 @router.get("/model", response_model=ModelSettingsResponse)
 async def get_model_settings():
     """獲取當前LLM模型設定"""
@@ -314,4 +318,38 @@ async def get_config_status():
             "system_ready": config_validation["config_complete"]
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"獲取配置狀態失敗: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"獲取配置狀態失敗: {str(e)}")
+
+# ==================== 開發模式管理端點 ====================
+
+@router.get("/dev-mode")
+async def get_dev_mode_status():
+    """獲取開發模式狀態"""
+    try:
+        # 從settings.json讀取開發模式狀態
+        dev_mode = settings_manager.get_dev_mode_status()
+        return {
+            "is_dev_mode": dev_mode
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"獲取開發模式狀態失敗: {str(e)}")
+
+@router.post("/dev-mode")
+async def set_dev_mode_status(settings: DevModeSettings):
+    """設定開發模式狀態"""
+    try:
+        # 更新開發模式狀態
+        success = settings_manager.set_dev_mode_status(settings.is_dev_mode)
+        if not success:
+            raise HTTPException(status_code=500, detail="設定開發模式狀態失敗")
+        
+        return {
+            "message": f"開發模式已{'開啟' if settings.is_dev_mode else '關閉'}",
+            "status": "success",
+            "is_dev_mode": settings.is_dev_mode
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"設定開發模式狀態失敗: {str(e)}") 

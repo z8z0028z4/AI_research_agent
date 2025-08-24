@@ -1,4 +1,4 @@
-# 🧪 AI Research Assistant v4.1 - Enhanced Production Release
+# 🧪 AI Research Assistant v4.3 - SMILES Integration & Bug Fixes Release
 
 A comprehensive AI-powered research assistant system designed for materials science and chemistry research workflows. **Enhanced Production Release: Complete system with API key management, graceful startup, and improved user experience.**
 
@@ -6,17 +6,22 @@ This production-ready tool combines document ingestion, vector embedding, GPT-ba
 
 ---
 
-## 🎉 v4.1 Enhanced Production Release Highlights
+## 🎉 v4.3 SMILES Integration & Bug Fixes Release Highlights
 
-This marks the **enhanced production-ready release** of AI Research Assistant, featuring comprehensive document management, intelligent deduplication, robust file processing capabilities, and **new API key management system**.
+This release focuses on **SMILES chemical structure integration**, **bug fixes**, and **enhanced installation experience** with comprehensive testing framework and improved system reliability.
 
-### 🆕 **v4.1 New Features**
-- **🔑 API Key Management**: Integrated OpenAI API key configuration through the settings interface
-- **🚀 Graceful Startup**: System automatically creates dummy `.env` file if missing, ensuring smooth startup
-- **⚙️ Smart Setup**: Enhanced `simple_setup.bat` with user choice for existing virtual environments
-- **🧹 Perplexity Removal**: Completely removed Perplexity functionality for streamlined operation
-- **🔧 Dynamic Configuration**: Improved LLM configuration system with real-time parameter adjustment
-- **📚 Knowledge Base Enhancement**: Fixed GPT-5 Responses API integration for better query performance
+### 🆕 **v4.3 New Features**
+- **🧪 Comprehensive Testing Framework**: Complete test suite with unit, integration, API, and E2E tests
+- **✅ Real Testing Approach**: All tests use actual API calls and real data (no mocks)
+- **🎯 Proposal E2E Tests**: Full end-to-end testing of proposal generation workflows
+- **📊 Test Coverage**: Comprehensive coverage of all major features and user workflows
+- **🚀 Interactive Test Runner**: User-friendly test execution with `run_tests.bat`
+- **🔧 Quality Assurance**: Enhanced error handling and system reliability validation
+- **📈 Performance Monitoring**: Response time and system performance testing
+- **🧪 SMILES Chemical Structure Integration**: Enhanced chemical structure visualization and DOCX integration
+- **🔧 Development Mode**: Configurable chunk retrieval for faster testing and development
+- **⚡ CPU/GPU Installation Options**: Smart setup script with CPU vs CUDA version selection
+- **🐛 Bug Fixes**: Comprehensive fixes for citation management and proposal revision workflows
 
 ---
 
@@ -69,6 +74,19 @@ This marks the **enhanced production-ready release** of AI Research Assistant, f
 - **Excel Integration**: Processes experimental data from `.xlsx` files and converts to searchable text
 - **Synthesis Suggestions**: Provides creative and practical synthesis recommendations based on both literature and experimental data
 - **Chemical Safety**: Integrates PubChem data for chemical safety information and NFPA hazard codes
+
+### 🧪 **SMILES Chemical Structure Integration** *(v4.3)*
+- **Chemical Structure Visualization**: Automatic SMILES to PNG conversion for chemical structures
+- **DOCX Integration**: Chemical structures embedded directly in generated Word documents
+- **PubChem Integration**: Automatic chemical information retrieval with safety data
+- **Enhanced Chemical Tables**: Rich chemical tables with structure images and metadata
+- **SMILES Drawer Service**: Dedicated service for chemical structure rendering
+
+### 🔧 **Development Mode & Performance Optimization** *(v4.3)*
+- **Configurable Chunk Retrieval**: Adjustable chunk retrieval quantity for different use cases
+- **Development Mode**: Fast testing mode with reduced chunk retrieval (k=1)
+- **Settings Integration**: Development mode toggle in Settings page
+- **Performance Monitoring**: Enhanced response time tracking and optimization
 
 ---
 
@@ -130,6 +148,25 @@ Access the Settings page in the React interface to:
 
 ---
 
+## 🐛 v4.3 Bug Fixes & Improvements
+
+### **Fixed Issues**
+- **Citation Management**: Fixed citation cards disappearing after experiment detail generation
+- **Proposal Revision**: Fixed chunks from document expansion not being added to citation cards
+- **SMILES Integration**: Fixed SMILES drawer failing after proposal revision
+- **DOCX Generation**: Fixed chemical table using URL embedding instead of SMILES-drawn structures
+- **API Compatibility**: Fixed citations format compatibility in DOCX generation requests
+
+### **Performance Improvements**
+- **Reduced Chunk Retrieval**: Default chunk retrieval reduced from 10 to 3 for better performance
+- **Development Mode**: Added k=1 chunk retrieval option for faster testing
+- **Smart Caching**: Enhanced citation and chunk management for better user experience
+
+### **Installation Enhancements**
+- **CPU/GPU Selection**: Smart setup script with installation type selection
+- **Error Handling**: Improved error messages and recovery mechanisms
+- **Verification**: Enhanced installation verification with PyTorch and CUDA status checks
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -137,6 +174,7 @@ Access the Settings page in the React interface to:
 - **Node.js**: 16.0 or higher
 - **Memory**: 8GB RAM minimum (16GB recommended)
 - **Storage**: 2GB free space for vector database
+- **Testing**: pytest and related dependencies (included in requirements.txt)
 
 ### 🎯 One-Click Installation (Windows)
 
@@ -148,14 +186,19 @@ simple_setup.bat
 
 This script will:
 - ✅ Create Python virtual environment (with user choice for existing environments)
-- ✅ Install all Python dependencies
+- ✅ **Choose CPU or GPU installation** (CPU for compatibility, GPU for performance)
+- ✅ Install all Python dependencies with selected version
 - ✅ Install Node.js dependencies
-- ✅ Start backend and frontend services
+- ✅ Verify installation and show system status
 - ✅ Open the application in your browser
 
 **🆕 Smart Environment Management**: If a virtual environment already exists, the script will ask whether to:
 - **Option 1**: Delete existing environment and create a fresh one
 - **Option 2**: Continue with the existing environment
+
+**🆕 CPU vs GPU Installation Options**:
+- **CPU Version**: Smaller download, works on all systems (recommended for most users)
+- **GPU Version**: Larger download, requires NVIDIA GPU with CUDA support (for performance)
 
 ### Manual Installation (All Platforms)
 
@@ -237,6 +280,61 @@ OPENAI_API_KEY=sk-your-openai-api-key-here
 - **Semantic Scholar Success Rate**: 95%+ with retry mechanisms
 - **Rate Limiting Compliance**: Automatic throttling prevents API blocks
 - **Metadata Enrichment**: ~80% venue retrieval success rate
+
+---
+
+## 🧪 Testing
+
+### **Comprehensive Test Suite**
+The project includes a comprehensive testing framework with multiple test types:
+
+#### **Test Categories**
+- **Unit Tests**: Individual function and module testing
+- **Integration Tests**: Cross-module workflow testing  
+- **API Tests**: FastAPI endpoint validation
+- **E2E Tests**: Complete user workflow testing
+- **Performance Tests**: Response time and system performance validation
+
+#### **Running Tests**
+
+**Windows (Recommended):**
+```bash
+# Interactive test menu
+run_tests.bat
+
+# Or run specific test types
+python tests\run_tests.py --type quick    # Quick core tests
+python tests\run_tests.py --type all      # All tests
+python tests\run_tests.py --type api      # API tests only
+python tests\run_tests.py --type e2e      # End-to-end tests
+python tests\run_tests.py --type proposal # Proposal E2E tests
+```
+
+**All Platforms:**
+```bash
+# Install test dependencies (included in requirements.txt)
+pip install -r requirements.txt
+
+# Run tests
+pytest tests/ -v                    # All tests
+pytest tests/test_api.py -v         # API tests
+pytest tests/test_e2e_real.py -v    # E2E tests
+pytest tests/test_e2e_proposal_workflow.py -v  # Proposal E2E tests
+```
+
+#### **Test Features**
+- **Real Testing**: No mocks - tests use actual API calls and real data
+- **Comprehensive Coverage**: Tests cover all major features and workflows
+- **Error Handling**: Validates system behavior under various error conditions
+- **Performance Monitoring**: Tracks response times and system performance
+- **User Workflow Validation**: Ensures complete user journeys work correctly
+
+### **Test Results**
+- ✅ **All Core Tests Passing**: Unit, integration, and API tests
+- ✅ **E2E Tests Passing**: Complete user workflow validation
+- ✅ **Proposal E2E Tests**: Full proposal generation workflow testing
+- ✅ **Error Handling Tests**: Robust error condition handling
+- ✅ **Performance Tests**: Response time validation
 
 ---
 
@@ -534,4 +632,4 @@ This version is stable, tested, and ready for production research workflows.
 
 ---
 
-*Last updated: Augest 2025 - Enhanced Production Release v4.1*
+*Last updated: August 2025 - Testing & Quality Assurance Release v4.2*

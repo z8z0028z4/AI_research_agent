@@ -28,8 +28,8 @@ telemetry_logger.addHandler(logging.NullHandler())
 # ----------------------------------------------------------------
 
 
-# 添加原項目路徑到 sys.path
-sys.path.append(os.path.join(os.path.dirname(__file__), '../app'))
+# 添加原項目路徑到 sys.path (已重組，現在所有模組都在 backend 內)
+# sys.path.append(os.path.join(os.path.dirname(__file__), '../app'))
 
 # ==================== 啟動前 .env 檔案檢查 ====================
 def check_and_create_env_file_before_startup():
@@ -105,7 +105,7 @@ def initialize_vector_stats():
         start_time = time.time()
         
         # 導入統計函數
-        from chunk_embedding import get_vectorstore_stats
+        from backend.services.embedding_service import get_vectorstore_stats
         
         # 獲取論文和實驗向量統計
         paper_stats = get_vectorstore_stats("paper")
@@ -154,7 +154,7 @@ def update_vector_stats_cache():
     
     try:
         logger.info("🔄 開始更新向量統計緩存...")
-        from chunk_embedding import get_vectorstore_stats
+        from backend.services.embedding_service import get_vectorstore_stats
         
         paper_stats = get_vectorstore_stats("paper")
         experiment_stats = get_vectorstore_stats("experiment")

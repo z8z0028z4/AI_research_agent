@@ -1,6 +1,7 @@
 {
   "cid": 165397,
   "name": "copper;diacetate;hydrate",
+  "iupac_name": "copper;diacetate;hydrate",
   "formula": "C4H8CuO5",
   "weight": "199.65",
   "smiles": "CC(=O)[O-].CC(=O)[O-].O.[Cu+2]",

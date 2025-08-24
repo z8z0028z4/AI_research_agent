@@ -1,0 +1,335 @@
+"""
+核心模組測試
+===========
+
+測試後端核心功能模組 - 使用真實功能而非 Mock
+"""
+
+import pytest
+
+
+class TestConfigManagement:
+    """配置管理測試 - 真實測試"""
+    
+    def test_settings_loading(self):
+        """測試設置加載 - 真實測試"""
+        from backend.core.config import settings
+        
+        # 驗證真實配置
+        assert hasattr(settings, 'app_name')
+        assert hasattr(settings, 'openai_model')
+        assert settings.app_name == "AI Research Assistant"
+        assert settings.openai_model in ["gpt-5o-mini", "gpt-5o", "gpt-4o-mini"]
+    
+    def test_config_validation(self):
+        """測試配置驗證 - 真實測試"""
+        from backend.core.config import validate_config
+
+        # 測試真實配置驗證
+        result = validate_config()
+        assert isinstance(result, dict)
+        assert "config_complete" in result
+        # 配置應該完整，因為我們有真實的 settings.json
+        assert result.get('config_complete') is True
+    
+    def test_config_reload(self):
+        """測試配置重載 - 真實測試"""
+        from backend.core.config import reload_config
+        
+        # 測試重載真實配置
+        result = reload_config()
+        assert result is not None
+        assert hasattr(result, 'app_name')
+
+
+class TestVectorStore:
+    """向量存儲測試 - 真實測試"""
+    
+    def test_vectorstore_stats_real(self):
+        """測試真實向量存儲統計"""
+        from backend.services.embedding_service import get_vectorstore_stats
+        
+        # 測試論文向量庫統計
+        stats = get_vectorstore_stats("paper")
+        assert isinstance(stats, dict)
+        assert "total_documents" in stats
+        assert "collection_name" in stats
+        assert stats["collection_name"] == "paper"
+        # 應該有真實的文檔數量
+        assert isinstance(stats["total_documents"], int)
+        assert stats["total_documents"] >= 0
+    
+    def test_paper_vectorstore_loading_real(self):
+        """測試真實論文向量存儲加載"""
+        from backend.core.retrieval import load_paper_vectorstore
+        
+        vectorstore = load_paper_vectorstore()
+        assert vectorstore is not None
+        # 驗證向量存儲有真實的檢索器
+        retriever = vectorstore.as_retriever()
+        assert retriever is not None
+    
+    def test_experiment_vectorstore_loading_real(self):
+        """測試真實實驗向量存儲加載"""
+        from backend.core.retrieval import load_experiment_vectorstore
+        
+        vectorstore = load_experiment_vectorstore()
+        assert vectorstore is not None
+        # 驗證向量存儲有真實的檢索器
+        retriever = vectorstore.as_retriever()
+        assert retriever is not None
+
+
+class TestRetrieval:
+    """檢索功能測試 - 真實測試"""
+    
+    def test_real_document_search(self):
+        """測試真實文檔搜索"""
+        from backend.core.retrieval import load_paper_vectorstore, retrieve_chunks_multi_query
+        
+        # 使用真實向量存儲
+        vs = load_paper_vectorstore()
+        results = retrieve_chunks_multi_query(vs, ["chemistry synthesis"], k=3)
+        
+        assert isinstance(results, list)
+        # 應該能找到相關文檔
+        assert len(results) > 0
+        # 驗證文檔結構
+        for doc in results:
+            assert hasattr(doc, 'page_content')
+            assert hasattr(doc, 'metadata')
+            assert len(doc.page_content) > 0
+    
+    def test_real_experiment_search(self):
+        """測試真實實驗搜索"""
+        from backend.core.retrieval import load_experiment_vectorstore, retrieve_chunks_multi_query
+        
+        # 使用真實向量存儲
+        vs = load_experiment_vectorstore()
+        results = retrieve_chunks_multi_query(vs, ["experiment method"], k=3)
+        
+        assert isinstance(results, list)
+        # 可能沒有實驗數據，但函數應該正常工作
+        assert len(results) >= 0
+    
+    def test_real_multi_query_retrieval(self):
+        """測試真實多查詢檢索"""
+        from backend.core.retrieval import load_paper_vectorstore, retrieve_chunks_multi_query
+        
+        vs = load_paper_vectorstore()
+        queries = ["chemical synthesis", "organic chemistry", "catalysis"]
+        results = retrieve_chunks_multi_query(vs, queries, k=5)
+        
+        assert isinstance(results, list)
+        # 應該能找到相關文檔
+        assert len(results) > 0
+
+
+class TestPromptBuilder:
+    """提示詞構建測試 - 真實測試"""
+    
+    def test_real_prompt_construction(self):
+        """測試真實提示詞構建"""
+        from backend.core.prompt_builder import build_prompt
+        from backend.core.retrieval import load_paper_vectorstore, retrieve_chunks_multi_query
+        
+        # 獲取真實文檔
+        vs = load_paper_vectorstore()
+        docs = retrieve_chunks_multi_query(vs, ["chemistry"], k=3)
+        
+        if len(docs) > 0:
+            prompt, citations = build_prompt(docs, "什麼是化學合成？")
+            
+            assert isinstance(prompt, str)
+            assert len(prompt) > 0
+            assert "化學合成" in prompt or "chemistry" in prompt.lower()
+            assert isinstance(citations, list)
+            assert len(citations) > 0
+    
+    def test_real_proposal_prompt(self):
+        """測試真實提案提示詞"""
+        from backend.core.prompt_builder import build_proposal_prompt
+        from backend.core.retrieval import load_paper_vectorstore, retrieve_chunks_multi_query
+        
+        # 獲取真實文檔
+        vs = load_paper_vectorstore()
+        docs = retrieve_chunks_multi_query(vs, ["research"], k=3)
+        
+        if len(docs) > 0:
+            prompt, citations = build_proposal_prompt("化學合成方法研究", docs)
+            
+            assert isinstance(prompt, str)
+            assert len(prompt) > 0
+            assert "research proposal" in prompt.lower() or "研究提案" in prompt
+            assert isinstance(citations, list)
+
+
+class TestQueryExpander:
+    """查詢擴展測試 - 真實測試"""
+    
+    def test_real_query_expansion(self):
+        """測試真實查詢擴展"""
+        from backend.core.query_expander import expand_query
+        
+        # 測試真實查詢擴展
+        queries = expand_query("chemical synthesis methods")
+        
+        assert isinstance(queries, list)
+        # 應該能生成多個相關查詢
+        assert len(queries) >= 3
+        # 驗證查詢內容
+        for query in queries:
+            assert isinstance(query, str)
+            assert len(query) > 0
+            # 查詢應該包含相關關鍵詞
+            assert any(keyword in query.lower() for keyword in ["chemical", "synthesis", "method", "chemistry"])
+
+
+class TestGeneration:
+    """生成模組測試 - 真實測試"""
+    
+    def test_real_llm_call(self):
+        """測試真實 LLM 調用"""
+        from backend.core.generation import call_llm
+        
+        # 測試真實 LLM 調用
+        response = call_llm("Say hello in Chinese")
+        
+        assert isinstance(response, str)
+        assert len(response) > 0
+        # 回應應該包含中文
+        assert any(char in response for char in "你好")
+    
+    def test_real_structured_llm_call(self):
+        """測試真實結構化 LLM 調用"""
+        from backend.core.generation import call_structured_llm
+        
+        schema = {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["title", "content"],
+            "properties": {
+                "title": {"type": "string"},
+                "content": {"type": "string"}
+            }
+        }
+        
+        # 測試真實結構化調用
+        response = call_structured_llm("Generate a brief test response", schema)
+        
+        assert isinstance(response, dict)
+        assert "title" in response
+        assert "content" in response
+        assert isinstance(response["title"], str)
+        assert isinstance(response["content"], str)
+        # 內容應該有值，title 可能為空
+        assert len(response["content"]) > 0
+
+
+class TestSchemaManager:
+    """Schema 管理測試 - 真實測試"""
+    
+    def test_real_schema_creation(self):
+        """測試真實 Schema 創建"""
+        from backend.core.schema_manager import create_research_proposal_schema
+        
+        schema = create_research_proposal_schema()
+        
+        assert isinstance(schema, dict)
+        assert "type" in schema
+        assert schema["type"] == "object"
+        assert "properties" in schema
+        assert "required" in schema
+    
+    def test_real_dynamic_schema_params(self):
+        """測試真實動態 Schema 參數"""
+        from backend.core.schema_manager import get_dynamic_schema_params
+        
+        params = get_dynamic_schema_params()
+        
+        assert isinstance(params, dict)
+        assert "min_length" in params
+        assert "max_length" in params
+        assert params["min_length"] > 0
+        assert params["max_length"] > params["min_length"]
+
+
+class TestModeManager:
+    """模式管理測試 - 真實測試"""
+    
+    def test_real_available_modes(self):
+        """測試真實可用模式"""
+        from backend.core.mode_manager import get_available_modes
+        
+        modes = get_available_modes()
+        
+        assert isinstance(modes, list)
+        assert len(modes) > 0
+        # 驗證實際的模式名稱
+        actual_modes = ['納入實驗資料，進行推論與建議', 'make proposal', '允許延伸與推論', '僅嚴謹文獻溯源', 'expand to experiment detail', 'generate new idea']
+        for mode in actual_modes:
+            assert mode in modes
+    
+    def test_real_mode_validation(self):
+        """測試真實模式驗證"""
+        from backend.core.mode_manager import validate_mode
+        
+        # 測試實際有效模式
+        assert validate_mode("make proposal") is True
+        assert validate_mode("僅嚴謹文獻溯源") is True
+        assert validate_mode("允許延伸與推論") is True
+        
+        # 測試無效模式
+        assert validate_mode("invalid_mode") is False
+    
+    def test_real_mode_description(self):
+        """測試真實模式描述"""
+        from backend.core.mode_manager import get_mode_description
+        
+        desc = get_mode_description("make proposal")
+        assert isinstance(desc, str)
+        assert len(desc) > 0
+        # 檢查是否包含提案相關內容
+        assert "proposal" in desc.lower() or "提案" in desc
+
+
+class TestFormatConverter:
+    """格式轉換測試 - 真實測試"""
+    
+    def test_real_proposal_to_text(self):
+        """測試真實提案轉文本"""
+        from backend.core.format_converter import structured_proposal_to_text
+        
+        structured_data = {
+            "proposal_title": "測試研究提案",
+            "need": "研究需求",
+            "solution": "解決方案",
+            "differentiation": "差異化",
+            "benefit": "預期效益"
+        }
+        
+        text = structured_proposal_to_text(structured_data)
+        
+        assert isinstance(text, str)
+        assert len(text) > 0
+        assert "測試研究提案" in text
+        assert "研究需求" in text
+        assert "解決方案" in text
+    
+    def test_real_experimental_detail_to_text(self):
+        """測試真實實驗詳情轉文本"""
+        from backend.core.format_converter import structured_experimental_detail_to_text
+        
+        structured_data = {
+            "synthesis_process": "合成過程",
+            "materials_and_conditions": "材料和條件",
+            "analytical_methods": "分析方法"
+        }
+        
+        text = structured_experimental_detail_to_text(structured_data)
+        
+        assert isinstance(text, str)
+        assert len(text) > 0
+        assert "合成過程" in text
+        assert "材料和條件" in text
+        assert "分析方法" in text 

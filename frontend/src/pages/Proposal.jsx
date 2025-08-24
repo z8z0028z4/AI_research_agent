@@ -204,6 +204,16 @@ const Proposal = () => {
         setStructuredExperiment(null);
       }
 
+      // ✅ 修復：正確處理citations狀態
+      if (data.citations && data.citations.length > 0) {
+        // 如果有新的citations，則更新
+        setCitations(data.citations);
+        console.log('🔍 更新citations數量:', data.citations.length);
+      } else {
+        // 如果沒有新的citations，則保留原有的
+        console.log('🔍 保留原有citations數量:', citations.length);
+      }
+
       // 顯示重試信息
       if (data.retry_info) {
         console.log('🔄 重試信息:', data.retry_info);
@@ -317,6 +327,8 @@ const Proposal = () => {
               <Option value={20}>20 documents (Thorough)</Option>
             </Select>
           </Form.Item>
+
+
 
           <Space wrap>
             <Button type="primary" size="large" onClick={onGenerate} loading={loading}>

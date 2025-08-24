@@ -42,7 +42,7 @@ async def query_knowledge(request: KnowledgeQueryRequest):
         print(f"🔍 回答模式：{request.answer_mode}")
         
         # 延遲導入核心模組
-        from app.core import (
+        from backend.core import (
             load_paper_vectorstore,
             search_documents,
             build_prompt,

@@ -13,12 +13,12 @@ import shutil
 from typing import List, Dict, Any, Callable
 
 # 添加原項目路徑到 sys.path
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../../app'))
+# sys.path.append(os.path.join(os.path.dirname(__file__), '../../../app'))  # 已重組，不再需要
 
-from file_upload import process_uploaded_files
-from chunk_embedding import embed_documents_from_metadata, embed_experiment_txt_batch
-from excel_to_txt_by_row import export_new_experiments_to_txt
-from app.config import EXPERIMENT_DIR
+from backend.services.file_service import process_uploaded_files
+from backend.services.embedding_service import embed_documents_from_metadata, embed_experiment_txt_batch
+from backend.services.excel_service import export_new_experiments_to_txt
+from backend.config import EXPERIMENT_DIR
 
 from .file_classifier import FileClassifier
 from .progress_tracker import progress_tracker

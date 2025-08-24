@@ -65,6 +65,9 @@ urllib3>=2.0.0
 beautifulsoup4>=4.12.0
 lxml>=4.9.0
 
+# Chemical informatics and molecular processing
+rdkit>=2025.3.5
+
 # Additional dependencies for sentence-transformers
 scipy>=1.11.0
 
@@ -80,3 +83,9 @@ passlib[bcrypt]>=1.7.4
 
 # Logging and debugging
 colorlog>=6.8.0
+
+# Testing dependencies
+pytest>=8.4.1
+pytest-cov>=6.2.1
+pytest-asyncio>=0.24.0
+httpx>=0.27.0

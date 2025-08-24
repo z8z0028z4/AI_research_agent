@@ -13,11 +13,11 @@ import os
 import pandas as pd
 
 # 添加原項目路徑到 sys.path
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../../app'))
+# sys.path.append(os.path.join(os.path.dirname(__file__), '../../../app'))  # 已重組，不再需要
 
-from app.config import EXPERIMENT_DIR
-from excel_to_txt_by_row import export_new_experiments_to_txt
-from chunk_embedding import embed_experiment_txt_batch
+from backend.config import EXPERIMENT_DIR
+from backend.services.excel_service import export_new_experiments_to_txt
+from backend.services.embedding_service import embed_experiment_txt_batch
 
 router = APIRouter()
 

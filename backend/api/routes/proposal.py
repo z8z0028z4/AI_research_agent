@@ -38,12 +38,12 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../../../app'))
 
 # 修正導入方式
 try:
-    from pubchem_handler import chemical_metadata_extractor
+    from backend.services.pubchem_service import chemical_metadata_extractor
 except ImportError:
-    # 如果直接導入失敗，嘗試使用完整路徑
-    sys.path.append(os.path.join(os.path.dirname(__file__), '../../../'))
-    from app.pubchem_handler import chemical_metadata_extractor
-from app.services.chemical_service import chemical_service
+    # 如果直接導入失敗，嘗試使用完整路徑 (已重組，不再需要)
+    # sys.path.append(os.path.join(os.path.dirname(__file__), '../../../'))
+    from backend.services.pubchem_service import chemical_metadata_extractor
+from backend.services.chemical_service import chemical_service
 from langchain_core.documents import Document
 
 # SVG 轉換依賴檢查
@@ -94,6 +94,8 @@ class ProposalRevisionRequest(BaseModel):
     user_feedback: str
     # 來自前端的可序列化 chunks
     chunks: List[Dict[str, Any]]
+    # 可選的檢索參數
+    k_new_chunks: Optional[int] = 3  # 新chunks檢索數量，預設3（降低查詢量）
 
 
 def _serialize_chunks(chunks: List[Any]) -> List[Dict[str, Any]]:
@@ -147,7 +149,7 @@ async def generate_proposal(request: ProposalRequest):
         print(f"🔍 [DEBUG-{request_id}] 準備調用 agent_answer with mode='make proposal'")
         
         # 延遲導入以避免循環導入問題
-        from knowledge_agent import agent_answer
+        from backend.services.knowledge_service import agent_answer
         
         # 與 Streamlit Tab1 對齊：使用模式 make proposal 生成提案
         result = agent_answer(request.research_goal, mode="make proposal", k=request.retrieval_count)
@@ -222,7 +224,14 @@ async def revise_proposal(request: ProposalRevisionRequest):
     """
     try:
         # 延遲導入以避免循環導入問題
-        from knowledge_agent import agent_answer
+        from backend.services.knowledge_service import agent_answer
+        
+        # 檢查開發模式狀態
+        from backend.core.settings_manager import settings_manager
+        is_dev_mode = settings_manager.get_dev_mode_status()
+        
+        # 根據開發模式決定檢索參數
+        k_new_chunks = 1 if is_dev_mode else (request.k_new_chunks or 3)
         
         # 與 Streamlit Tab1 對齊：採用 generate new idea 模式，並帶入原始提案與 chunks
         result = agent_answer(
@@ -230,13 +239,14 @@ async def revise_proposal(request: ProposalRevisionRequest):
             mode="generate new idea",
             old_chunks=_deserialize_chunks(request.chunks),
             proposal=request.original_proposal,
+            k_new_chunks=k_new_chunks,  # 傳遞檢索參數
         )
 
         # 檢查是否有直接的材料列表（來自結構化輸出）
         if result.get("materials_list"):
             print(f"🔍 [DEBUG] 使用結構化數據中的材料列表: {result['materials_list']}")
             # 直接使用結構化數據中的材料列表
-            from pubchem_handler import extract_and_fetch_chemicals, remove_json_chemical_block
+            from backend.services.pubchem_service import extract_and_fetch_chemicals, remove_json_chemical_block
             chemical_metadata_list, not_found_list = extract_and_fetch_chemicals(result["materials_list"])
             # 清理文本中的 JSON 化學品塊
             proposal_answer = remove_json_chemical_block(result.get("answer", ""))
@@ -246,6 +256,15 @@ async def revise_proposal(request: ProposalRevisionRequest):
             chemical_metadata_list, not_found_list, proposal_answer = chemical_metadata_extractor(
                 result.get("answer", "")
             )
+
+        # ✅ 修復：為化學品添加SMILES繪製的結構圖
+        print(f"🔍 [DEBUG] 為修訂提案的化學品添加SMILES繪製")
+        from backend.services.chemical_service import chemical_service
+        enhanced_chemicals = []
+        for chemical in chemical_metadata_list:
+            enhanced_chemical = chemical_service.add_smiles_drawing(chemical)
+            enhanced_chemicals.append(enhanced_chemical)
+        chemical_metadata_list = enhanced_chemicals
 
         # 修復 citations 中的 page 欄位類型問題
         fixed_citations = []
@@ -288,7 +307,7 @@ async def generate_experiment_detail(request: ExperimentDetailRequest):
     """
     try:
         # 延遲導入以避免循環導入問題
-        from knowledge_agent import agent_answer
+        from backend.services.knowledge_service import agent_answer
         
         # 與 Streamlit Tab1 對齊：由 agent 以指定模式展開實驗細節
         result = agent_answer(
@@ -298,9 +317,15 @@ async def generate_experiment_detail(request: ExperimentDetailRequest):
             proposal=request.proposal,
         )
 
+        # ✅ 修復：添加citations字段到返回結果
+        # 從result中獲取citations，如果沒有則返回空列表
+        citations = result.get("citations", [])
+        print(f"🔍 [DEBUG] generate_experiment_detail 返回的citations數量: {len(citations)}")
+        
         return {
             "experiment_detail": result.get("answer", ""),
             "structured_experiment": result.get("structured_experiment", {}),
+            "citations": citations,  # ✅ 修復：添加citations字段
             "success": True,
             "retry_info": {
                 "retry_count": getattr(result, 'retry_count', 0),
@@ -404,7 +429,7 @@ class DocxRequest(BaseModel):
     chemicals: List[Dict[str, Any]]
     not_found: List[str]
     experiment_detail: Optional[str] = ""
-    citations: List[Dict[str, str]]
+    citations: List[Dict[str, Any]]  # ✅ 修復：改為 Any 以支持數字類型的 page 字段
 
 @router.post("/proposal/generate-docx")
 async def generate_docx(request: DocxRequest):

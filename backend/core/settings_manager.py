@@ -194,6 +194,19 @@ class SettingsManager:
     def reload_settings(self):
         """重新載入設定"""
         self._current_settings = self._load_settings()
+    
+    def get_dev_mode_status(self) -> bool:
+        """獲取開發模式狀態"""
+        return self.get_setting('dev_mode', False)
+    
+    def set_dev_mode_status(self, is_dev_mode: bool) -> bool:
+        """設定開發模式狀態"""
+        try:
+            self.set_setting('dev_mode', is_dev_mode)
+            return True
+        except Exception as e:
+            print(f"設定開發模式狀態失敗: {e}")
+            return False
 
 # 創建全局設定管理器實例
 settings_manager = SettingsManager() 
