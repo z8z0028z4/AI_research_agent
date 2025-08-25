@@ -1,4 +1,4 @@
-# 🧪 AI Research Assistant v4.3 - SMILES Integration & Bug Fixes Release
+# 🧪 AI Research Assistant v4.4 - Embedding Model Improvement & System Fixes Release
 
 A comprehensive AI-powered research assistant system designed for materials science and chemistry research workflows. **Enhanced Production Release: Complete system with API key management, graceful startup, and improved user experience.**
 
@@ -6,11 +6,21 @@ This production-ready tool combines document ingestion, vector embedding, GPT-ba
 
 ---
 
-## 🎉 v4.3 SMILES Integration & Bug Fixes Release Highlights
+## 🎉 v4.4 Embedding Model Improvement & System Fixes Release Highlights
 
-This release focuses on **SMILES chemical structure integration**, **bug fixes**, and **enhanced installation experience** with comprehensive testing framework and improved system reliability.
+This release focuses on **embedding model optimization**, **system installation fixes**, and **performance improvements** with better CPU efficiency and enhanced semantic understanding.
 
-### 🆕 **v4.3 New Features**
+### 🆕 **v4.4 New Features**
+- **🔧 Embedding Model Upgrade**: Upgraded from `BAAI/bge-small-zh-v1.5` to `BAAI/bge-base-en-v1.5`
+  - Enhanced English semantic understanding capabilities
+  - Better cross-language retrieval performance
+  - CPU-friendly architecture with reduced resource consumption
+  - Improved vector retrieval accuracy and relevance
+- **🛠️ System Installation Fixes**: Fixed `simple_setup.bat` script issues
+  - Improved virtual environment setup process
+  - Optimized dependency installation workflow
+  - Enhanced installation success rate
+- **⚡ Performance Improvements**: Better CPU efficiency and processing speed
 - **🧪 Comprehensive Testing Framework**: Complete test suite with unit, integration, API, and E2E tests
 - **✅ Real Testing Approach**: All tests use actual API calls and real data (no mocks)
 - **🎯 Proposal E2E Tests**: Full end-to-end testing of proposal generation workflows
@@ -63,10 +73,13 @@ This release focuses on **SMILES chemical structure integration**, **bug fixes**
 - **Component-based Architecture**: Modular design for easy maintenance and extension
 - **Improved Navigation**: Enhanced sidebar and page transitions
 
-### 📥 **Document Embedding & Knowledge Base**
+### 📥 **Document Embedding & Knowledge Base** *(Enhanced)*
 - **Document Processing**: Supports PDF and Word documents with intelligent chunking and metadata extraction
 - **Vector Database**: Uses ChromaDB for efficient semantic search and retrieval
-- **Academic Embeddings**: Utilizes `nomic-ai/nomic-embed-text-v1.5` for domain-specific semantic understanding
+- **Academic Embeddings**: Utilizes `BAAI/bge-base-en-v1.5` for enhanced domain-specific semantic understanding
+  - **CPU-Friendly**: Optimized for CPU processing with reduced resource consumption
+  - **Cross-Language**: Better performance for English academic literature
+  - **Improved Accuracy**: Enhanced semantic retrieval relevance and precision
 - **Batch Processing**: Upload multiple documents for comprehensive knowledge base building
 
 ### 🧪 **Experimental Reasoning Mode** *(Coming Soon)*
@@ -148,9 +161,12 @@ Access the Settings page in the React interface to:
 
 ---
 
-## 🐛 v4.3 Bug Fixes & Improvements
+## 🐛 v4.4 Bug Fixes & Improvements
 
 ### **Fixed Issues**
+- **System Installation**: Fixed `simple_setup.bat` script execution issues and path problems
+- **Virtual Environment**: Fixed virtual environment setup process and dependency installation
+- **Embedding Model**: Upgraded to more efficient `BAAI/bge-base-en-v1.5` model
 - **Citation Management**: Fixed citation cards disappearing after experiment detail generation
 - **Proposal Revision**: Fixed chunks from document expansion not being added to citation cards
 - **SMILES Integration**: Fixed SMILES drawer failing after proposal revision
@@ -158,11 +174,16 @@ Access the Settings page in the React interface to:
 - **API Compatibility**: Fixed citations format compatibility in DOCX generation requests
 
 ### **Performance Improvements**
+- **Embedding Model Optimization**: Upgraded to `BAAI/bge-base-en-v1.5` for better CPU efficiency
+- **Reduced Resource Consumption**: Lower CPU usage and memory requirements
+- **Enhanced Semantic Understanding**: Improved accuracy for English academic literature
 - **Reduced Chunk Retrieval**: Default chunk retrieval reduced from 10 to 3 for better performance
 - **Development Mode**: Added k=1 chunk retrieval option for faster testing
 - **Smart Caching**: Enhanced citation and chunk management for better user experience
 
 ### **Installation Enhancements**
+- **Fixed Setup Script**: Resolved `simple_setup.bat` execution issues and path problems
+- **Improved Virtual Environment**: Enhanced virtual environment setup and dependency management
 - **CPU/GPU Selection**: Smart setup script with installation type selection
 - **Error Handling**: Improved error messages and recovery mechanisms
 - **Verification**: Enhanced installation verification with PyTorch and CUDA status checks
@@ -632,4 +653,4 @@ This version is stable, tested, and ready for production research workflows.
 
 ---
 
-*Last updated: August 2025 - Testing & Quality Assurance Release v4.2*
+*Last updated: January 2025 - Embedding Model Improvement & System Fixes Release v4.4*
