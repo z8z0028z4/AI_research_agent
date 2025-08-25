@@ -1,4 +1,4 @@
-# 🧪 AI Research Assistant v4.3 - SMILES Integration & Bug Fixes Release
+# 🧪 AI Research Assistant v4.4 - Embedding Model Improvement & System Fixes Release
 
 A comprehensive AI-powered research assistant system designed for materials science and chemistry research workflows. **Enhanced Production Release: Complete system with API key management, graceful startup, and improved user experience.**
 
@@ -6,11 +6,21 @@ This production-ready tool combines document ingestion, vector embedding, GPT-ba
 
 ---
 
-## 🎉 v4.3 SMILES Integration & Bug Fixes Release Highlights
+## 🎉 v4.4 Embedding Model Improvement & System Fixes Release Highlights
 
-This release focuses on **SMILES chemical structure integration**, **bug fixes**, and **enhanced installation experience** with comprehensive testing framework and improved system reliability.
+This release focuses on **embedding model optimization**, **system installation fixes**, and **performance improvements** with better CPU efficiency and enhanced semantic understanding.
 
-### 🆕 **v4.3 New Features**
+### 🆕 **v4.4 New Features**
+- **🔧 Embedding Model Upgrade**: Upgraded from `BAAI/bge-small-zh-v1.5` to `BAAI/bge-base-en-v1.5`
+  - Enhanced English semantic understanding capabilities
+  - Better cross-language retrieval performance
+  - CPU-friendly architecture with reduced resource consumption
+  - Improved vector retrieval accuracy and relevance
+- **🛠️ System Installation Fixes**: Fixed `simple_setup.bat` script issues
+  - Improved virtual environment setup process
+  - Optimized dependency installation workflow
+  - Enhanced installation success rate
+- **⚡ Performance Improvements**: Better CPU efficiency and processing speed
 - **🧪 Comprehensive Testing Framework**: Complete test suite with unit, integration, API, and E2E tests
 - **✅ Real Testing Approach**: All tests use actual API calls and real data (no mocks)
 - **🎯 Proposal E2E Tests**: Full end-to-end testing of proposal generation workflows
@@ -27,102 +37,33 @@ This release focuses on **SMILES chemical structure integration**, **bug fixes**
 
 ## ✨ Key Features
 
-### 🎯 **Proposal Generator** *(Enhanced with JSON Schema)*
-- **AI-Powered Research Proposals**: Generate comprehensive research proposals based on your research goals
-- **Structured Output**: Uses latest Responses API + JSON Schema for consistent, reproducible proposal formats
-- **Chemical Safety Integration**: Automatic chemical information retrieval from PubChem with safety data
-- **Interactive Refinement**: Revise proposals based on your feedback and requirements
-- **Experiment Detail Generation**: Expand proposals into detailed experimental plans
-- **Document Export**: Download complete proposals as Word documents with chemical tables and safety icons
-- **Citation Tracking**: Every proposal includes numbered references linking to source documents
-- **Smart Text Cleaning**: Automatic markdown format removal for clean document output
+### 🎯 **Core Features**
+- **AI Proposal Generator**: Create and refine research proposals with automatic chemical safety info and citation tracking
+- **Smart Document Management**: Upload, classify, and deduplicate research files (PDF, DOCX) with automatic metadata enrichment
+- **Knowledge Base & Embedding**: Build searchable knowledge base using advanced embeddings (CPU-optimized)
+- **Chemical Structure Support**: Visualize and insert chemical structures (SMILES) into Word documents
 
-### 🤖 **Model Selector System** *(Enhanced - v4.1)*
-- **Multi-Model Support**: Choose from GPT-5, GPT-5 Nano, GPT-5 Mini with real-time switching
-- **Dynamic Parameter Configuration**: Adjust max_tokens, timeout, reasoning_effort, verbosity
-- **Parameter Validation**: Automatic validation of model-specific parameters and constraints
-- **Settings Persistence**: Model preferences and parameters are saved and restored automatically
-- **GPT-5 Advanced Features**: Support for reasoning_effort and verbosity controls for enhanced reasoning
-- **Bridge Architecture**: Seamless integration between app and backend model configurations
-- **🔑 API Key Integration**: Direct API key management through settings interface
-- **🔄 Real-time Validation**: Instant API key validation and configuration updates
+### 🔧 **System Features**
+- **Flexible Model Selection**: Switch between GPT-5 series models with real-time parameter adjustment
+- **Modern User Interface**: Responsive web app with real-time updates and easy navigation
+- **Performance & Dev Tools**: Development mode for fast testing and built-in performance monitoring
+- **Comprehensive Testing**: Complete test suite with unit, integration, API, and E2E tests
 
-### 🔍 **Intelligent Document Management** *(Production Ready)*
-- **Smart Upload System**: Automatic file classification and metadata extraction
-- **Duplicate Detection**: Advanced deduplication using DOI + type and title + type combinations
-- **Semantic Scholar Integration**: Automatic metadata enrichment with journal venues and author information
-- **Batch Processing**: Efficient handling of multiple documents with progress tracking
-- **Type Classification**: Intelligent distinction between main papers and supporting information
-- **Error Recovery**: Robust error handling with detailed logging and fallback mechanisms
-
-### 🖥️ **Enhanced User Interface** *(Updated)*
-- **React Frontend**: Modern, responsive web interface built with React 18 + Ant Design
-- **FastAPI Backend**: RESTful API architecture for better performance and scalability
-- **Real-time Updates**: Live status updates and progress indicators
-- **Responsive Design**: Works seamlessly on desktop and mobile devices
-- **Component-based Architecture**: Modular design for easy maintenance and extension
-- **Improved Navigation**: Enhanced sidebar and page transitions
-
-### 📥 **Document Embedding & Knowledge Base**
-- **Document Processing**: Supports PDF and Word documents with intelligent chunking and metadata extraction
-- **Vector Database**: Uses ChromaDB for efficient semantic search and retrieval
-- **Academic Embeddings**: Utilizes `nomic-ai/nomic-embed-text-v1.5` for domain-specific semantic understanding
-- **Batch Processing**: Upload multiple documents for comprehensive knowledge base building
-
-### 🧪 **Experimental Reasoning Mode** *(Coming Soon)*
-- **Dual Retriever Architecture**: Combines literature data with experimental logs for comprehensive analysis
-- **Excel Integration**: Processes experimental data from `.xlsx` files and converts to searchable text
-- **Synthesis Suggestions**: Provides creative and practical synthesis recommendations based on both literature and experimental data
-- **Chemical Safety**: Integrates PubChem data for chemical safety information and NFPA hazard codes
-
-### 🧪 **SMILES Chemical Structure Integration** *(v4.3)*
-- **Chemical Structure Visualization**: Automatic SMILES to PNG conversion for chemical structures
-- **DOCX Integration**: Chemical structures embedded directly in generated Word documents
-- **PubChem Integration**: Automatic chemical information retrieval with safety data
-- **Enhanced Chemical Tables**: Rich chemical tables with structure images and metadata
-- **SMILES Drawer Service**: Dedicated service for chemical structure rendering
-
-### 🔧 **Development Mode & Performance Optimization** *(v4.3)*
-- **Configurable Chunk Retrieval**: Adjustable chunk retrieval quantity for different use cases
-- **Development Mode**: Fast testing mode with reduced chunk retrieval (k=1)
-- **Settings Integration**: Development mode toggle in Settings page
-- **Performance Monitoring**: Enhanced response time tracking and optimization
+*Experimental Reasoning Mode and advanced Excel integration coming soon!*
 
 ---
 
 ## 🔧 **Core System Enhancements**
 
-### 📁 **Intelligent Document Upload System**
-- **Smart File Classification**: Automatic detection of research papers vs supporting information
-- **Batch Processing**: Handle multiple documents efficiently with real-time progress tracking
-- **Format Support**: PDF and DOCX files with robust text extraction
-- **Error Recovery**: Comprehensive error handling with detailed logging
+### 📁 **Document Processing**
+- **Smart Upload**: Automatic classification of research papers vs supporting files
+- **Batch Processing**: Handle multiple files efficiently with real-time progress tracking
+- **Format Support**: PDF and DOCX with robust text extraction and error handling
 
-### 🔍 **Advanced Deduplication Engine**
-- **Multi-Level Detection**: 
-  - DOI + document type combination matching
-  - Title + document type combination matching
-  - Batch-internal duplicate detection
-  - Registry duplicate checking
-- **Intelligent Type Assignment**: 
-  - DOI-based paper classification
-  - LLM-powered content analysis for non-DOI documents
-  - Automatic distinction between main papers and supporting information
-
-### 🌐 **Enhanced Semantic Scholar Integration**
-- **Robust API Handling**: 
-  - Smart rate limiting with exponential backoff
-  - 429 error recovery with extended wait times
-  - Multiple retry strategies for reliability
-- **Metadata Enrichment**: 
-  - Automatic title enhancement
-  - Author information extraction
-  - Publication year and venue data
-  - DOI backfilling for title-only searches
-- **Improved Search Quality**: 
-  - Best-match algorithm for multiple results
-  - Similarity scoring for result ranking
-  - Extended timeout handling for complex queries
+### 🔍 **Intelligent Management**
+- **Duplicate Detection**: Multi-level deduplication using DOI, title, and content analysis
+- **Metadata Enrichment**: Automatic enrichment via Semantic Scholar API
+- **Type Classification**: Intelligent distinction between main papers and supporting information
 
 ---
 
@@ -133,24 +74,21 @@ This release focuses on **SMILES chemical structure integration**, **bug fixes**
 - **GPT-5 Nano**: Lightweight version for fast, simple formatting tasks
 - **GPT-5 Mini**: Balanced version with speed and functionality
 
-### Model Parameters
-- **Max Tokens**: Maximum response length (1-32,000)
-- **Timeout**: Request timeout in seconds (10-600)
-- **Reasoning Effort**: Controls reasoning depth (minimal/low/medium/high)
-- **Verbosity**: Controls response detail level (low/medium/high)
+### Key Parameters
+- **Max Tokens**: Response length (1-32,000)
+- **Timeout**: Request timeout (10-600 seconds)
+- **Reasoning Effort**: Reasoning depth control (minimal/low/medium/high)
+- **Verbosity**: Response detail level (low/medium/high)
 
-### Configuration
-Access the Settings page in the React interface to:
-1. Select your preferred model
-2. Adjust model parameters
-3. Save settings for future sessions
-4. View model-specific parameter information
 
 ---
 
-## 🐛 v4.3 Bug Fixes & Improvements
+## 🐛 v4.4 Bug Fixes & Improvements
 
 ### **Fixed Issues**
+- **System Installation**: Fixed `simple_setup.bat` script execution issues and path problems
+- **Virtual Environment**: Fixed virtual environment setup process and dependency installation
+- **Embedding Model**: Upgraded to more efficient `BAAI/bge-base-en-v1.5` model
 - **Citation Management**: Fixed citation cards disappearing after experiment detail generation
 - **Proposal Revision**: Fixed chunks from document expansion not being added to citation cards
 - **SMILES Integration**: Fixed SMILES drawer failing after proposal revision
@@ -158,11 +96,16 @@ Access the Settings page in the React interface to:
 - **API Compatibility**: Fixed citations format compatibility in DOCX generation requests
 
 ### **Performance Improvements**
+- **Embedding Model Optimization**: Upgraded to `BAAI/bge-base-en-v1.5` for better CPU efficiency
+- **Reduced Resource Consumption**: Lower CPU usage and memory requirements
+- **Enhanced Semantic Understanding**: Improved accuracy for English academic literature
 - **Reduced Chunk Retrieval**: Default chunk retrieval reduced from 10 to 3 for better performance
 - **Development Mode**: Added k=1 chunk retrieval option for faster testing
 - **Smart Caching**: Enhanced citation and chunk management for better user experience
 
 ### **Installation Enhancements**
+- **Fixed Setup Script**: Resolved `simple_setup.bat` execution issues and path problems
+- **Improved Virtual Environment**: Enhanced virtual environment setup and dependency management
 - **CPU/GPU Selection**: Smart setup script with installation type selection
 - **Error Handling**: Improved error messages and recovery mechanisms
 - **Verification**: Enhanced installation verification with PyTorch and CUDA status checks
@@ -243,7 +186,7 @@ run_backend.bat    # Start backend first
 
 ---
 
-## 🔑 Environment Configuration *(Enhanced)*
+## 🔑 Environment Configuration
 
 The system now supports automatic environment management:
 
@@ -268,34 +211,30 @@ OPENAI_API_KEY=sk-your-openai-api-key-here
 
 ---
 
-## 📊 **Usage Statistics & Performance**
+## 📊 **Performance & Statistics**
 
-### **Document Processing Capabilities**
+### **Document Processing**
 - **Batch Size**: Up to 100+ documents per upload
-- **Processing Speed**: ~1-2 seconds per document (depending on size and API response times)
-- **Deduplication Accuracy**: 99%+ accuracy with DOI+type matching
-- **Supported Formats**: PDF, DOCX with robust text extraction
+- **Deduplication**: 99%+ accuracy with DOI+type matching
+- **Formats**: PDF, DOCX with robust text extraction
 
-### **API Integration Performance**
-- **Semantic Scholar Success Rate**: 95%+ with retry mechanisms
-- **Rate Limiting Compliance**: Automatic throttling prevents API blocks
-- **Metadata Enrichment**: ~80% venue retrieval success rate
+### **API Performance**
+- **Semantic Scholar**: 95%+ success rate with retry mechanisms
+- **Rate Limiting**: Automatic throttling prevents API blocks
+- **Metadata**: ~80% venue retrieval success rate
 
 ---
 
 ## 🧪 Testing
 
-### **Comprehensive Test Suite**
-The project includes a comprehensive testing framework with multiple test types:
-
-#### **Test Categories**
+### **Test Suite**
 - **Unit Tests**: Individual function and module testing
 - **Integration Tests**: Cross-module workflow testing  
 - **API Tests**: FastAPI endpoint validation
 - **E2E Tests**: Complete user workflow testing
 - **Performance Tests**: Response time and system performance validation
 
-#### **Running Tests**
+### **Running Tests**
 
 **Windows (Recommended):**
 ```bash
@@ -312,9 +251,6 @@ python tests\run_tests.py --type proposal # Proposal E2E tests
 
 **All Platforms:**
 ```bash
-# Install test dependencies (included in requirements.txt)
-pip install -r requirements.txt
-
 # Run tests
 pytest tests/ -v                    # All tests
 pytest tests/test_api.py -v         # API tests
@@ -322,12 +258,11 @@ pytest tests/test_e2e_real.py -v    # E2E tests
 pytest tests/test_e2e_proposal_workflow.py -v  # Proposal E2E tests
 ```
 
-#### **Test Features**
+### **Test Features**
 - **Real Testing**: No mocks - tests use actual API calls and real data
 - **Comprehensive Coverage**: Tests cover all major features and workflows
 - **Error Handling**: Validates system behavior under various error conditions
 - **Performance Monitoring**: Tracks response times and system performance
-- **User Workflow Validation**: Ensures complete user journeys work correctly
 
 ### **Test Results**
 - ✅ **All Core Tests Passing**: Unit, integration, and API tests
@@ -340,66 +275,40 @@ pytest tests/test_e2e_proposal_workflow.py -v  # Proposal E2E tests
 
 ## 🎯 Usage Guide
 
-### 📋 **Proposal Generator** (Main Feature - Enhanced)
+### 📋 **Proposal Generator** (Main Feature)
+1. **Enter Research Goal**: Describe your research objective
+2. **Generate Proposal**: Click "✍️ Generate proposal" to create AI-powered research proposal
+3. **Review Results**: View proposal with chemical safety info and citations
+4. **Refine Proposal**: Provide feedback and revise, or expand into detailed experimental plans
+5. **Export Document**: Download complete proposal as Word document
 
-The Proposal Generator is the primary feature with enhanced structured output:
+### 🔍 **Literature Search**
+- **Search Interface**: Query academic databases
+- **Citation Management**: Automatic citation formatting and reference tracking
+- **Integration**: Use search results in proposal generation
 
-1. **Enter Research Goal**: Describe your research objective in the text area
-2. **Generate Proposal**: Click "✍️ Generate proposal" to create an AI-powered research proposal
-3. **Review Results**: The system will display:
-   - Complete research proposal (with structured JSON Schema output)
-   - Chemical information table with safety data and icons
-   - Citations from knowledge base
-4. **Refine Proposal**: 
-   - Provide feedback and click "💡 Generate New Idea" to revise
-   - Click "✅ Accept & Generate Experiment Detail" to expand into detailed experimental plans
-5. **Export Document**: Click "📥 Download DOCX" to download the complete proposal as a Word document
+### ⚙️ **Settings & Model Configuration**
+- **API Key Management**: Enter and validate OpenAI API key directly in settings
+- **Model Selection**: Choose from GPT-5 series models
+- **Parameter Tuning**: Adjust max_tokens, timeout, and model-specific parameters
+- **Real-time Updates**: Changes take effect immediately
 
-**Enhanced Features:**
-- **Structured Output**: Uses latest Responses API + JSON Schema for consistent formatting
-- **High Reproducibility**: Fixed proposal format ensures consistent results
-- **Model Selection**: Choose from GPT-5, GPT-5 Nano, or GPT-5 Mini
-- **Parameter Control**: Adjust model parameters for optimal results
-
-### 🔍 **Literature Search** (recovered feature)
-
-Access academic literature and research papers:
-
-1. **Search Interface**: Use the Search page to query academic databases
-2. **Citation Management**: Automatic citation formatting and reference tracking
-3. **Integration**: Search results can be used in proposal generation
-
-### ⚙️ **Settings & Model Configuration** *(Enhanced)*
-Configure your AI models and parameters:
-
-1. **🔑 API Key Management**: 
-   - Enter and validate OpenAI API key directly in settings
-   - Real-time API key validation with actual API calls
-   - Automatic `.env` file creation and management
-2. **Model Selection**: Choose your preferred GPT model
-3. **Parameter Tuning**: Adjust max_tokens, timeout, and GPT-5-specific parameters
-4. **Real-time Updates**: Changes take effect immediately
-5. **Environment Status**: View current `.env` file and API key configuration status
-
-### 📥 **Document Upload** (Fixed)
-
-Upload and process research documents to build your knowledge base:
-
-1. **Upload Documents**: Drag and drop PDF or Word files
-2. **Processing**: The system will chunk, embed, and store documents
-3. **Knowledge Base**: Documents become searchable for proposal generation
+### 📥 **Document Upload**
+- **Upload Documents**: Drag and drop PDF or Word files
+- **Processing**: System chunks, embeds, and stores documents
+- **Knowledge Base**: Documents become searchable for proposal generation
 
 ---
 
 ## 🔧 **Configuration Options**
 
-### **Document Processing Settings**
+### **Document Processing**
 - **Chunk Size**: 500 characters (configurable)
 - **Chunk Overlap**: 50 characters
 - **Max Retries**: 3 attempts for API calls
 - **Timeout**: 20 seconds for external API calls
 
-### **Deduplication Settings**
+### **Deduplication**
 - **Primary**: DOI + document type matching
 - **Secondary**: Title + document type matching
 - **Batch Processing**: Internal duplicate detection
@@ -435,13 +344,13 @@ app/                     # Legacy Streamlit components
 
 ## 🐛 **Critical Bug Fixes**
 
-### **Metadata Extraction Issues**
+### **Metadata Extraction**
 - ✅ **Fixed**: `'NoneType' object has no attribute 'strip'` errors in duplicate checking
 - ✅ **Fixed**: Undefined variable `attempt` in GPT analysis function
 - ✅ **Fixed**: LLM response mapping for new output format ("SI", "paper")
 - ✅ **Fixed**: Type field inconsistency between metadata extraction and duplicate checking
 
-### **API Integration Improvements**
+### **API Integration**
 - ✅ **Enhanced**: Semantic Scholar rate limiting handling
 - ✅ **Improved**: Error logging and recovery mechanisms
 - ✅ **Fixed**: Title-based search venue retrieval issues
@@ -451,13 +360,13 @@ app/                     # Legacy Streamlit components
 
 ## 🏗️ **Architecture Improvements**
 
-### **Code Quality & Maintainability**
+### **Code Quality**
 - **Comprehensive Error Handling**: Try-catch blocks with proper fallback values
 - **Improved Logging**: Detailed debug information for troubleshooting
 - **Type Safety**: Better handling of optional values and None checks
 - **Documentation**: Enhanced inline documentation and function descriptions
 
-### **Performance Optimizations**
+### **Performance**
 - **Efficient Batch Processing**: Optimized document handling workflows
 - **Smart Caching**: Vector database performance improvements
 - **Reduced API Calls**: Intelligent deduplication reduces redundant requests
@@ -465,7 +374,7 @@ app/                     # Legacy Streamlit components
 
 ---
 
-## 🎯 **Production Readiness Checklist**
+## 🎯 **Production Readiness**
 
 - ✅ **Error Handling**: Comprehensive error recovery mechanisms
 - ✅ **Logging**: Detailed operation logging for debugging
@@ -479,57 +388,14 @@ app/                     # Legacy Streamlit components
 
 ## 🛠️ Troubleshooting
 
-### React Version Issues
-
-1. **Frontend not starting**
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-
-2. **Backend API errors**
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   python main.py
-   ```
-
-3. **Port conflicts**
-   - Frontend: http://localhost:3000
-   - Backend: http://localhost:8000
-   - API Docs: http://localhost:8000/api/docs
-
-### Common Issues
-
-1. **"Module not found" errors**
-   ```bash
-   pip install -r requirements.txt --upgrade
-   pip install -r backend/requirements.txt --upgrade
-   ```
-
-2. **Node.js version issues**
-   ```bash
-   node --version  # Should be >= 16.0
-   npm --version
-   ```
-
-3. **API connection errors**
-   - Check if backend is running on port 8000
-   - Check browser console for CORS errors
-   - Verify API keys in `.env` file
-
-4. **Model configuration issues**
-   - Check Settings page for model availability
-   - Verify API key has access to selected model
-   - Reset settings if parameters are invalid
-
 ### **Common Issues**
-1. **ECONNREFUSED errors**: Normal when frontend starts before backend
-2. **Empty venue fields**: Some papers lack venue data in Semantic Scholar
-3. **Duplicate detection**: Ensure consistent document type classification
-4. **Missing .env file**: System automatically creates dummy file - configure API keys in Settings
-5. **API key validation**: Use the Settings page to validate and configure API keys
+1. **Frontend not starting**: `cd frontend && npm install && npm run dev`
+2. **Backend API errors**: `cd backend && pip install -r requirements.txt && python main.py`
+3. **Port conflicts**: Frontend (3000), Backend (8000), API Docs (8000/api/docs)
+4. **Module not found**: `pip install -r requirements.txt --upgrade`
+5. **Node.js issues**: Ensure version >= 16.0
+6. **API connection**: Check backend on port 8000, verify API keys in `.env`
+7. **Model configuration**: Check Settings page for model availability
 
 ### **Getting Help**
 - **Documentation**: Check README.md and USAGE_GUIDE.md
@@ -539,8 +405,6 @@ app/                     # Legacy Streamlit components
 ---
 
 ## 🔮 **Future Roadmap**
-
-
 
 ### 🔍 **Enhanced Retrieval System**
 - **Improved Article Retrieval**: Enhance retriever capabilities for better answer relevance
@@ -632,4 +496,4 @@ This version is stable, tested, and ready for production research workflows.
 
 ---
 
-*Last updated: August 2025 - Testing & Quality Assurance Release v4.2*
+*Last updated: August 2025 - Embedding Model Improvement & System Fixes Release v4.4*

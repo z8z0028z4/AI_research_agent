@@ -37,7 +37,7 @@ if exist "%VENV_PATH%" (
     echo.
     set /p choice="Enter your choice (1 or 2): "
     
-    if "%choice%"=="1" (
+    if "!choice!"=="1" (
         echo Removing existing virtual environment...
         rmdir /s /q "%VENV_PATH%"
         echo Creating new virtual environment at %VENV_PATH%...
@@ -48,7 +48,7 @@ if exist "%VENV_PATH%" (
             exit /b 1
         )
         echo ✅ Virtual environment created successfully!
-    ) else if "%choice%"=="2" (
+    ) else if "!choice!"=="2" (
         echo Continuing with existing virtual environment...
         echo ✅ Using existing virtual environment!
     ) else (
@@ -102,7 +102,7 @@ echo [2] GPU version with CUDA support (Larger download, requires NVIDIA GPU wit
 echo.
 set /p gpu_choice="Enter your choice (1 or 2): "
 
-if "%gpu_choice%"=="1" (
+if "!gpu_choice!"=="1" (
     echo Installing CPU version dependencies...
     pip install -r requirements.txt
     if errorlevel 1 (
@@ -112,7 +112,7 @@ if "%gpu_choice%"=="1" (
         exit /b 1
     )
     echo ✅ CPU version dependencies installed!
-) else if "%gpu_choice%"=="2" (
+) else if "!gpu_choice!"=="2" (
     echo Installing GPU version dependencies with CUDA support...
     echo This may take longer due to larger download size...
     
