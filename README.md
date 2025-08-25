@@ -496,4 +496,4 @@ This version is stable, tested, and ready for production research workflows.
 
 ---
 
-*Last updated: January 2025 - Embedding Model Improvement & System Fixes Release v4.4*
+*Last updated: August 2025 - Embedding Model Improvement & System Fixes Release v4.4*
