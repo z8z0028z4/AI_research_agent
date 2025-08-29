@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Card, Form, Input, Button, message, Space, Typography, List, Tag, Divider, Select, Radio, Collapse } from 'antd';
 import { useTextHighlight } from '../components/TextHighlight/TextHighlightProvider';
+import { useAppState } from '../contexts/AppStateContext';
 
 const { Title, Paragraph, Text } = Typography;
 const { TextArea } = Input;
@@ -11,11 +12,18 @@ const API_BASE = '/api/v1';
 const KnowledgeQuery = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [answer, setAnswer] = useState('');
-  const [citations, setCitations] = useState([]);
-  const [chunks, setChunks] = useState([]);
-  const [retrievalCount, setRetrievalCount] = useState(10); // 預設檢索 10 個文檔
-  const [answerMode, setAnswerMode] = useState('rigorous'); // 預設嚴謹模式
+  
+  // 使用全局狀態管理
+  const { state, setKnowledgeFormData, setKnowledgeResult } = useAppState();
+  const {
+    formData,
+    answer,
+    citations,
+    chunks,
+    retrievalCount,
+    answerMode,
+    hasQueried
+  } = state.knowledgeQuery;
 
   // 文字反白功能
   const { setMode, setText, handleTextSelection } = useTextHighlight();
@@ -29,6 +37,13 @@ const KnowledgeQuery = () => {
   useEffect(() => {
     setMode('knowledge_assistant');
   }, [setMode]);
+
+  // 同步表單數據
+  useEffect(() => {
+    if (formData.question !== form.getFieldValue('question')) {
+      form.setFieldsValue(formData);
+    }
+  }, [formData, form]);
 
   const callApi = async (path, options = {}) => {
     const res = await fetch(`${API_BASE}${path}`, {
@@ -54,6 +69,10 @@ const KnowledgeQuery = () => {
   const onQuery = async () => {
     const question = form.getFieldValue('question');
     if (!question) return message.warning('Please enter your question');
+    
+    // 保存表單數據到全局狀態
+    setKnowledgeFormData({ question });
+    
     setLoading(true);
     try {
       const data = await callApi('/knowledge/query', {
@@ -63,9 +82,15 @@ const KnowledgeQuery = () => {
           answer_mode: answerMode
         }),
       });
-      setAnswer(data.answer || '');
-      setCitations(data.citations || []);
-      setChunks(data.chunks || []);
+      
+      // 使用全局狀態管理更新結果
+      setKnowledgeResult({
+        answer: data.answer || '',
+        citations: data.citations || [],
+        chunks: data.chunks || [],
+        retrievalCount: retrievalCount,
+        answerMode: answerMode
+      });
       
       // 設置文字反白功能的數據
       setText(data.answer || '');
@@ -79,9 +104,14 @@ const KnowledgeQuery = () => {
 
   const onClear = () => {
     form.resetFields();
-    setAnswer('');
-    setCitations([]);
-    setChunks([]);
+    setKnowledgeFormData({ question: '' });
+    setKnowledgeResult({
+      answer: '',
+      citations: [],
+      chunks: [],
+      retrievalCount: 10,
+      answerMode: 'rigorous'
+    });
   };
 
   return (
@@ -92,7 +122,7 @@ const KnowledgeQuery = () => {
       </Paragraph>
 
       <Card title="Query Settings" style={{ marginBottom: 16 }}>
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" initialValues={formData}>
           <Form.Item
             label="Query Question"
             name="question"
@@ -101,6 +131,7 @@ const KnowledgeQuery = () => {
             <TextArea
               rows={4}
               placeholder="Enter your question, e.g., 'Please introduce the synthesis methods of metal-organic framework materials'"
+              onChange={(e) => setKnowledgeFormData({ question: e.target.value })}
             />
           </Form.Item>
 
@@ -109,7 +140,7 @@ const KnowledgeQuery = () => {
               <Text strong>Answer Mode:</Text>
               <Radio.Group 
                 value={answerMode} 
-                onChange={(e) => setAnswerMode(e.target.value)}
+                onChange={(e) => setKnowledgeFormData({ answerMode: e.target.value })}
                 style={{ marginLeft: 16 }}
               >
                 <Radio.Button value="rigorous">Rigorous Citation</Radio.Button>
@@ -121,7 +152,7 @@ const KnowledgeQuery = () => {
               <Text strong>Retrieval Count:</Text>
               <Select
                 value={retrievalCount}
-                onChange={setRetrievalCount}
+                onChange={(value) => setKnowledgeFormData({ retrievalCount: value })}
                 style={{ width: 120, marginLeft: 16 }}
               >
                 <Option value={5}>5 docs</Option>
@@ -152,7 +183,7 @@ const KnowledgeQuery = () => {
         </Form>
       </Card>
 
-      {hasResult && (
+      {hasQueried && hasResult && (
         <>
           {/* Query Result Summary */}
           <Card style={{ marginBottom: 16 }}>

@@ -332,4 +332,214 @@ class TestFormatConverter:
         assert len(text) > 0
         assert "合成過程" in text
         assert "材料和條件" in text
-        assert "分析方法" in text 
+        assert "分析方法" in text
+    
+    def test_real_revision_experimental_detail_to_text(self):
+        """測試真實實驗細節修改轉文本"""
+        from backend.core.format_converter import structured_revision_experimental_detail_to_text
+        
+        structured_data = {
+            "revision_explanation": "修訂說明",
+            "synthesis_process": "修改後的合成過程",
+            "materials_and_conditions": "修改後的材料和條件",
+            "analytical_methods": "修改後的分析方法",
+            "precautions": "修改後的注意事項"
+        }
+        
+        text = structured_revision_experimental_detail_to_text(structured_data)
+        
+        assert isinstance(text, str)
+        assert len(text) > 0
+        assert "修訂說明" in text
+        assert "修改後的合成過程" in text
+        assert "修改後的材料和條件" in text
+        assert "修改後的分析方法" in text
+        assert "修改後的注意事項" in text
+    
+    def test_real_revision_proposal_to_text(self):
+        """測試真實提案修改轉文本"""
+        from backend.core.format_converter import structured_revision_proposal_to_text
+        
+        structured_data = {
+            "revision_explanation": "修訂說明",
+            "proposal_title": "修改後的提案標題",
+            "need": "修改後的研究需求",
+            "solution": "修改後的解決方案",
+            "differentiation": "修改後的差異化",
+            "benefit": "修改後的預期效益"
+        }
+        
+        text = structured_revision_proposal_to_text(structured_data)
+        
+        assert isinstance(text, str)
+        assert len(text) > 0
+        assert "修訂說明" in text
+        assert "修改後的提案標題" in text
+        assert "修改後的研究需求" in text
+        assert "修改後的解決方案" in text
+
+
+class TestGenerationRevisionFunctions:
+    """生成修改功能測試 - 新增測試"""
+    
+    @patch('backend.core.generation.call_structured_llm')
+    def test_call_llm_structured_revision_experimental_detail(self, mock_call_llm):
+        """測試實驗細節修改的 LLM 調用"""
+        from backend.core.generation import call_llm_structured_revision_experimental_detail
+        
+        mock_call_llm.return_value = {
+            "revision_explanation": "Revision explanation",
+            "synthesis_process": "Updated synthesis process",
+            "materials_and_conditions": "Updated materials and conditions",
+            "analytical_methods": "Updated analytical methods",
+            "precautions": "Updated precautions"
+        }
+        
+        result = call_llm_structured_revision_experimental_detail(
+            question="Please revise this experiment detail",
+            new_chunks=[],
+            old_chunks=[],
+            proposal="Original proposal",
+            original_experimental_detail="Original experimental detail"
+        )
+        
+        assert isinstance(result, dict)
+        assert "revision_explanation" in result
+        assert "synthesis_process" in result
+        assert "materials_and_conditions" in result
+        assert "analytical_methods" in result
+        assert "precautions" in result
+        mock_call_llm.assert_called_once()
+    
+    def test_old_text_building_with_full_content(self):
+        """測試完整文檔內容的 old_text 構建"""
+        from backend.core.generation import call_llm_structured_revision_experimental_detail
+        
+        # 模擬文檔塊
+        mock_chunks = [
+            Mock(
+                page_content="This is a complete document content about chemistry synthesis with detailed experimental procedures.",
+                metadata={
+                    "title": "Test Paper",
+                    "filename": "test.pdf",
+                    "page_number": 1
+                }
+            ),
+            Mock(
+                page_content="Another complete document about analytical methods and characterization techniques.",
+                metadata={
+                    "title": "Analytical Paper",
+                    "filename": "analytical.pdf",
+                    "page_number": 2
+                }
+            )
+        ]
+        
+        # 測試 old_text 構建邏輯（不實際調用 LLM）
+        old_text = ""
+        for i, doc in enumerate(mock_chunks):
+            metadata = doc.metadata
+            title = metadata.get("title", "Untitled")
+            filename = metadata.get("filename") or metadata.get("source", "Unknown")
+            page = metadata.get("page_number") or metadata.get("page", "?")
+            
+            # 顯示完整的文檔內容，而不是只有前80個字符
+            old_text += f"    [{i+1}] {title} | Page {page}\n{doc.page_content}\n\n"
+        
+        assert len(old_text) > 0
+        assert "This is a complete document content about chemistry synthesis" in old_text
+        assert "Another complete document about analytical methods" in old_text
+        assert "Test Paper" in old_text
+        assert "Analytical Paper" in old_text
+        assert "[1]" in old_text
+        assert "[2]" in old_text
+    
+    def test_old_text_building_with_dict_chunks(self):
+        """測試字典格式 chunks 的 old_text 構建"""
+        # 模擬字典格式的文檔塊
+        mock_dict_chunks = [
+            {
+                "page_content": "This is a complete document content about chemistry synthesis.",
+                "metadata": {
+                    "title": "Test Paper",
+                    "filename": "test.pdf",
+                    "page_number": 1
+                }
+            },
+            {
+                "page_content": "Another complete document about experimental procedures.",
+                "metadata": {
+                    "title": "Experimental Paper",
+                    "filename": "experiment.pdf",
+                    "page_number": 2
+                }
+            }
+        ]
+        
+        # 測試 old_text 構建邏輯
+        old_text = ""
+        for i, doc in enumerate(mock_dict_chunks):
+            metadata = doc.get('metadata', {})
+            title = metadata.get("title", "Untitled")
+            filename = metadata.get("filename") or metadata.get("source", "Unknown")
+            page = metadata.get("page_number") or metadata.get("page", "?")
+            
+            # 顯示完整的文檔內容
+            old_text += f"    [{i+1}] {title} | Page {page}\n{doc['page_content']}\n\n"
+        
+        assert len(old_text) > 0
+        assert "This is a complete document content about chemistry synthesis" in old_text
+        assert "Another complete document about experimental procedures" in old_text
+        assert "Test Paper" in old_text
+        assert "Experimental Paper" in old_text
+        assert "[1]" in old_text
+        assert "[2]" in old_text
+
+
+class TestSchemaManagerRevisionFunctions:
+    """架構管理修改功能測試 - 新增測試"""
+    
+    def test_create_revision_experimental_detail_schema(self):
+        """測試實驗細節修改架構創建"""
+        from backend.core.schema_manager import create_revision_experimental_detail_schema
+        
+        schema = create_revision_experimental_detail_schema()
+        
+        assert isinstance(schema, dict)
+        assert "type" in schema
+        assert schema["type"] == "object"
+        assert "title" in schema
+        assert schema["title"] == "RevisionExperimentalDetail"
+        assert "properties" in schema
+        assert "required" in schema
+        
+        # 檢查必需字段
+        required_fields = schema["required"]
+        expected_fields = [
+            "revision_explanation",
+            "synthesis_process", 
+            "materials_and_conditions",
+            "analytical_methods",
+            "precautions"
+        ]
+        for field in expected_fields:
+            assert field in required_fields
+        
+        # 檢查屬性定義
+        properties = schema["properties"]
+        for field in expected_fields:
+            assert field in properties
+            assert "type" in properties[field]
+            assert properties[field]["type"] == "string"
+    
+    def test_get_schema_by_type_revision_experimental_detail(self):
+        """測試通過類型獲取實驗細節修改架構"""
+        from backend.core.schema_manager import get_schema_by_type
+        
+        schema = get_schema_by_type("revision_experimental_detail")
+        
+        assert isinstance(schema, dict)
+        assert "type" in schema
+        assert schema["type"] == "object"
+        assert "title" in schema
+        assert schema["title"] == "RevisionExperimentalDetail" 

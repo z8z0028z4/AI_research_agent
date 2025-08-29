@@ -2,6 +2,7 @@ import { Button, Card, Collapse, Divider, Form, Input, List, message, Select, Sp
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import SmilesDrawer from '../components/SmilesDrawer';
 import { useTextHighlight } from '../components/TextHighlight/TextHighlightProvider';
+import { useAppState } from '../contexts/AppStateContext';
 
 const { Title, Paragraph, Text } = Typography;
 const { TextArea } = Input;
@@ -12,23 +13,33 @@ const API_BASE = '/api/v1';
 const Proposal = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [proposal, setProposal] = useState('');
-  const [chemicals, setChemicals] = useState([]);
-  const [notFound, setNotFound] = useState([]);
-  const [citations, setCitations] = useState([]);
-  const [chunks, setChunks] = useState([]);
-  const [experimentDetail, setExperimentDetail] = useState('');
-  const [structuredExperiment, setStructuredExperiment] = useState(null); // 結構化實驗細節數據
-  const [retrievalCount, setRetrievalCount] = useState(10); // 預設檢索 10 個文檔
-  const [showReviseInput, setShowReviseInput] = useState(false); // 控制修訂輸入框顯示
-  const [reviseFeedback, setReviseFeedback] = useState(''); // 修訂意見
-  const [hasGeneratedContent, setHasGeneratedContent] = useState(false); // 追蹤是否已生成內容
   const [isTextareaFocused, setIsTextareaFocused] = useState(false); // 追蹤輸入框是否被聚焦
   const [isReviseInputFocused, setIsReviseInputFocused] = useState(false); // 追蹤修訂輸入框是否被聚焦
   const reviseInputRef = useRef(null); // 修訂輸入框的 ref
 
-  // 結構化數據狀態
-  const [structuredProposal, setStructuredProposal] = useState(null); // 結構化提案數據
+  // 使用全局狀態管理
+  const { 
+    state, 
+    setProposalFormData, 
+    setProposalResult, 
+    setProposalExperiment 
+  } = useAppState();
+  
+  const {
+    formData,
+    proposal,
+    chemicals,
+    notFound,
+    citations,
+    chunks,
+    experimentDetail,
+    structuredExperiment,
+    structuredProposal,
+    retrievalCount,
+    hasGeneratedContent,
+    showReviseInput,
+    reviseFeedback
+  } = state.proposal;
 
   // 文字反白功能
   const { setMode, setProposal: setTextHighlightProposal, setText, handleTextSelection, setReviseCallback } = useTextHighlight();
@@ -43,6 +54,13 @@ const Proposal = () => {
     setMode('make proposal');
   }, [setMode]);
 
+  // 同步表單數據
+  useEffect(() => {
+    if (formData.goal !== form.getFieldValue('goal')) {
+      form.setFieldsValue(formData);
+    }
+  }, [formData, form]);
+
   // 設置文字反白功能的修改回調
   useEffect(() => {
     setReviseCallback((result) => {
@@ -56,34 +74,34 @@ const Proposal = () => {
       if (result.interaction_type === 'revise') {
         if (result.structured_proposal) {
           // 修改提案
-          setProposal(result.answer || '');
-          setStructuredProposal(result.structured_proposal);
-          setChemicals(result.chemicals || []);
-          setExperimentDetail(''); // 清空實驗細節
-          setStructuredExperiment(null); // 清空結構化實驗細節
+          setProposalResult({
+            proposal: result.answer || '',
+            structuredProposal: result.structured_proposal,
+            chemicals: result.chemicals || [],
+            notFound: result.not_found || [],
+            citations: result.citations || [],
+            chunks: result.chunks || [],
+            experimentDetail: '', // 清空實驗細節
+            structuredExperiment: null // 清空結構化實驗細節
+          });
         } else if (result.structured_experiment) {
           // 修改實驗細節
-          setExperimentDetail(result.answer || '');
-          setStructuredExperiment(result.structured_experiment);
-          // 不清空提案相關數據
+          setProposalExperiment({
+            experimentDetail: result.answer || '',
+            structuredExperiment: result.structured_experiment,
+            citations: result.citations || []
+          });
         }
-        
-        // 更新引用和文檔塊
-        setCitations(result.citations || []);
-        setChunks(result.chunks || []);
         
         // 更新文字反白功能的數據
         setTextHighlightProposal(result.answer || '', result.chunks || []);
         setText(result.answer || '');
         
-        // 設置為已生成內容
-        setHasGeneratedContent(true);
-        
         console.log('✅ [PROPOSAL] 文字反白修改已應用');
         console.log('✅ [PROPOSAL] 修改類型:', result.structured_proposal ? 'proposal' : 'experiment');
       }
     });
-  }, [setReviseCallback, setTextHighlightProposal, setText]);
+  }, [setReviseCallback, setTextHighlightProposal, setText, setProposalResult, setProposalExperiment]);
 
   // 監控 chemicals 狀態變化
   useEffect(() => {
@@ -120,6 +138,9 @@ const Proposal = () => {
     const goal = form.getFieldValue('goal');
     if (!goal) return message.warning('請輸入研究目標');
 
+    // 保存表單數據到全局狀態
+    setProposalFormData({ goal });
+
     // 生成唯一的請求 ID
     const requestId = Math.random().toString(36).substr(2, 8);
     const startTime = Date.now();
@@ -150,26 +171,22 @@ const Proposal = () => {
       console.log(`✅ [FRONTEND-${requestId}] 引用數量: ${data.citations?.length || 0}`);
       console.log(`✅ [FRONTEND-${requestId}] 文檔塊數量: ${data.chunks?.length || 0}`);
 
-      setProposal(data.proposal || '');
-      setChemicals(data.chemicals || []);
-      setNotFound(data.not_found || []);
-      setCitations(data.citations || []);
-      setChunks(data.chunks || []);
-      setExperimentDetail('');
-      setHasGeneratedContent(true); // 設置為已生成內容
-
-      // 新增：處理結構化提案數據
-      if (data.structured_proposal) {
-        setStructuredProposal(data.structured_proposal);
-      } else {
-        setStructuredProposal(null);
-      }
+      // 使用全局狀態管理更新結果
+      setProposalResult({
+        proposal: data.proposal || '',
+        chemicals: data.chemicals || [],
+        notFound: data.not_found || [],
+        citations: data.citations || [],
+        chunks: data.chunks || [],
+        experimentDetail: '',
+        structuredProposal: data.structured_proposal || null,
+        structuredExperiment: null,
+        retrievalCount: retrievalCount
+      });
 
       // 設置文字反白功能的數據
       setTextHighlightProposal(data.proposal || '', data.chunks || []);
       setText(data.proposal || '');
-
-
 
       console.log(`✅ [FRONTEND-${requestId}] 狀態更新完成`);
 
@@ -208,28 +225,23 @@ const Proposal = () => {
       });
       console.log('🔍 FRONTEND DEBUG: Revise response received:', data);
 
-      setProposal(data.proposal || '');
-      setChemicals(data.chemicals || []);
-      setNotFound(data.not_found || []);
-      setCitations(data.citations || []);
-      setChunks(data.chunks || []);
-      setExperimentDetail('');
-      setShowReviseInput(false); // 隱藏修訂輸入框
-      setReviseFeedback(''); // 清空修訂意見
-      setHasGeneratedContent(true); // 設置為已生成內容
-
-      // 新增：處理結構化提案數據
-      if (data.structured_proposal) {
-        setStructuredProposal(data.structured_proposal);
-      } else {
-        setStructuredProposal(null);
-      }
+      // 使用全局狀態管理更新結果
+      setProposalResult({
+        proposal: data.proposal || '',
+        chemicals: data.chemicals || [],
+        notFound: data.not_found || [],
+        citations: data.citations || [],
+        chunks: data.chunks || [],
+        experimentDetail: '',
+        structuredProposal: data.structured_proposal || null,
+        structuredExperiment: null,
+        showReviseInput: false, // 隱藏修訂輸入框
+        reviseFeedback: '' // 清空修訂意見
+      });
 
       // 更新文字反白功能的數據
       setTextHighlightProposal(data.proposal || '', data.chunks || []);
       setText(data.proposal || '');
-
-
 
       message.success('提案修訂成功！');
     } catch (e) {
@@ -243,12 +255,11 @@ const Proposal = () => {
   const onShowReviseInput = () => {
     if (showReviseInput) {
       // 如果已經顯示，則直接隱藏
-      setShowReviseInput(false);
-      setReviseFeedback('');
+      setProposalFormData({ showReviseInput: false, reviseFeedback: '' });
       setIsReviseInputFocused(false);
     } else {
       // 如果未顯示，則顯示並聚焦
-      setShowReviseInput(true);
+      setProposalFormData({ showReviseInput: true });
       // 使用 setTimeout 確保 DOM 更新後再聚焦
       setTimeout(() => {
         reviseInputRef.current?.focus();
@@ -263,25 +274,13 @@ const Proposal = () => {
       const data = await callApi('/proposal/experiment-detail', {
         body: JSON.stringify({ proposal, chunks }),
       });
-      setExperimentDetail(data.experiment_detail || '');
 
-      // 處理結構化實驗細節數據
-      if (data.structured_experiment) {
-        console.log('🔍 收到結構化實驗細節:', data.structured_experiment);
-        setStructuredExperiment(data.structured_experiment);
-      } else {
-        setStructuredExperiment(null);
-      }
-
-      // ✅ 修復：正確處理citations狀態
-      if (data.citations && data.citations.length > 0) {
-        // 如果有新的citations，則更新
-        setCitations(data.citations);
-        console.log('🔍 更新citations數量:', data.citations.length);
-      } else {
-        // 如果沒有新的citations，則保留原有的
-        console.log('🔍 保留原有citations數量:', citations.length);
-      }
+      // 使用全局狀態管理更新實驗細節
+      setProposalExperiment({
+        experimentDetail: data.experiment_detail || '',
+        structuredExperiment: data.structured_experiment || null,
+        citations: data.citations || citations // 如果有新的citations則更新，否則保留原有的
+      });
 
       // 顯示重試信息
       if (data.retry_info) {
@@ -373,20 +372,21 @@ const Proposal = () => {
       <Paragraph>Generate your comprehensive research proposals with minimal input.</Paragraph>
 
       <Card title="New Proposal" style={{ marginBottom: 24, position: 'relative' }}>
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" initialValues={formData}>
           <Form.Item name="goal" label="Research Goal" rules={[{ required: true, message: 'Please enter your research goal' }]}>
             <TextArea
               rows={hasGeneratedContent && !isTextareaFocused ? 1 : 12}
               placeholder="Please enter your research goal"
               onFocus={() => setIsTextareaFocused(true)}
               onBlur={() => setIsTextareaFocused(false)}
+              onChange={(e) => setProposalFormData({ goal: e.target.value })}
             />
           </Form.Item>
 
           <Form.Item label="Document Retrieval Count">
             <Select
               value={retrievalCount}
-              onChange={setRetrievalCount}
+              onChange={(value) => setProposalFormData({ retrievalCount: value })}
               style={{ width: 200 }}
             >
               <Option value={1}>1 document (Dev Test)</Option>
@@ -961,8 +961,7 @@ const Proposal = () => {
                     type="text"
                     size="small"
                     onClick={() => {
-                      setShowReviseInput(false);
-                      setReviseFeedback('');
+                      setProposalFormData({ showReviseInput: false, reviseFeedback: '' });
                     }}
                   >
                     ✕ Close
@@ -972,7 +971,7 @@ const Proposal = () => {
                   <TextArea
                     placeholder="Your revision idea"
                     value={reviseFeedback}
-                    onChange={(e) => setReviseFeedback(e.target.value)}
+                    onChange={(e) => setProposalFormData({ reviseFeedback: e.target.value })}
                     rows={isReviseInputFocused ? 6 : 2}
                     style={{ width: 800 }}
                     onFocus={() => setIsReviseInputFocused(true)}

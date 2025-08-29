@@ -3,6 +3,7 @@ import { Layout, Typography, Space, Button, Avatar, Badge } from 'antd'
 import { ExperimentOutlined, UserOutlined, HistoryOutlined } from '@ant-design/icons'
 import { useTextHighlight } from '../TextHighlight/TextHighlightProvider'
 import HistoryDialog from '../TextHighlight/HistoryDialog'
+import StateManager from './StateManager'
 
 const { Header } = Layout
 const { Title } = Typography
@@ -50,6 +51,7 @@ const AppHeader = () => {
               歷史記錄
             </Button>
           </Badge>
+          <StateManager />
           <Button type="text" style={{ color: 'white' }}>
             <UserOutlined />
             用戶中心

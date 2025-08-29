@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { Card, Input, Button, List, Typography, Space, Select, message } from 'antd';
 import { SearchOutlined, FileTextOutlined, ExperimentOutlined } from '@ant-design/icons';
+import { useAppState } from '../contexts/AppStateContext';
 
 const { Title, Paragraph } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 
 const SearchPage = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchType, setSearchType] = useState('papers');
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState([]);
+  
+  // 使用全局狀態管理
+  const { state, setSearchQuery, setSearchResults } = useAppState();
+  const { searchQuery, searchType, results, hasSearched } = state.search;
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -40,7 +42,7 @@ const SearchPage = () => {
         }
       ];
       
-      setResults(mockResults);
+      setSearchResults(mockResults);
       message.success(`Found ${mockResults.length} results`);
     } catch (error) {
       message.error('Search failed');
@@ -98,7 +100,7 @@ const SearchPage = () => {
             />
             <Select
               value={searchType}
-              onChange={setSearchType}
+              onChange={(value) => setSearchQuery(value, 'searchType')}
               style={{ width: 150 }}
             >
               <Option value="papers">Papers</Option>
@@ -117,7 +119,7 @@ const SearchPage = () => {
         </Space>
       </Card>
 
-      {results.length > 0 && (
+      {hasSearched && results.length > 0 && (
         <Card title={`Search Results (${results.length})`}>
           <List
             itemLayout="horizontal"
