@@ -167,15 +167,21 @@ def build_detail_experimental_plan_prompt(chunks: List[Document], proposal_text:
     citation_map = {}
     
     for i, doc in enumerate(chunks):
-        # 檢查：doc 應有 metadata 屬性，且為 dict
-        metadata = doc.metadata
+        # 處理可能是字典格式的 chunks
+        if hasattr(doc, 'metadata'):
+            metadata = doc.metadata
+            page_content = doc.page_content
+        else:
+            metadata = doc.get('metadata', {})
+            page_content = doc.get('page_content', '')
+        
         title = metadata.get("title", "Untitled")
         # 檢查：filename 來源於 "filename" 或 "source"，若都無則為 "Unknown"
         filename = metadata.get("filename") or metadata.get("source", "Unknown")
         # 檢查：page 來源於 "page_number" 或 "page"，若都無則為 "?"
         page = metadata.get("page_number") or metadata.get("page", "?")
         # 預覽片段，取前 80 字元，並將換行替換為空格
-        snippet = doc.page_content[:80].replace("\n", " ")
+        snippet = page_content[:80].replace("\n", " ")
 
         # 檢查：避免重複的 (filename, page) 組合
         citation_key = f"{filename}_p{page}"
@@ -193,7 +199,7 @@ def build_detail_experimental_plan_prompt(chunks: List[Document], proposal_text:
             label = citation_map[citation_key]
 
         # context_text 累加每個 chunk 的內容，格式為 [n] title | Page n
-        context_text += f"{label} {title} | Page {page}\n{doc.page_content}\n\n"
+        context_text += f"{label} {title} | Page {page}\n{page_content}\n\n"
 
     system_prompt = f"""
     You are an experienced consultant in materials experiment design. Based on the following research proposal and related literature excerpts, please provide the researcher with a detailed set of recommended experimental procedures.

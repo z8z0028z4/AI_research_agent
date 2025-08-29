@@ -18,9 +18,11 @@ from ..core.schema_manager import (
     create_research_proposal_schema,
     create_experimental_detail_schema,
     create_revision_proposal_schema,
+    create_revision_experimental_detail_schema,
     get_schema_by_type
 )
 from ..core.vector_store import load_paper_vectorstore, load_experiment_vectorstore
+from ..core.retrieval import retrieve_chunks_multi_query, preview_chunks
 from ..core.prompt_builder import (
     build_prompt,
     build_proposal_prompt,
@@ -33,13 +35,15 @@ from ..core.generation import (
     call_llm,
     call_llm_structured_proposal,
     call_llm_structured_experimental_detail,
-    call_llm_structured_revision_proposal
+    call_llm_structured_revision_proposal,
+    call_llm_structured_revision_experimental_detail
 )
 from ..core.query_expander import expand_query, expand_query_with_fallback
 from ..core.format_converter import (
     structured_proposal_to_text,
     structured_experimental_detail_to_text,
-    structured_revision_proposal_to_text
+    structured_revision_proposal_to_text,
+    structured_revision_experimental_detail_to_text
 )
 
 from backend.utils.logger import get_logger
@@ -126,13 +130,14 @@ def generate_iterative_structured_proposal(
     return proposal_data
 
 
-def generate_structured_experimental_detail(chunks: List, proposal: str) -> Dict[str, Any]:
+def generate_structured_experimental_detail(chunks: List, proposal: str, user_prompt: str = "") -> Dict[str, Any]:
     """
     生成結構化實驗細節的便捷函數
     
     Args:
         chunks: 文獻片段
         proposal: 研究提案
+        user_prompt: 用戶的修改意見（可選）
     
     Returns:
         Dict[str, Any]: 結構化實驗細節
@@ -140,19 +145,20 @@ def generate_structured_experimental_detail(chunks: List, proposal: str) -> Dict
     logger.info(f"🔍 DEBUG: generate_structured_experimental_detail 開始")
     logger.info(f"🔍 DEBUG: chunks 長度: {len(chunks) if chunks else 0}")
     logger.info(f"🔍 DEBUG: proposal 長度: {len(proposal) if proposal else 0}")
+    logger.info(f"🔍 DEBUG: user_prompt 長度: {len(user_prompt) if user_prompt else 0}")
     
     # 使用標準化的提示詞構建流程
     system_prompt, citations = build_detail_experimental_plan_prompt(chunks, proposal)
     
-    # 由於 system_prompt 已經包含了文獻摘要和提案內容，user_prompt 保持為空字串以保持一致性
-    user_prompt = ""
+    # 構建完整的提示詞，包含用戶的修改意見
+    if user_prompt:
+        full_prompt = f"{system_prompt}\n\n--- User Modification Request ---\n{user_prompt}"
+    else:
+        full_prompt = f"{system_prompt}\n\n{user_prompt}"
     
     # 調用結構化LLM（使用正確的實驗細節schema）
     from backend.core.schema_manager import create_experimental_detail_schema
     from backend.core.generation import call_structured_llm
-    
-    # 構建完整的提示詞
-    full_prompt = f"{system_prompt}\n\n{user_prompt}"
     
     # 使用正確的實驗細節schema
     current_schema = create_experimental_detail_schema()
@@ -189,6 +195,29 @@ def generate_structured_revision_proposal(
         Dict[str, Any]: 結構化修訂提案 (包含修訂說明)
     """
     return call_llm_structured_revision_proposal(question, new_chunks, old_chunks, proposal)
+
+
+def generate_structured_revision_experimental_detail(
+    question: str, 
+    new_chunks: List, 
+    old_chunks: List, 
+    proposal: str,
+    original_experimental_detail: str
+) -> Dict[str, Any]:
+    """
+    生成結構化修訂實驗細節的便捷函數
+    
+    Args:
+        question: 用戶反饋/問題
+        new_chunks: 新檢索的文檔塊
+        old_chunks: 原始文檔塊
+        proposal: 原始提案
+        original_experimental_detail: 原始實驗細節
+    
+    Returns:
+        Dict[str, Any]: 結構化修訂實驗細節
+    """
+    return call_llm_structured_revision_experimental_detail(question, new_chunks, old_chunks, proposal, original_experimental_detail)
 
 
 # ==================== 向後兼容性函數 ====================
@@ -315,76 +344,35 @@ def structured_revision_proposal_to_text_compat(*args, **kwargs):
     return structured_revision_proposal_to_text(*args, **kwargs)
 
 
+def structured_revision_experimental_detail_to_text_compat(*args, **kwargs):
+    """向後兼容性函數"""
+    return structured_revision_experimental_detail_to_text(*args, **kwargs)
+
+
 # ==================== 導出所有函數 ====================
 
 __all__ = [
-    # 核心功能
-    'generate_structured_proposal',
-    'generate_iterative_structured_proposal',
-    'generate_structured_experimental_detail',
-    
-    'generate_structured_revision_proposal',
-    
-    # Schema 管理
     'get_dynamic_schema_params',
     'create_research_proposal_schema',
     'create_experimental_detail_schema',
-    
     'create_revision_proposal_schema',
-    'get_schema_by_type',
-    
-    # 向量數據庫操作
+    'create_revision_experimental_detail_schema',
     'load_paper_vectorstore',
     'load_experiment_vectorstore',
-    
-    # 提示詞構建
+    'retrieve_chunks_multi_query',
+    'preview_chunks',
     'build_prompt',
     'build_proposal_prompt',
     'build_detail_experimental_plan_prompt',
     'build_inference_prompt',
     'build_dual_inference_prompt',
     'build_iterative_proposal_prompt',
-    
-    # LLM 生成
-    'call_llm',
-    'call_llm_structured_proposal',
-    'call_llm_structured_experimental_detail',
-    
-    'call_llm_structured_revision_proposal',
-    
-    # 查詢擴展
-    'expand_query',
-    'expand_query_with_fallback',
-    
-    # 格式轉換
-    'structured_proposal_to_text',
-    'structured_experimental_detail_to_text',
-    'structured_revision_proposal_to_text',
-    
-    # 向後兼容性函數
-    'get_dynamic_schema_params_compat',
-    'create_research_proposal_schema_compat',
-    'create_experimental_detail_schema_compat',
-    
-    'create_revision_proposal_schema_compat',
-    'load_paper_vectorstore_compat',
-    'load_experiment_vectorstore_compat',
-    'retrieve_chunks_multi_query_compat',
-    'preview_chunks_compat',
-    'build_prompt_compat',
-    'build_proposal_prompt_compat',
-    'build_detail_experimental_plan_prompt_compat',
-    'build_inference_prompt_compat',
-    'build_dual_inference_prompt_compat',
-    'build_iterative_proposal_prompt_compat',
-    'call_llm_compat',
-    'call_llm_structured_proposal_compat',
-    'call_llm_structured_experimental_detail_compat',
-
-    'call_llm_structured_revision_proposal_compat',
-    'expand_query_compat',
-    'expand_query_with_fallback_compat',
+    'generate_structured_proposal',
+    'generate_structured_experimental_detail',
+    'generate_structured_revision_proposal',
+    'generate_structured_revision_experimental_detail',
     'structured_proposal_to_text_compat',
     'structured_experimental_detail_to_text_compat',
-    'structured_revision_proposal_to_text_compat'
+    'structured_revision_proposal_to_text_compat',
+    'structured_revision_experimental_detail_to_text_compat'
 ]

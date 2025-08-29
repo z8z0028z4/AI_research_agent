@@ -158,3 +158,53 @@ def structured_revision_proposal_to_text(revision_data: Dict[str, Any]) -> str:
         text_parts.append(f"```json\n{materials_json}\n```\n")
     
     return "\n".join(text_parts)
+
+
+def structured_revision_experimental_detail_to_text(revision_data: Dict[str, Any]) -> str:
+    """
+    將結構化修訂實驗細節轉換為傳統文本格式
+    
+    Args:
+        revision_data: 結構化修訂實驗細節數據 (包含修訂說明)
+    
+    Returns:
+        str: 格式化的文本實驗細節
+    """
+    if not revision_data:
+        return ""
+    
+    text_parts = []
+    
+    # 修訂說明
+    if revision_data.get('revision_explanation'):
+        text_parts.append("Revision Explanation:")
+        text_parts.append(f"{revision_data['revision_explanation']}\n")
+    
+    # Synthesis Process
+    if revision_data.get('synthesis_process'):
+        text_parts.append("SYNTHESIS PROCESS:")
+        text_parts.append(f"{revision_data['synthesis_process']}\n")
+    
+    # Materials and Conditions
+    if revision_data.get('materials_and_conditions'):
+        text_parts.append("MATERIALS AND CONDITIONS:")
+        text_parts.append(f"{revision_data['materials_and_conditions']}\n")
+    
+    # Analytical Methods
+    if revision_data.get('analytical_methods'):
+        text_parts.append("ANALYTICAL METHODS:")
+        text_parts.append(f"{revision_data['analytical_methods']}\n")
+    
+    # Precautions
+    if revision_data.get('precautions'):
+        text_parts.append("PRECAUTIONS:")
+        text_parts.append(f"{revision_data['precautions']}\n")
+    
+    return "\n".join(text_parts)
+
+__all__ = [
+    'structured_proposal_to_text',
+    'structured_experimental_detail_to_text',
+    'structured_revision_proposal_to_text',
+    'structured_revision_experimental_detail_to_text'
+]

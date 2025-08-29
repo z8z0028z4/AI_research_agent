@@ -35,14 +35,29 @@ try:
         if model_name is None:
             model_name = get_current_model()
         
+        # 🔍 [DEBUG] 參數追蹤：檢查設定管理器返回的參數
+        print(f"🔍 [DEBUG] get_model_params 開始")
+        print(f"🔍 [DEBUG] - model_name: {model_name}")
+        
         # 從設定管理器獲取動態參數
         llm_params = settings_manager.get_llm_parameters()
+        print(f"🔍 [DEBUG] - settings_manager.get_llm_parameters() 返回: {llm_params}")
         
         # 使用新的參數適配器
         if HAS_PARAMETER_DETECTOR:
             try:
                 adapted_params = adapt_parameters(model_name, llm_params)
                 print(f"🔧 模型參數適配完成: {adapted_params}")
+                
+                # 🔍 [DEBUG] 參數追蹤：檢查適配後的參數
+                print(f"🔍 [DEBUG] 適配後的參數:")
+                print(f"🔍 [DEBUG] - adapted_params 類型: {type(adapted_params)}")
+                print(f"🔍 [DEBUG] - adapted_params 內容: {adapted_params}")
+                print(f"🔍 [DEBUG] - adapted_params.get('reasoning'): {adapted_params.get('reasoning')}")
+                print(f"🔍 [DEBUG] - adapted_params.get('reasoning_effort'): {adapted_params.get('reasoning_effort')}")
+                print(f"🔍 [DEBUG] - adapted_params.get('text'): {adapted_params.get('text')}")
+                print(f"🔍 [DEBUG] - adapted_params.get('verbosity'): {adapted_params.get('verbosity')}")
+                
                 return adapted_params
             except Exception as e:
                 print(f"⚠️ 參數適配失敗，使用基礎參數: {e}")
@@ -61,6 +76,7 @@ try:
             if "reasoning_effort" in llm_params:
                 base_params["reasoning_effort"] = llm_params["reasoning_effort"]
         
+        print(f"🔍 [DEBUG] 使用基礎參數: {base_params}")
         return base_params
     
     def get_model_supported_parameters(model_name: str = None) -> Dict[str, Any]:

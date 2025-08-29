@@ -383,7 +383,7 @@ def agent_answer(question: str, mode: str = "make proposal", **kwargs):
     
     # ==================== 獲取使用的模型信息 ====================
     try:
-        from model_config_bridge import get_current_model
+        from backend.services.model_service import get_current_model
         used_model = get_current_model()
         print(f"🔍 [AGENT-{request_id}] 使用的模型: {used_model}")
     except Exception as e:

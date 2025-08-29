@@ -162,9 +162,48 @@ async def generate_proposal(request: ProposalRequest):
 
         # 從回答中抽取化學品資訊與提案正文（包含 SMILES 繪製的結構圖）
         print(f"🔍 [DEBUG-{request_id}] 準備調用化學服務提取化學品並添加結構圖")
-        chemical_metadata_list, not_found_list, proposal_answer = chemical_service.extract_chemicals_with_drawings(
-            result.get("answer", "")
-        )
+        
+        # 檢查是否有結構化數據中的材料列表
+        structured_proposal = result.get("structured_proposal")
+        if structured_proposal and structured_proposal.get('materials_list'):
+            print(f"🔍 [DEBUG-{request_id}] 使用結構化數據中的材料列表: {structured_proposal['materials_list']}")
+            # 直接使用結構化數據中的材料列表
+            from backend.services.pubchem_service import extract_and_fetch_chemicals, remove_json_chemical_block
+            chemical_metadata_list, not_found_list = extract_and_fetch_chemicals(structured_proposal['materials_list'])
+            # 清理文本中的 JSON 化學品塊
+            proposal_answer = remove_json_chemical_block(result.get("answer", ""))
+            
+            # ✅ 修復：為化學品添加SMILES繪製的結構圖
+            print(f"🔍 [DEBUG-{request_id}] 為結構化數據的化學品添加SMILES繪製")
+            print(f"🔍 [DEBUG-{request_id}] 化學品數量: {len(chemical_metadata_list)}")
+            
+            # 測試 SMILES-Drawer 是否正常工作
+            try:
+                from backend.services.smiles_drawer import smiles_drawer
+                test_smiles = "CCO"  # 乙醇
+                print(f"🔍 [DEBUG-{request_id}] 測試 SMILES-Drawer 功能...")
+                test_svg = smiles_drawer.smiles_to_svg(test_smiles)
+                test_png = smiles_drawer.smiles_to_png_base64(test_smiles)
+                print(f"🔍 [DEBUG-{request_id}] 測試結果 - SVG: {test_svg is not None}, PNG: {test_png is not None}")
+            except Exception as e:
+                print(f"❌ [DEBUG-{request_id}] SMILES-Drawer 測試失敗: {e}")
+            
+            enhanced_chemicals = []
+            for i, chemical in enumerate(chemical_metadata_list):
+                print(f"🔍 [DEBUG-{request_id}] 處理化學品 {i+1}/{len(chemical_metadata_list)}: {chemical.get('name', 'Unknown')}")
+                print(f"🔍 [DEBUG-{request_id}] 化學品數據鍵: {list(chemical.keys())}")
+                print(f"🔍 [DEBUG-{request_id}] SMILES: {chemical.get('smiles', 'N/A')}")
+                enhanced_chemical = chemical_service.add_smiles_drawing(chemical)
+                enhanced_chemicals.append(enhanced_chemical)
+                print(f"🔍 [DEBUG-{request_id}] 處理完成，最終數據鍵: {list(enhanced_chemical.keys())}")
+            chemical_metadata_list = enhanced_chemicals
+        else:
+            # 回退到從文本中提取
+            print(f"🔍 [DEBUG-{request_id}] 回退到從文本中提取材料列表")
+            chemical_metadata_list, not_found_list, proposal_answer = chemical_service.extract_chemicals_with_drawings(
+                result.get("answer", "")
+            )
+        
         print(f"🔍 [DEBUG-{request_id}] 化學品提取和結構圖生成完成")
         print(f"🔍 [DEBUG-{request_id}] proposal_answer 長度: {len(proposal_answer)}")
         print(f"🔍 [DEBUG-{request_id}] chemical_metadata_list 數量: {len(chemical_metadata_list)}")

@@ -1,6 +1,7 @@
 import { Button, Card, Collapse, Divider, Form, Input, List, message, Select, Space, Typography } from 'antd';
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import SmilesDrawer from '../components/SmilesDrawer';
+import { useTextHighlight } from '../components/TextHighlight/TextHighlightProvider';
 
 const { Title, Paragraph, Text } = Typography;
 const { TextArea } = Input;
@@ -29,10 +30,70 @@ const Proposal = () => {
   // 結構化數據狀態
   const [structuredProposal, setStructuredProposal] = useState(null); // 結構化提案數據
 
+  // 文字反白功能
+  const { setMode, setProposal: setTextHighlightProposal, setText, handleTextSelection, setReviseCallback } = useTextHighlight();
+
   const hasResult = useMemo(
     () => Boolean(proposal) || chemicals.length > 0 || citations.length > 0,
     [proposal, chemicals, citations]
   );
+
+  // 設置文字反白模式
+  useEffect(() => {
+    setMode('make proposal');
+  }, [setMode]);
+
+  // 設置文字反白功能的修改回調
+  useEffect(() => {
+    setReviseCallback((result) => {
+      console.log('🔍 [PROPOSAL] 文字反白修改回調被調用');
+      console.log('🔍 [PROPOSAL] result:', result);
+      console.log('🔍 [PROPOSAL] result.answer:', result.answer);
+      console.log('🔍 [PROPOSAL] result.structured_proposal:', result.structured_proposal);
+      console.log('🔍 [PROPOSAL] result.structured_experiment:', result.structured_experiment);
+      
+      // 根據互動類型處理不同的修改
+      if (result.interaction_type === 'revise') {
+        if (result.structured_proposal) {
+          // 修改提案
+          setProposal(result.answer || '');
+          setStructuredProposal(result.structured_proposal);
+          setChemicals(result.chemicals || []);
+          setExperimentDetail(''); // 清空實驗細節
+          setStructuredExperiment(null); // 清空結構化實驗細節
+        } else if (result.structured_experiment) {
+          // 修改實驗細節
+          setExperimentDetail(result.answer || '');
+          setStructuredExperiment(result.structured_experiment);
+          // 不清空提案相關數據
+        }
+        
+        // 更新引用和文檔塊
+        setCitations(result.citations || []);
+        setChunks(result.chunks || []);
+        
+        // 更新文字反白功能的數據
+        setTextHighlightProposal(result.answer || '', result.chunks || []);
+        setText(result.answer || '');
+        
+        // 設置為已生成內容
+        setHasGeneratedContent(true);
+        
+        console.log('✅ [PROPOSAL] 文字反白修改已應用');
+        console.log('✅ [PROPOSAL] 修改類型:', result.structured_proposal ? 'proposal' : 'experiment');
+      }
+    });
+  }, [setReviseCallback, setTextHighlightProposal, setText]);
+
+  // 監控 chemicals 狀態變化
+  useEffect(() => {
+    console.log('🔍 [PROPOSAL] chemicals 狀態變化:', chemicals);
+    console.log('🔍 [PROPOSAL] chemicals 長度:', chemicals.length);
+    if (chemicals.length > 0) {
+      console.log('🔍 [PROPOSAL] 第一個化學品:', chemicals[0]);
+      console.log('🔍 [PROPOSAL] 第一個化學品的鍵:', Object.keys(chemicals[0]));
+    }
+  }, [chemicals]);
 
   const callApi = async (path, options = {}) => {
     const res = await fetch(`${API_BASE}${path}`, {
@@ -104,6 +165,10 @@ const Proposal = () => {
         setStructuredProposal(null);
       }
 
+      // 設置文字反白功能的數據
+      setTextHighlightProposal(data.proposal || '', data.chunks || []);
+      setText(data.proposal || '');
+
 
 
       console.log(`✅ [FRONTEND-${requestId}] 狀態更新完成`);
@@ -159,6 +224,10 @@ const Proposal = () => {
       } else {
         setStructuredProposal(null);
       }
+
+      // 更新文字反白功能的數據
+      setTextHighlightProposal(data.proposal || '', data.chunks || []);
+      setText(data.proposal || '');
 
 
 
@@ -396,16 +465,22 @@ const Proposal = () => {
                 key: 'proposal',
                 label: <span style={{ fontWeight: 700, fontSize: 27 }}>🤖 Generated proposal</span>,
                 children: (
-                  <div style={{
-                    whiteSpace: 'pre-wrap',
-                    fontSize: '16px',
-                    lineHeight: '1.6',
-                    wordBreak: 'break-word',
-                    overflowWrap: 'break-word',
-                    maxWidth: '100%',
-                    width: '100%',
-                    fontWeight: 'normal'
-                  }}>
+                  <div 
+                    data-area="proposal"
+                    data-testid="proposal-content"
+                    onMouseUp={handleTextSelection}
+                    style={{
+                      whiteSpace: 'pre-wrap',
+                      fontSize: '16px',
+                      lineHeight: '1.6',
+                      wordBreak: 'break-word',
+                      overflowWrap: 'break-word',
+                      maxWidth: '100%',
+                      width: '100%',
+                      fontWeight: 'normal',
+                      cursor: 'text'
+                    }}
+                  >
                     {structuredProposal ? (
                       // 渲染結構化提案數據
                       <>
@@ -554,157 +629,194 @@ const Proposal = () => {
           />
 
           {(experimentDetail || structuredExperiment) && (
-            <Collapse
-              defaultActiveKey={['experiment']}
-              style={{ marginBottom: 16 }}
-              items={[
-                {
-                  key: 'experiment',
-                  label: <span style={{ fontWeight: 700, fontSize: 27 }}>🔬 Suggested experiment details</span>,
-                  children: (
-                    <div style={{
-                      whiteSpace: 'pre-wrap',
-                      fontSize: '16px',
-                      lineHeight: '1.6',
-                      wordBreak: 'break-word',
-                      overflowWrap: 'break-word',
-                      maxWidth: '100%',
-                      width: '100%',
-                      fontWeight: 'normal'
-                    }}>
-                      {structuredExperiment ? (
-                        // 渲染結構化實驗細節數據
-                        <>
-                          {/* 合成過程 */}
-                          {structuredExperiment.synthesis_process && (
-                            <>
-                              <div style={{
-                                fontSize: '24px',
-                                fontWeight: 'bold',
-                                color: '#1890ff',
-                                marginTop: '12px',
-                                marginBottom: '6px'
-                              }}>
-                                Synthesis Process
-                              </div>
-                              <div style={{ marginBottom: '16px' }}>
-                                {structuredExperiment.synthesis_process
-                                  .replace(/^(SYNTHESIS PROCESS|Synthesis Process|合成過程)[:\s]*/i, '')
-                                  .trim()}
-                              </div>
-                            </>
-                          )}
+            <>
+              {/* 修訂說明卡片 - 僅在修訂實驗細節時顯示 */}
+              {structuredExperiment?.revision_explanation && (
+                <Collapse
+                  defaultActiveKey={['revision']}
+                  style={{ marginBottom: 16 }}
+                  items={[
+                    {
+                      key: 'revision',
+                      label: <span style={{ fontWeight: 700, fontSize: 27 }}>📝 Revision Explanation</span>,
+                      children: (
+                        <div style={{
+                          whiteSpace: 'pre-wrap',
+                          fontSize: '16px',
+                          lineHeight: '1.6',
+                          wordBreak: 'break-word',
+                          overflowWrap: 'break-word',
+                          maxWidth: '100%',
+                          width: '100%',
+                          fontWeight: 'normal'
+                        }}>
+                          {structuredExperiment.revision_explanation}
+                        </div>
+                      ),
+                    },
+                  ]}
+                />
+              )}
 
-                          {/* 材料和條件 */}
-                          {structuredExperiment.materials_and_conditions && (
-                            <>
-                              <div style={{
-                                fontSize: '24px',
-                                fontWeight: 'bold',
-                                color: '#1890ff',
-                                marginTop: '12px',
-                                marginBottom: '6px'
-                              }}>
-                                Materials and Conditions
-                              </div>
-                              <div style={{ marginBottom: '16px' }}>
-                                {structuredExperiment.materials_and_conditions
-                                  .replace(/^(MATERIALS AND CONDITIONS|Materials and Conditions|材料和條件)[:\s]*/i, '')
-                                  .trim()}
-                              </div>
-                            </>
-                          )}
-
-                          {/* 分析方法 */}
-                          {structuredExperiment.analytical_methods && (
-                            <>
-                              <div style={{
-                                fontSize: '24px',
-                                fontWeight: 'bold',
-                                color: '#1890ff',
-                                marginTop: '12px',
-                                marginBottom: '6px'
-                              }}>
-                                Analytical Methods
-                              </div>
-                              <div style={{ marginBottom: '16px' }}>
-                                {structuredExperiment.analytical_methods
-                                  .replace(/^(ANALYTICAL METHODS|Analytical Methods|分析方法)[:\s]*/i, '')
-                                  .trim()}
-                              </div>
-                            </>
-                          )}
-
-                          {/* 注意事項 */}
-                          {structuredExperiment.precautions && (
-                            <>
-                              <div style={{
-                                fontSize: '24px',
-                                fontWeight: 'bold',
-                                color: '#1890ff',
-                                marginTop: '12px',
-                                marginBottom: '6px'
-                              }}>
-                                Precautions
-                              </div>
-                              <div style={{ marginBottom: '16px' }}>
-                                {structuredExperiment.precautions
-                                  .replace(/^(PRECAUTIONS|Precautions|注意事項)[:\s]*/i, '')
-                                  .trim()}
-                              </div>
-                            </>
-                          )}
-                        </>
-                      ) : (
-                        // 渲染傳統文本格式（作為 fallback）
-                        experimentDetail
-                          .replace(/\*\*(.*?)\*\*/g, '$1') // 移除粗體標記
-                          .replace(/\*(.*?)\*/g, '$1') // 移除斜體標記
-                          .replace(/`(.*?)`/g, '$1') // 移除代碼標記
-                          .replace(/^#{3,}\s*(.*)$/gm, '$1') // 只移除 ### 及以上的標題標記，保留 ##
-                          .replace(/^\s*[-*+]\s+/gm, '- ') // 統一項目符號
-                          .replace(/^\s*\d+\.\s+/gm, (match) => match.replace(/^\s*\d+\.\s+/, '')) // 移除編號
-                          .replace(/\n\s*\n\s*\n/g, '\n\n') // 移除多餘空行
-                          .replace(/\n\s*\*\*/g, '\n') // 移除粗體前的換行
-                          .replace(/\*\*\s*\n/g, '\n') // 移除粗體後的換行
-                          .split('\n')
-                          .map((line, index) => {
-                            // 檢查是否為實驗細節的主要標題行（與提案區域相同的樣式）
-                            if (line.match(/^(##\s*)?(合成過程|材料和條件|分析方法|注意事項|Synthesis Process|Materials and Conditions|Analytical Methods|Precautions|實驗細節|Experimental Details)/)) {
-                              return (
-                                <div key={index} style={{
+              {/* 實驗細節卡片 */}
+              <Collapse
+                defaultActiveKey={['experiment']}
+                style={{ marginBottom: 16 }}
+                items={[
+                  {
+                    key: 'experiment',
+                    label: <span style={{ fontWeight: 700, fontSize: 27 }}>🔬 Suggested experiment details</span>,
+                    children: (
+                      <div 
+                        data-area="experiment"
+                        data-testid="experiment-content"
+                        onMouseUp={handleTextSelection}
+                        style={{
+                          whiteSpace: 'pre-wrap',
+                          fontSize: '16px',
+                          lineHeight: '1.6',
+                          wordBreak: 'break-word',
+                          overflowWrap: 'break-word',
+                          maxWidth: '100%',
+                          width: '100%',
+                          fontWeight: 'normal',
+                          cursor: 'text'
+                        }}
+                      >
+                        {structuredExperiment ? (
+                          // 渲染結構化實驗細節數據
+                          <>
+                            {/* 合成過程 */}
+                            {structuredExperiment.synthesis_process && (
+                              <>
+                                <div style={{
                                   fontSize: '24px',
                                   fontWeight: 'bold',
                                   color: '#1890ff',
-                                  marginTop: '16px',
-                                  marginBottom: '8px'
-                                }}>
-                                  {line.replace(/^##\s*/, '')}
-                                </div>
-                              );
-                            }
-                            // 檢查是否為子標題行（保持原有的樣式）
-                            if (line.match(/^(\d+\)\s*)?(前處理與配方計算|微波輔助骨架合成|活化|微波促進的後合成接枝|Pre-treatment and Formulation Calculation|Microwave-assisted Framework Synthesis|Activation|Microwave-promoted Post-synthesis Grafting|材料\(IUPAC 名稱以便辨識\)|Materials \(IUPAC names for identification\))/)) {
-                              return (
-                                <div key={index} style={{
-                                  fontSize: '20px',
-                                  fontWeight: 'bold',
-                                  color: '#262626',
                                   marginTop: '12px',
                                   marginBottom: '6px'
                                 }}>
-                                  {line}
+                                  Synthesis Process
                                 </div>
-                              );
-                            }
-                            return <div key={index} style={{ fontWeight: 'normal' }}>{line}</div>;
-                          })
-                      )}
-                    </div>
-                  ),
-                },
-              ]}
-            />
+                                <div style={{ marginBottom: '16px' }}>
+                                  {structuredExperiment.synthesis_process
+                                    .replace(/^(SYNTHESIS PROCESS|Synthesis Process|合成過程)[:\s]*/i, '')
+                                    .trim()}
+                                </div>
+                              </>
+                            )}
+
+                            {/* 材料和條件 */}
+                            {structuredExperiment.materials_and_conditions && (
+                              <>
+                                <div style={{
+                                  fontSize: '24px',
+                                  fontWeight: 'bold',
+                                  color: '#1890ff',
+                                  marginTop: '12px',
+                                  marginBottom: '6px'
+                                }}>
+                                  Materials and Conditions
+                                </div>
+                                <div style={{ marginBottom: '16px' }}>
+                                  {structuredExperiment.materials_and_conditions
+                                    .replace(/^(MATERIALS AND CONDITIONS|Materials and Conditions|材料和條件)[:\s]*/i, '')
+                                    .trim()}
+                                </div>
+                              </>
+                            )}
+
+                            {/* 分析方法 */}
+                            {structuredExperiment.analytical_methods && (
+                              <>
+                                <div style={{
+                                  fontSize: '24px',
+                                  fontWeight: 'bold',
+                                  color: '#1890ff',
+                                  marginTop: '12px',
+                                  marginBottom: '6px'
+                                }}>
+                                  Analytical Methods
+                                </div>
+                                <div style={{ marginBottom: '16px' }}>
+                                  {structuredExperiment.analytical_methods
+                                    .replace(/^(ANALYTICAL METHODS|Analytical Methods|分析方法)[:\s]*/i, '')
+                                    .trim()}
+                                </div>
+                              </>
+                            )}
+
+                            {/* 注意事項 */}
+                            {structuredExperiment.precautions && (
+                              <>
+                                <div style={{
+                                  fontSize: '24px',
+                                  fontWeight: 'bold',
+                                  color: '#1890ff',
+                                  marginTop: '12px',
+                                  marginBottom: '6px'
+                                }}>
+                                  Precautions
+                                </div>
+                                <div style={{ marginBottom: '16px' }}>
+                                  {structuredExperiment.precautions
+                                    .replace(/^(PRECAUTIONS|Precautions|注意事項)[:\s]*/i, '')
+                                    .trim()}
+                                </div>
+                              </>
+                            )}
+                          </>
+                        ) : (
+                          // 渲染傳統文本格式（作為 fallback）
+                          experimentDetail
+                            .replace(/\*\*(.*?)\*\*/g, '$1') // 移除粗體標記
+                            .replace(/\*(.*?)\*/g, '$1') // 移除斜體標記
+                            .replace(/`(.*?)`/g, '$1') // 移除代碼標記
+                            .replace(/^#{3,}\s*(.*)$/gm, '$1') // 只移除 ### 及以上的標題標記，保留 ##
+                            .replace(/^\s*[-*+]\s+/gm, '- ') // 統一項目符號
+                            .replace(/^\s*\d+\.\s+/gm, (match) => match.replace(/^\s*\d+\.\s+/, '')) // 移除編號
+                            .replace(/\n\s*\n\s*\n/g, '\n\n') // 移除多餘空行
+                            .replace(/\n\s*\*\*/g, '\n') // 移除粗體前的換行
+                            .replace(/\*\*\s*\n/g, '\n') // 移除粗體後的換行
+                            .split('\n')
+                            .map((line, index) => {
+                              // 檢查是否為實驗細節的主要標題行（與提案區域相同的樣式）
+                              if (line.match(/^(##\s*)?(合成過程|材料和條件|分析方法|注意事項|Synthesis Process|Materials and Conditions|Analytical Methods|Precautions|實驗細節|Experimental Details)/)) {
+                                return (
+                                  <div key={index} style={{
+                                    fontSize: '24px',
+                                    fontWeight: 'bold',
+                                    color: '#1890ff',
+                                    marginTop: '16px',
+                                    marginBottom: '8px'
+                                  }}>
+                                    {line.replace(/^##\s*/, '')}
+                                  </div>
+                                );
+                              }
+                              // 檢查是否為子標題行（保持原有的樣式）
+                              if (line.match(/^(\d+\)\s*)?(前處理與配方計算|微波輔助骨架合成|活化|微波促進的後合成接枝|Pre-treatment and Formulation Calculation|Microwave-assisted Framework Synthesis|Activation|Microwave-promoted Post-synthesis Grafting|材料\(IUPAC 名稱以便辨識\)|Materials \(IUPAC names for identification\))/)) {
+                                return (
+                                  <div key={index} style={{
+                                    fontSize: '20px',
+                                    fontWeight: 'bold',
+                                    color: '#262626',
+                                    marginTop: '12px',
+                                    marginBottom: '6px'
+                                  }}>
+                                    {line}
+                                  </div>
+                                );
+                              }
+                              return <div key={index} style={{ fontWeight: 'normal' }}>{line}</div>;
+                            })
+                        )}
+                      </div>
+                    ),
+                  },
+                ]}
+              />
+            </>
           )}
 
           <Collapse
@@ -716,87 +828,98 @@ const Proposal = () => {
                 label: <span style={{ fontWeight: 700, fontSize: 27 }}>🧪 Chemical Summary</span>,
                 children: (
                   <>
-                    <List
-                      dataSource={chemicals}
-                      renderItem={(c, index) => (
-                        <List.Item style={{ padding: '16px 0', borderBottom: '1px solid #f0f0f0' }}>
-                          <div style={{ width: '100%' }}>
-                            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                              {/* Structure Image - 優先使用 SMILES 繪製的結構圖 */}
-                              <div style={{ flex: '0 0 150px' }}>
-                                <SmilesDrawer
-                                  svgStructure={c.svg_structure}
-                                  pngStructure={c.png_structure}
-                                  smiles={c.smiles}
-                                  name={c.name}
-                                  width={120}
-                                  height={120}
-                                  showSmiles={false}
-                                  loading={false}
-                                  error={null}
-                                />
-                              </div>
-
-                              {/* Chemical Name and Properties */}
-                              <div style={{ flex: '1', display: 'flex', gap: '24px' }}>
-                                {/* Properties */}
-                                <div style={{ flex: '1' }}>
-                                  <Text strong style={{ fontSize: '24px', marginBottom: '8px', display: 'block' }}>
-                                    {c.pubchem_url ? (
-                                      <a href={c.pubchem_url} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff', fontSize: '24px', fontWeight: 'bold' }}>
-                                        {c.name}
-                                      </a>
-                                    ) : (
-                                      <span style={{ color: '#1890ff', fontSize: '24px', fontWeight: 'bold' }}>{c.name}</span>
-                                    )}
-                                  </Text>
-                                  <div style={{
-                                    fontSize: '14px',
-                                    lineHeight: '1.5',
-                                    wordBreak: 'break-word',
-                                    overflowWrap: 'break-word'
-                                  }}>
-                                    <div><strong>Formula:</strong> <code>{c.formula || '-'}</code></div>
-                                    <div><strong>MW:</strong> <code>{c.weight || '-'}</code></div>
-                                    <div><strong>Boiling Point:</strong> <code>{c.boiling_point_c || '-'}</code></div>
-                                    <div><strong>Melting Point:</strong> <code>{c.melting_point_c || '-'}</code></div>
-                                    <div><strong>CAS No.:</strong> <code>{c.cas || '-'}</code></div>
-                                    <div><strong>SMILES:</strong> <code>{c.smiles || '-'}</code></div>
-                                  </div>
+                                         <List
+                       dataSource={chemicals}
+                       renderItem={(c, index) => {
+                         console.log(`🔍 [CHEMICAL-SUMMARY] 渲染化學品 ${index}:`, c);
+                         console.log(`🔍 [CHEMICAL-SUMMARY] 化學品 ${index} 的鍵:`, Object.keys(c));
+                         console.log(`🔍 [CHEMICAL-SUMMARY] 化學品 ${index} 是否有 svg_structure:`, 'svg_structure' in c);
+                         console.log(`🔍 [CHEMICAL-SUMMARY] 化學品 ${index} 是否有 png_structure:`, 'png_structure' in c);
+                         
+                                                  return (
+                          <List.Item style={{ padding: '16px 0', borderBottom: '1px solid #f0f0f0' }}>
+                            <div style={{ width: '100%' }}>
+                              <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                                {/* Structure Image - 優先使用 SMILES 繪製的結構圖 */}
+                                <div style={{ flex: '0 0 150px' }}>
+                                  <SmilesDrawer
+                                    svgStructure={c.svg_structure}
+                                    pngStructure={c.png_structure}
+                                    smiles={c.smiles}
+                                    name={c.name}
+                                    width={120}
+                                    height={120}
+                                    showSmiles={false}
+                                    loading={false}
+                                    error={null}
+                                  />
                                 </div>
 
-                                {/* Safety Icons */}
-                                <div style={{ flex: '0 0 150px' }}>
-                                  <Text strong style={{ fontSize: '14px', marginBottom: '8px', display: 'block' }}>
-                                    Handling Safety
-                                  </Text>
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {/* NFPA Diamond */}
-                                    {c.safety_icons?.nfpa_image && (
-                                      <img
-                                        src={c.safety_icons.nfpa_image}
-                                        alt="NFPA"
-                                        style={{ width: '50px', height: '50px' }}
-                                      />
-                                    )}
-                                    {/* GHS Icons */}
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '120px' }}>
-                                      {c.safety_icons?.ghs_icons?.map((icon, index) => (
+                                {/* Chemical Name and Properties */}
+                                <div style={{ flex: '1', display: 'flex', gap: '24px' }}>
+                                  {/* Properties */}
+                                  <div style={{ flex: '1' }}>
+                                    <Text strong style={{ fontSize: '24px', marginBottom: '8px', display: 'block' }}>
+                                      {c.pubchem_url ? (
+                                        <a href={c.pubchem_url} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff', fontSize: '24px', fontWeight: 'bold' }}>
+                                          {c.name}
+                                        </a>
+                                      ) : (
+                                        <span style={{ color: '#1890ff', fontSize: '24px', fontWeight: 'bold' }}>{c.name}</span>
+                                      )}
+                                    </Text>
+                                    <div 
+                                      onMouseUp={handleTextSelection}
+                                      style={{
+                                        fontSize: '14px',
+                                        lineHeight: '1.5',
+                                        wordBreak: 'break-word',
+                                        overflowWrap: 'break-word',
+                                        cursor: 'text'
+                                      }}
+                                    >
+                                      <div><strong>Formula:</strong> <code>{c.formula || '-'}</code></div>
+                                      <div><strong>MW:</strong> <code>{c.weight || '-'}</code></div>
+                                      <div><strong>Boiling Point:</strong> <code>{c.boiling_point_c || '-'}</code></div>
+                                      <div><strong>Melting Point:</strong> <code>{c.melting_point_c || '-'}</code></div>
+                                      <div><strong>CAS No.:</strong> <code>{c.cas || '-'}</code></div>
+                                      <div><strong>SMILES:</strong> <code>{c.smiles || '-'}</code></div>
+                                    </div>
+                                  </div>
+
+                                  {/* Safety Icons */}
+                                  <div style={{ flex: '0 0 150px' }}>
+                                    <Text strong style={{ fontSize: '14px', marginBottom: '8px', display: 'block' }}>
+                                      Handling Safety
+                                    </Text>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                      {/* NFPA Diamond */}
+                                      {c.safety_icons?.nfpa_image && (
                                         <img
-                                          key={index}
-                                          src={icon}
-                                          alt="GHS"
-                                          style={{ width: '40px', height: '40px' }}
+                                          src={c.safety_icons.nfpa_image}
+                                          alt="NFPA"
+                                          style={{ width: '50px', height: '50px' }}
                                         />
-                                      ))}
+                                      )}
+                                      {/* GHS Icons */}
+                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '120px' }}>
+                                        {c.safety_icons?.ghs_icons?.map((icon, index) => (
+                                          <img
+                                            key={index}
+                                            src={icon}
+                                            alt="GHS"
+                                            style={{ width: '40px', height: '40px' }}
+                                          />
+                                        ))}
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        </List.Item>
-                      )}
+                          </List.Item>
+                         );
+                       }}
                       grid={{ gutter: 16, column: 2 }}
                     />
                     {!!notFound.length && (

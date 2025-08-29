@@ -115,10 +115,19 @@ class ModelParameterDetector:
         # 適配參數
         adapted_params = {'model': model_name}
         
+        # 添加調試日誌
+        logger.info(f"🔍 [DEBUG] 開始參數適配")
+        logger.info(f"🔍 [DEBUG] 模型名稱: {model_name}")
+        logger.info(f"🔍 [DEBUG] 用戶參數: {user_params}")
+        logger.info(f"🔍 [DEBUG] 支援參數: {list(supported_params.keys())}")
+        
         for param_name, param_value in user_params.items():
+            logger.info(f"🔍 [DEBUG] 處理參數: {param_name} = {param_value}")
+            
             # 特殊處理：將 max_tokens 映射到 max_output_tokens（GPT-5系列）
             if param_name == 'max_tokens' and model_name.startswith('gpt-5'):
                 adapted_params['max_output_tokens'] = param_value
+                logger.info(f"🔍 [DEBUG] 映射 max_tokens -> max_output_tokens: {param_value}")
                 continue
                 
             if param_name not in supported_params:
@@ -127,19 +136,27 @@ class ModelParameterDetector:
                 
             param_config = supported_params[param_name]
             api_name = param_config['api_name']
+            logger.info(f"🔍 [DEBUG] 參數 {param_name} 的 API 名稱: {api_name}")
             
             # 根據API名稱進行適配
             if api_name == 'reasoning.effort':
                 # 正確處理reasoning參數
                 adapted_params['reasoning'] = {'effort': param_value}
-            elif api_name == 'max_output_tokens':  # 修正：使用max_output_tokens
+                logger.info(f"🔍 [DEBUG] 設置 reasoning.effort: {param_value}")
+            elif api_name == 'max_output_tokens':
                 adapted_params['max_output_tokens'] = param_value
-            elif api_name == 'text.verbosity':  # 修正：verbosity在text對象中
-                adapted_params['text'] = {'verbosity': param_value}
+                logger.info(f"🔍 [DEBUG] 設置 max_output_tokens: {param_value}")
+            elif api_name == 'text.verbosity':
+                # 處理 verbosity 參數
+                if 'text' not in adapted_params:
+                    adapted_params['text'] = {}
+                adapted_params['text']['verbosity'] = param_value
+                logger.info(f"🔍 [DEBUG] 設置 text.verbosity: {param_value}")
             else:
                 adapted_params[api_name] = param_value
+                logger.info(f"🔍 [DEBUG] 設置 {api_name}: {param_value}")
                 
-        logger.info(f"參數適配完成: {adapted_params}")
+        logger.info(f"🔍 [DEBUG] 參數適配完成: {adapted_params}")
         return adapted_params
     
     def create_cfg_tool(self, grammar_definition: str, tool_name: str = "custom_grammar") -> Dict[str, Any]:

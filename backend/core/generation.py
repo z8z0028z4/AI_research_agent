@@ -61,6 +61,28 @@ def _call_gpt5_responses_api(prompt: str, llm_params: Dict[str, Any], **kwargs) 
     try:
         client = OpenAI()
         
+        # 添加 SSL 驗證禁用選項，解決企業網路環境的證書問題
+        import httpx
+        import os
+        
+        # 檢查環境變數，允許用戶控制 SSL 驗證
+        disable_ssl_verify = os.getenv('DISABLE_SSL_VERIFY', 'false').lower() == 'true'
+        if disable_ssl_verify:
+            client._client = httpx.Client(verify=False)
+            logger.warning("⚠️ SSL 驗證已禁用（環境變數控制）")
+        else:
+            # 嘗試使用預設設置，如果失敗則自動禁用
+            try:
+                # 測試連接
+                test_client = httpx.Client()
+                test_client.close()
+            except Exception as e:
+                if "certificate verify failed" in str(e).lower():
+                    client._client = httpx.Client(verify=False)
+                    logger.warning("⚠️ 檢測到 SSL 證書問題，自動禁用 SSL 驗證")
+                else:
+                    raise e
+        
         # 構建 Responses API 參數 - 使用 input 而不是 prompt
         responses_params = {
             "model": llm_params.get("model", "gpt-5"),
@@ -202,6 +224,16 @@ def call_structured_llm(prompt: str, schema: Dict[str, Any], **kwargs) -> Dict[s
         current_model = get_current_model()
         llm_params = get_model_params()
         
+        # 🔍 [DEBUG] 參數追蹤：檢查 call_structured_llm 中的參數
+        logger.info(f"🔍 [DEBUG] call_structured_llm 參數追蹤:")
+        logger.info(f"🔍 [DEBUG] - current_model: {current_model}")
+        logger.info(f"🔍 [DEBUG] - llm_params 類型: {type(llm_params)}")
+        logger.info(f"🔍 [DEBUG] - llm_params 內容: {llm_params}")
+        logger.info(f"🔍 [DEBUG] - llm_params.get('reasoning'): {llm_params.get('reasoning')}")
+        logger.info(f"🔍 [DEBUG] - llm_params.get('reasoning_effort'): {llm_params.get('reasoning_effort')}")
+        logger.info(f"🔍 [DEBUG] - llm_params.get('text'): {llm_params.get('text')}")
+        logger.info(f"🔍 [DEBUG] - llm_params.get('verbosity'): {llm_params.get('verbosity')}")
+        
         logger.info(f"調用結構化 LLM，模型：{current_model}")
         
         # 只支援 GPT-5 系列
@@ -231,6 +263,37 @@ def _call_gpt5_structured_api(prompt: str, schema: Dict[str, Any], llm_params: D
     try:
         client = OpenAI()
         
+        # 添加 SSL 驗證禁用選項，解決企業網路環境的證書問題
+        import httpx
+        import os
+        
+        # 檢查環境變數，允許用戶控制 SSL 驗證
+        disable_ssl_verify = os.getenv('DISABLE_SSL_VERIFY', 'false').lower() == 'true'
+        if disable_ssl_verify:
+            client._client = httpx.Client(verify=False)
+            logger.warning("⚠️ SSL 驗證已禁用（環境變數控制）")
+        else:
+            # 嘗試使用預設設置，如果失敗則自動禁用
+            try:
+                # 測試連接
+                test_client = httpx.Client()
+                test_client.close()
+            except Exception as e:
+                if "certificate verify failed" in str(e).lower():
+                    client._client = httpx.Client(verify=False)
+                    logger.warning("⚠️ 檢測到 SSL 證書問題，自動禁用 SSL 驗證")
+                else:
+                    raise e
+        
+        # 🔍 [DEBUG] 參數追蹤：檢查輸入的 llm_params
+        logger.info(f"🔍 [DEBUG] _call_gpt5_structured_api 輸入參數:")
+        logger.info(f"🔍 [DEBUG] - llm_params 類型: {type(llm_params)}")
+        logger.info(f"🔍 [DEBUG] - llm_params 內容: {llm_params}")
+        logger.info(f"🔍 [DEBUG] - llm_params.get('reasoning'): {llm_params.get('reasoning')}")
+        logger.info(f"🔍 [DEBUG] - llm_params.get('reasoning_effort'): {llm_params.get('reasoning_effort')}")
+        logger.info(f"🔍 [DEBUG] - llm_params.get('text'): {llm_params.get('text')}")
+        logger.info(f"🔍 [DEBUG] - llm_params.get('verbosity'): {llm_params.get('verbosity')}")
+        
         # 構建 Responses API 參數
         responses_params = {
             "model": llm_params.get("model", "gpt-5"),
@@ -244,10 +307,50 @@ def _call_gpt5_structured_api(prompt: str, schema: Dict[str, Any], llm_params: D
                 },
                 "verbosity": llm_params.get("verbosity", "low")
             },
-            "reasoning": {"effort": llm_params.get("reasoning_effort", "medium")},
             "max_output_tokens": llm_params.get("max_output_tokens", 2000),
             "timeout": llm_params.get("timeout", 60)
         }
+        
+        # 🔍 [DEBUG] 參數追蹤：檢查是否已經有適配過的參數
+        if 'reasoning' in llm_params:
+            logger.info(f"🔍 [DEBUG] 使用適配後的 reasoning 參數: {llm_params['reasoning']}")
+            responses_params['reasoning'] = llm_params['reasoning']
+        else:
+            logger.info(f"🔍 [DEBUG] 使用默認 reasoning 參數")
+            responses_params['reasoning'] = {"effort": llm_params.get("reasoning_effort", "medium")}
+        
+        if 'text' in llm_params:
+            logger.info(f"🔍 [DEBUG] 使用適配後的 text 參數: {llm_params['text']}")
+            # 保留 JSON Schema 格式信息，只更新 verbosity
+            if 'verbosity' in llm_params['text']:
+                responses_params['text']['verbosity'] = llm_params['text']['verbosity']
+            logger.info(f"🔍 [DEBUG] 更新後的 text 參數: {responses_params['text']}")
+        else:
+            logger.info(f"🔍 [DEBUG] 使用默認 text 參數")
+            responses_params['text']['verbosity'] = llm_params.get("verbosity", "low")
+        
+        # 🔍 [DEBUG] 參數追蹤：檢查構建的 responses_params
+        logger.info(f"🔍 [DEBUG] 構建的 responses_params:")
+        logger.info(f"🔍 [DEBUG] - responses_params 類型: {type(responses_params)}")
+        logger.info(f"🔍 [DEBUG] - responses_params 內容: {responses_params}")
+        logger.info(f"🔍 [DEBUG] - responses_params['reasoning']: {responses_params['reasoning']}")
+        logger.info(f"🔍 [DEBUG] - responses_params['text']: {responses_params['text']}")
+        
+        # 🔍 [DEBUG] 檢查 JSON Schema 格式信息
+        if 'text' in responses_params and 'format' in responses_params['text']:
+            logger.info(f"🔍 [DEBUG] JSON Schema 格式信息存在:")
+            logger.info(f"🔍 [DEBUG] - format.type: {responses_params['text']['format'].get('type', 'missing')}")
+            logger.info(f"🔍 [DEBUG] - format.name: {responses_params['text']['format'].get('name', 'missing')}")
+            logger.info(f"🔍 [DEBUG] - format.strict: {responses_params['text']['format'].get('strict', 'missing')}")
+            logger.info(f"🔍 [DEBUG] - schema 存在: {'schema' in responses_params['text']['format']}")
+        else:
+            logger.warning(f"⚠️ [DEBUG] JSON Schema 格式信息缺失!")
+            logger.warning(f"⚠️ [DEBUG] text 鍵存在: {'text' in responses_params}")
+            if 'text' in responses_params:
+                logger.warning(f"⚠️ [DEBUG] text 內容: {responses_params['text']}")
+                logger.warning(f"⚠️ [DEBUG] format 鍵存在: {'format' in responses_params['text']}")
+        
+        # 🔍 [DEBUG] 參數追蹤：參數已經在構建時正確處理
         
         logger.debug(f"使用 Responses API with JSON Schema，參數：{responses_params}")
         
@@ -442,6 +545,15 @@ def call_llm_structured_proposal(system_prompt: str, user_prompt: str) -> Dict[s
         # 動態獲取最新的 schema
         current_schema = create_research_proposal_schema()
         
+        # 添加調試日誌
+        logger.info(f"🔍 [DEBUG] 獲取到的 schema: {current_schema is not None}")
+        if current_schema:
+            logger.info(f"🔍 [DEBUG] Schema 類型: {current_schema.get('type', 'unknown')}")
+            logger.info(f"🔍 [DEBUG] Schema 標題: {current_schema.get('title', 'unknown')}")
+            logger.info(f"🔍 [DEBUG] Schema 必需字段: {current_schema.get('required', [])}")
+        else:
+            logger.warning("⚠️ [DEBUG] Schema 為空，將回退到傳統文本生成")
+        
         # 構建完整的提示詞
         full_prompt = f"{system_prompt}\n\n{user_prompt}"
         
@@ -585,6 +697,15 @@ def call_llm_structured_revision_proposal(question: str, new_chunks: List, old_c
         # 動態獲取最新的 schema
         current_schema = create_revision_proposal_schema()
         
+        # 添加調試日誌
+        logger.info(f"🔍 [DEBUG] 獲取到的 schema: {current_schema is not None}")
+        if current_schema:
+            logger.info(f"🔍 [DEBUG] Schema 類型: {current_schema.get('type', 'unknown')}")
+            logger.info(f"🔍 [DEBUG] Schema 標題: {current_schema.get('title', 'unknown')}")
+            logger.info(f"🔍 [DEBUG] Schema 必需字段: {current_schema.get('required', [])}")
+        else:
+            logger.warning("⚠️ [DEBUG] Schema 為空，將回退到傳統文本生成")
+        
         # 構建提示詞
         system_prompt = """
         You are an experienced materials experiment design consultant. Please help modify parts of the research proposal based on user feedback, original proposal, and literature content.
@@ -618,20 +739,34 @@ def call_llm_structured_revision_proposal(question: str, new_chunks: List, old_c
         # 構建文檔內容
         old_text = ""
         for i, doc in enumerate(old_chunks):
-            metadata = doc.metadata
+            # 處理可能是字典格式的 chunks
+            if hasattr(doc, 'metadata'):
+                metadata = doc.metadata
+                page_content = doc.page_content
+            else:
+                metadata = doc.get('metadata', {})
+                page_content = doc.get('page_content', '')
+            
             title = metadata.get("title", "Untitled")
             filename = metadata.get("filename") or metadata.get("source", "Unknown")
             page = metadata.get("page_number") or metadata.get("page", "?")
-            snippet = doc.page_content[:80].replace("\n", " ")
+            snippet = page_content[:80].replace("\n", " ")
             old_text += f"    [{i+1}] {title} | Page {page}\n{snippet}\n\n"
         
         new_text = ""
         for i, doc in enumerate(new_chunks):
-            metadata = doc.metadata
+            # 處理可能是字典格式的 chunks
+            if hasattr(doc, 'metadata'):
+                metadata = doc.metadata
+                page_content = doc.page_content
+            else:
+                metadata = doc.get('metadata', {})
+                page_content = doc.get('page_content', '')
+            
             title = metadata.get("title", "Untitled")
             filename = metadata.get("filename") or metadata.get("source", "Unknown")
             page = metadata.get("page_number") or metadata.get("page", "?")
-            snippet = doc.page_content[:80].replace("\n", " ")
+            snippet = page_content[:80].replace("\n", " ")
             new_text += f"    [{i+1}] {title} | Page {page}\n{snippet}\n\n"
         
         user_prompt = f"""
@@ -655,4 +790,126 @@ def call_llm_structured_revision_proposal(question: str, new_chunks: List, old_c
         
     except Exception as e:
         logger.error(f"結構化修訂提案LLM調用失敗：{e}")
+        return {}
+
+
+def call_llm_structured_revision_experimental_detail(
+    question: str, 
+    new_chunks: List, 
+    old_chunks: List, 
+    proposal: str,
+    original_experimental_detail: str
+) -> Dict[str, Any]:
+    """
+    使用OpenAI Responses API的JSON structured output生成結構化修訂實驗細節
+    
+    Args:
+        question: 用戶反饋/問題
+        new_chunks: 新檢索的文檔塊（修改實驗細節時為空）
+        old_chunks: 原始文檔塊
+        proposal: 原始提案
+        original_experimental_detail: 原始實驗細節
+    
+    Returns:
+        Dict[str, Any]: 符合REVISION_EXPERIMENTAL_DETAIL_SCHEMA的結構化修訂實驗細節
+    """
+    logger.info(f"調用結構化修訂實驗細節LLM，用戶反饋長度：{len(question)}")
+    logger.info(f"原文檔塊數量：{len(old_chunks)}")
+    logger.info(f"原始提案長度：{len(proposal)} 字符")
+    logger.info(f"原始實驗細節長度：{len(original_experimental_detail)} 字符")
+    
+    try:
+        current_model = get_current_model()
+        llm_params = get_model_params()
+        logger.info(f"使用模型：{current_model}")
+        logger.debug(f"模型參數：{llm_params}")
+    except Exception as e:
+        logger.error(f"無法獲取模型信息：{e}")
+        raise LLMError(f"無法獲取模型信息：{str(e)}")
+    
+    try:
+        # 只支援 GPT-5 系列使用 Responses API
+        if not current_model.startswith('gpt-5'):
+            raise LLMError(f"不支援的模型：{current_model}，只支援 GPT-5 系列")
+        
+        from backend.core.schema_manager import create_revision_experimental_detail_schema
+        
+        # 動態獲取最新的 schema
+        current_schema = create_revision_experimental_detail_schema()
+        
+        # 添加調試日誌
+        logger.info(f"🔍 [DEBUG] 獲取到的 schema: {current_schema is not None}")
+        if current_schema:
+            logger.info(f"🔍 [DEBUG] Schema 類型: {current_schema.get('type', 'unknown')}")
+            logger.info(f"🔍 [DEBUG] Schema 標題: {current_schema.get('title', 'unknown')}")
+            logger.info(f"🔍 [DEBUG] Schema 必需字段: {current_schema.get('required', [])}")
+        else:
+            logger.warning("⚠️ [DEBUG] Schema 為空，將回退到傳統文本生成")
+        
+        # 構建提示詞
+        system_prompt = """
+        You are an experienced materials experiment design consultant. Please help modify parts of the experimental details based on user feedback, original proposal, original experimental details, and literature content.
+
+        Your task is to generate modified experimental details based on user feedback, original proposal, original experimental details, and literature content. The experimental details should be scientifically rigorous, feasible, and address the user's specific modification requests.
+
+        IMPORTANT: You must respond in valid JSON format only. Do not include any text before or after the JSON object.
+
+        The JSON must have the following structure:
+        {
+            "revision_explanation": "Brief explanation of revision logic and key improvements based on user feedback",
+            "synthesis_process": "Detailed synthesis steps, conditions, durations, etc. with modifications",
+            "materials_and_conditions": "Materials used, concentrations, temperatures, pressures, and other reaction conditions with modifications",
+            "analytical_methods": "Characterization techniques such as XRD, SEM, NMR, etc. with modifications",
+            "precautions": "Experimental notes and safety precautions with modifications"
+        }
+
+        Key requirements:
+        1. Prioritize the areas that the user wants to modify and look for possible improvement directions from the literature
+        2. Except for the areas that the user is dissatisfied with, other parts should maintain the original experimental detail content without changes
+        3. Maintain scientific rigor, clarity, and avoid vague descriptions
+        4. Use only the provided literature labels ([1], [2], etc.) for citations, and do not fabricate sources
+        5. Ensure every claim is supported by a cited source or reasonable extension from the literature
+        6. The revision_explanation should briefly explain the logic of changes and key improvements based on user feedback
+        7. Focus on the specific experimental step or section that the user wants to modify
+        """
+        
+        # 構建文檔內容（只使用原始chunks）
+        old_text = ""
+        for i, doc in enumerate(old_chunks):
+            # 處理可能是字典格式的 chunks
+            if hasattr(doc, 'metadata'):
+                metadata = doc.metadata
+                page_content = doc.page_content
+            else:
+                metadata = doc.get('metadata', {})
+                page_content = doc.get('page_content', '')
+            
+            title = metadata.get("title", "Untitled")
+            filename = metadata.get("filename") or metadata.get("source", "Unknown")
+            page = metadata.get("page_number") or metadata.get("page", "?")
+            
+            # 顯示完整的文檔內容，而不是只有前80個字符
+            old_text += f"    [{i+1}] {title} | Page {page}\n{page_content}\n\n"
+        
+        user_prompt = f"""
+        --- User Feedback ---
+        {question}
+
+        --- Original Proposal Content ---
+        {proposal}
+
+        --- Original Experimental Details ---
+        {original_experimental_detail}
+
+        --- Literature Excerpts Based on Original Proposal ---
+        {old_text}
+        """
+        
+        # 構建完整的提示詞
+        full_prompt = f"{system_prompt}\n\n{user_prompt}"
+        
+        return call_structured_llm(full_prompt, current_schema)
+        
+    except Exception as e:
+        logger.error(f"結構化修訂實驗細節LLM調用失敗：{e}")
         return {}

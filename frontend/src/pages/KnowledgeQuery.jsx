@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Card, Form, Input, Button, message, Space, Typography, List, Tag, Divider, Select, Radio, Collapse } from 'antd';
+import { useTextHighlight } from '../components/TextHighlight/TextHighlightProvider';
 
 const { Title, Paragraph, Text } = Typography;
 const { TextArea } = Input;
@@ -16,10 +17,18 @@ const KnowledgeQuery = () => {
   const [retrievalCount, setRetrievalCount] = useState(10); // 預設檢索 10 個文檔
   const [answerMode, setAnswerMode] = useState('rigorous'); // 預設嚴謹模式
 
+  // 文字反白功能
+  const { setMode, setText, handleTextSelection } = useTextHighlight();
+
   const hasResult = useMemo(
     () => Boolean(answer) || citations.length > 0,
     [answer, citations]
   );
+
+  // 設置文字反白模式
+  useEffect(() => {
+    setMode('knowledge_assistant');
+  }, [setMode]);
 
   const callApi = async (path, options = {}) => {
     const res = await fetch(`${API_BASE}${path}`, {
@@ -57,6 +66,9 @@ const KnowledgeQuery = () => {
       setAnswer(data.answer || '');
       setCitations(data.citations || []);
       setChunks(data.chunks || []);
+      
+      // 設置文字反白功能的數據
+      setText(data.answer || '');
     } catch (e) {
       showError(e, 'Query failed');
       console.error(e);
@@ -160,15 +172,19 @@ const KnowledgeQuery = () => {
                 key: 'answer',
                 label: <span style={{ fontWeight: 700, fontSize: 27 }}>🤖 AI Answer</span>,
                 children: (
-                  <div style={{ 
-                    whiteSpace: 'pre-wrap', 
-                    fontSize: '16px', 
-                    lineHeight: '1.6',
-                    wordBreak: 'break-word',
-                    overflowWrap: 'break-word',
-                    maxWidth: '100%',
-                    width: '100%'
-                  }}>
+                  <div 
+                    onMouseUp={handleTextSelection}
+                    style={{ 
+                      whiteSpace: 'pre-wrap', 
+                      fontSize: '16px', 
+                      lineHeight: '1.6',
+                      wordBreak: 'break-word',
+                      overflowWrap: 'break-word',
+                      maxWidth: '100%',
+                      width: '100%',
+                      cursor: 'text'
+                    }}
+                  >
                     {answer
                       .replace(/\*\*(.*?)\*\*/g, '$1') // 移除粗體標記
                       .replace(/\*(.*?)\*/g, '$1') // 移除斜體標記

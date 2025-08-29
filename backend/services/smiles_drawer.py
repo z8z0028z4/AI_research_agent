@@ -34,8 +34,12 @@ class SmilesDrawer:
         self.output_dir = Path("temp_structures")
         self.output_dir.mkdir(exist_ok=True)
         
+        logger.info(f"🔍 [DEBUG] RDKit 可用性檢查: {RDKIT_AVAILABLE}")
         if not RDKIT_AVAILABLE:
-            logger.warning("RDKit not available. SMILES drawing will not work.")
+            logger.warning("❌ RDKit not available. SMILES drawing will not work.")
+            logger.warning("❌ 請安裝 RDKit: pip install rdkit")
+        else:
+            logger.info("✅ RDKit 已正確導入，SMILES 繪製功能可用")
     
     def validate_smiles(self, smiles: str) -> bool:
         """

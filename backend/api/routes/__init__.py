@@ -12,6 +12,7 @@ from .chemical import router as chemical_router
 from .experiment import router as experiment_router
 from .proposal import router as proposal_router
 from .settings import router as settings_router
+from .text_interaction import router as text_interaction_router
 
 # 路由列表，用於在主應用中註冊
 routers = [
@@ -21,5 +22,6 @@ routers = [
     chemical_router,
     experiment_router,
     proposal_router,
-    settings_router
+    settings_router,
+    text_interaction_router
 ] 
