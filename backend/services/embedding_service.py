@@ -33,7 +33,8 @@ try:
 except ImportError:
     # 當作為模組導入時使用絕對導入
     from .pdf_read_and_chunk_page_get import load_and_parse_file, get_page_number_for_chunk
-import torch
+# 延遲導入torch，避免模組級別導入問題
+# import torch
 
 # 配置日誌
 logging.basicConfig(level=logging.DEBUG)
@@ -44,8 +45,8 @@ logger = logging.getLogger(__name__)
 VECTOR_INDEX_DIR = os.path.join(os.path.dirname(__file__), "..", "experiment_data", "vector_index")
 EMBEDDING_MODEL_NAME = "BAAI/bge-base-en-v1.5"
 
-# 設備配置
-device = "cuda" if torch.cuda.is_available() else "cpu"
+# 設備配置 - 延遲設置
+# device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # 全局 Chroma 實例緩存，避免重複創建
 _chroma_instances = {}
@@ -62,6 +63,10 @@ def get_chroma_instance(vectorstore_type: str = "paper"):
     """
     if vectorstore_type not in _chroma_instances:
         try:
+            # 延遲導入torch並設置設備
+            import torch
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            
             embedding_model = HuggingFaceEmbeddings(
                 model_name=EMBEDDING_MODEL_NAME,
                 model_kwargs={"trust_remote_code": True, "device": device}
@@ -98,7 +103,7 @@ def get_chroma_instance(vectorstore_type: str = "paper"):
 
 # ==================== 設備配置 ====================
 # 自動檢測並使用GPU或CPU進行向量計算
-logger.info(f"嵌入模型使用設備：{device.upper()}")
+# logger.info(f"嵌入模型使用設備：{device.upper()}")
 
 
 def embed_documents_from_metadata(metadata_list, status_callback=None):
@@ -521,6 +526,10 @@ def validate_embedding_model():
         bool: 模型是否可用
     """
     try:
+        # 延遲導入torch並設置設備
+        import torch
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        
         HuggingFaceEmbeddings(
             model_name=EMBEDDING_MODEL_NAME,
             model_kwargs={"trust_remote_code": True, "device": device}

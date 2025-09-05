@@ -1,0 +1,24 @@
+{
+  "cid": 887,
+  "name": "methanol",
+  "iupac_name": "methanol",
+  "formula": "CH4O",
+  "weight": "32.042",
+  "smiles": "CO",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=887&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/887",
+  "boiling_point": "148.3 \u00b0F at 760 mmHg (NTP, 1992)",
+  "melting_point": "-144 \u00b0F (NTP, 1992)",
+  "boiling_point_c": "64.6 \u00b0C",
+  "melting_point_c": "-97.8 \u00b0C",
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS02.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS06.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS07.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS08.svg"
+    ],
+    "nfpa_image": "https://pubchem.ncbi.nlm.nih.gov/image/nfpa.cgi?code=130"
+  },
+  "cas": "67-56-1"
+}

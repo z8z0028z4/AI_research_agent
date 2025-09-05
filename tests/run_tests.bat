@@ -46,40 +46,43 @@ if errorlevel 1 (
 :menu
 echo Please select a test type:
 echo.
-echo 1. 🚀 Quick Test (Unit Tests)
+echo 1. 🚀 Quick Check (Environment & Fast Tests)
 echo 2. 🔍 Full Test (All Tests)
 echo 3. 📊 Coverage Test (Generate Report)
 echo 4. 🎯 Custom Test (Specify)
 echo 5. 🔧 Fix Tests (Repair Failed Tests)
 echo 6. 📋 Test Status (View Results)
 echo 7. 🧹 Clean Up Tests (Remove Test Data)
-echo 8. ❌ Exit
+echo 8. 👀 Watch Mode (Auto-test on file changes)
+echo 9. ❌ Exit
 echo.
 
-set /p choice="Enter your choice (1-8): "
+set /p choice="Enter your choice (1-9): "
 
-if "%choice%"=="1" goto quick_test
+if "%choice%"=="1" goto quick_check
 if "%choice%"=="2" goto full_test
 if "%choice%"=="3" goto coverage_test
 if "%choice%"=="4" goto custom_test
 if "%choice%"=="5" goto fix_tests
 if "%choice%"=="6" goto test_status
 if "%choice%"=="7" goto cleanup_tests
-if "%choice%"=="8" goto exit
+if "%choice%"=="8" goto watch_mode
+if "%choice%"=="9" goto exit
 goto invalid_choice
 
-:quick_test
+:quick_check
 echo.
-echo 🚀 Running Quick Test...
+echo 🚀 Running Quick Check...
 echo ========================================
-python -m pytest test_core_modules.py -v --tb=short -m "not slow"
+python test_quick_check.py
 if errorlevel 1 (
     echo.
-    echo ❌ Quick Test Failed!
-    echo Please check the error messages and fix the issues
+    echo ❌ Quick Check Failed!
+    echo Please fix the issues before continuing
 ) else (
     echo.
-    echo ✅ Quick Test Passed!
+    echo ✅ Quick Check Passed!
+    echo You can now proceed with development
 )
 goto end_test
 
@@ -212,6 +215,35 @@ echo.
 echo ✅ Test data cleanup completed!
 goto end_test
 
+:watch_mode
+echo.
+echo 👀 Starting Watch Mode...
+echo ========================================
+echo This will automatically run tests when files change
+echo Press Ctrl+C to stop watching
+echo.
+echo Options:
+echo 1. Fast tests only (recommended for development)
+echo 2. Full tests with coverage
+echo 3. Custom watch settings
+echo.
+set /p watch_choice="Enter your choice (1-3): "
+
+if "%watch_choice%"=="1" (
+    echo Starting fast test watch mode...
+    python test_watch.py --fast
+) else if "%watch_choice%"=="2" (
+    echo Starting full test watch mode...
+    python test_watch.py --coverage
+) else if "%watch_choice%"=="3" (
+    echo Starting custom watch mode...
+    python test_watch.py
+) else (
+    echo Invalid choice, using default settings...
+    python test_watch.py --fast
+)
+goto end_test
+
 :invalid_choice
 echo.
 echo ❌ Invalid option, please select again
@@ -222,6 +254,12 @@ echo.
 echo ========================================
 echo Test Finished!
 echo ========================================
+echo.
+echo 💡 Tips for effective testing:
+echo   - Use Quick Check before starting development
+echo   - Use Watch Mode during active development
+echo   - Run Full Test before committing changes
+echo   - Check coverage regularly to ensure good test coverage
 echo.
 pause
 goto menu

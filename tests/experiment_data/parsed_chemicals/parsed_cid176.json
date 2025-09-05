@@ -1,0 +1,24 @@
+{
+  "cid": 176,
+  "name": "acetic acid",
+  "iupac_name": "acetic acid",
+  "formula": "C2H4O2",
+  "weight": "60.05",
+  "smiles": "CC(=O)O",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=176&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/176",
+  "boiling_point": "244 \u00b0F at 760 mmHg (NTP, 1992)",
+  "melting_point": "61.9 \u00b0F (NTP, 1992)",
+  "boiling_point_c": "117.8 \u00b0C",
+  "melting_point_c": "16.6 \u00b0C",
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS02.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS05.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS07.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS08.svg"
+    ],
+    "nfpa_image": "https://pubchem.ncbi.nlm.nih.gov/image/nfpa.cgi?code=320"
+  },
+  "cas": "64-19-7"
+}

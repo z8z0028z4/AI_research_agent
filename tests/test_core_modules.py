@@ -6,11 +6,13 @@
 """
 
 import pytest
+from unittest.mock import patch, Mock
 
 
 class TestConfigManagement:
     """配置管理測試 - 真實測試"""
     
+    @pytest.mark.fast
     def test_settings_loading(self):
         """測試設置加載 - 真實測試"""
         from backend.core.config import settings
@@ -21,6 +23,7 @@ class TestConfigManagement:
         assert settings.app_name == "AI Research Assistant"
         assert settings.openai_model in ["gpt-5o-mini", "gpt-5o", "gpt-4o-mini"]
     
+    @pytest.mark.fast
     def test_config_validation(self):
         """測試配置驗證 - 真實測試"""
         from backend.core.config import validate_config
@@ -32,6 +35,7 @@ class TestConfigManagement:
         # 配置應該完整，因為我們有真實的 settings.json
         assert result.get('config_complete') is True
     
+    @pytest.mark.fast
     def test_config_reload(self):
         """測試配置重載 - 真實測試"""
         from backend.core.config import reload_config
@@ -45,6 +49,7 @@ class TestConfigManagement:
 class TestVectorStore:
     """向量存儲測試 - 真實測試"""
     
+    @pytest.mark.fast
     def test_vectorstore_stats_real(self):
         """測試真實向量存儲統計"""
         from backend.services.embedding_service import get_vectorstore_stats
@@ -59,6 +64,7 @@ class TestVectorStore:
         assert isinstance(stats["total_documents"], int)
         assert stats["total_documents"] >= 0
     
+    @pytest.mark.fast
     def test_paper_vectorstore_loading_real(self):
         """測試真實論文向量存儲加載"""
         from backend.core.retrieval import load_paper_vectorstore
@@ -69,6 +75,7 @@ class TestVectorStore:
         retriever = vectorstore.as_retriever()
         assert retriever is not None
     
+    @pytest.mark.fast
     def test_experiment_vectorstore_loading_real(self):
         """測試真實實驗向量存儲加載"""
         from backend.core.retrieval import load_experiment_vectorstore
@@ -83,6 +90,7 @@ class TestVectorStore:
 class TestRetrieval:
     """檢索功能測試 - 真實測試"""
     
+    @pytest.mark.fast
     def test_real_document_search(self):
         """測試真實文檔搜索"""
         from backend.core.retrieval import load_paper_vectorstore, retrieve_chunks_multi_query

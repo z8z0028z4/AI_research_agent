@@ -1,0 +1,24 @@
+{
+  "cid": 24518,
+  "name": "zinc;dinitrate",
+  "iupac_name": "zinc;dinitrate",
+  "formula": "N2O6Zn",
+  "weight": "189.4",
+  "smiles": "[N+](=O)([O-])[O-].[N+](=O)([O-])[O-].[Zn+2]",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=24518&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/24518",
+  "boiling_point": "",
+  "melting_point": "97 \u00b0F (USCG, 1999)",
+  "boiling_point_c": "",
+  "melting_point_c": "36.1 \u00b0C",
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS03.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS05.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS07.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS09.svg"
+    ],
+    "nfpa_image": null
+  },
+  "cas": "7779-88-6"
+}

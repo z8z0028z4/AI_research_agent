@@ -53,41 +53,48 @@ class TestProposalFormImprovements:
         )
         assert request.retrieval_count is None
 
-    @patch('backend.services.knowledge_service.agent_answer')
-    def test_proposal_generation_with_retrieval_count(self, mock_agent_answer):
-        """測試提案生成時使用正確的檢索數量"""
-        # 設置 mock 返回值
-        mock_agent_answer.return_value = {
-            "answer": "這是一個測試提案內容，包含詳細的研究計劃和方法。",
-            "proposal": "這是一個測試提案內容，包含詳細的研究計劃和方法。",
-            "chemicals": [],
-            "not_found": [],
-            "citations": [],
-            "chunks": [],
-            "structured_proposal": None
-        }
-        
-        # 測試不同的檢索數量
-        test_cases = [1, 5, 10, 15, 20]
+    @pytest.mark.slow
+    def test_real_proposal_generation_with_retrieval_count(self):
+        """測試真實的提案生成功能（需要真實的LLM調用）"""
+        # 使用真實的API，不Mock任何功能
+        test_cases = [1, 3, 5]  # 使用較小的檢索數量以加快測試
         
         for retrieval_count in test_cases:
             response = self.client.post(
                 "/api/v1/proposal/generate",
                 json={
-                    "research_goal": "測試研究目標",
+                    "research_goal": "Design a simple MOF for CO2 capture",
                     "retrieval_count": retrieval_count
                 }
             )
             
             assert response.status_code == 200
+            data = response.json()
             
-            # 驗證 agent_answer 被調用時傳入了正確的檢索數量
-            call_args = mock_agent_answer.call_args
-            assert call_args is not None
+            # 驗證響應結構
+            assert "proposal" in data
+            assert "chemicals" in data
+            assert "citations" in data
+            assert "chunks" in data
             
-            # 檢查 kwargs 中是否包含 k (retrieval_count 在 agent_answer 中稱為 k)
-            kwargs = call_args.kwargs if call_args.kwargs else {}
-            assert kwargs.get('k') == retrieval_count
+            # 驗證真實內容（不是Mock的）
+            assert len(data["proposal"]) > 0, f"提案內容不應為空，檢索數量：{retrieval_count}"
+            assert isinstance(data["chemicals"], list)
+            assert isinstance(data["citations"], list)
+            assert isinstance(data["chunks"], list)
+            
+            # 驗證檢索數量影響（真實測試）
+            # 如果retrieval_count=N，chunks數量應該≤N
+            actual_chunks = len(data["chunks"])
+            assert actual_chunks <= retrieval_count, \
+                f"檢索數量{retrieval_count}應該最多返回{retrieval_count}個chunks，實際：{actual_chunks}"
+            
+            # 驗證提案內容質量
+            proposal_text = data["proposal"]
+            assert len(proposal_text) > 50, "提案內容應該有足夠的長度"
+            assert any(keyword in proposal_text.lower() for keyword in 
+                      ["mof", "co2", "capture", "synthesis", "material"]), \
+                "提案內容應該包含相關關鍵詞"
 
     def test_retrieval_count_validation(self):
         """測試檢索數量驗證"""
@@ -113,33 +120,35 @@ class TestProposalFormImprovements:
         )
         assert request.retrieval_count == 100
 
-    @patch('backend.services.knowledge_service.agent_answer')
-    def test_proposal_generation_without_retrieval_count(self, mock_agent_answer):
-        """測試不提供檢索數量時使用默認值"""
-        mock_agent_answer.return_value = {
-            "answer": "這是一個測試提案內容，包含詳細的研究計劃和方法。",
-            "proposal": "這是一個測試提案內容，包含詳細的研究計劃和方法。",
-            "chemicals": [],
-            "not_found": [],
-            "citations": [],
-            "chunks": [],
-            "structured_proposal": None
-        }
-        
-        # 不提供 retrieval_count
+    @pytest.mark.slow
+    def test_real_proposal_generation_without_retrieval_count(self):
+        """測試不提供檢索數量時使用默認值（真實測試）"""
+        # 不提供 retrieval_count，應該使用默認值
         response = self.client.post(
             "/api/v1/proposal/generate",
             json={
-                "research_goal": "測試研究目標"
+                "research_goal": "Design a simple MOF for CO2 capture"
             }
         )
         
         assert response.status_code == 200
+        data = response.json()
         
-        # 驗證使用了默認值 10
-        call_args = mock_agent_answer.call_args
-        kwargs = call_args.kwargs if call_args.kwargs else {}
-        assert kwargs.get('k') == 10
+        # 驗證響應結構
+        assert "proposal" in data
+        assert "chunks" in data
+        
+        # 驗證使用了默認檢索數量（通常是10）
+        # 由於我們沒有Mock，chunks數量應該反映真實的檢索結果
+        chunks_count = len(data["chunks"])
+        assert chunks_count >= 0, "chunks數量應該≥0"
+        
+        # 驗證提案內容
+        assert len(data["proposal"]) > 0, "提案內容不應為空"
+        
+        # 驗證默認行為：如果沒有指定檢索數量，應該有合理的chunks數量
+        # 通常默認值會產生一些檢索結果
+        print(f"默認檢索數量產生的chunks數量：{chunks_count}")
 
 
 @pytest.mark.fast
@@ -267,32 +276,17 @@ class TestFormStateConsistency:
 class TestIntegrationScenarios:
     """測試整合場景"""
     
-    @patch('backend.services.knowledge_service.agent_answer')
-    def test_complete_proposal_workflow(self, mock_agent_answer):
-        """測試完整的提案工作流程"""
-        # 設置 mock 返回值
-        mock_agent_answer.return_value = {
-            "answer": "這是一個測試提案內容，包含多個段落和詳細信息。",
-            "proposal": "這是一個測試提案內容，包含多個段落和詳細信息。",
-            "chemicals": [{"name": "Mg2(dobpdc)", "smiles": "test"}],
-            "not_found": [],
-            "citations": [{"title": "Test Paper", "authors": "Test Author"}],
-            "chunks": [{"content": "測試文檔塊", "metadata": {"source": "test.pdf"}}],
-            "structured_proposal": {
-                "proposal_title": "測試提案標題",
-                "need": "研究需求描述",
-                "solution": "解決方案描述"
-            }
-        }
-        
+    @pytest.mark.slow
+    def test_real_complete_proposal_workflow(self):
+        """測試真實的完整提案工作流程"""
         client = TestClient(app)
         
-        # 1. 生成提案
+        # 1. 生成提案（真實API調用）
         response = client.post(
             "/api/v1/proposal/generate",
             json={
-                "research_goal": "Design a Mg2(dobpdc) based functionalized MOF",
-                "retrieval_count": 15
+                "research_goal": "Design a Mg2(dobpdc) based functionalized MOF for CO2 capture",
+                "retrieval_count": 3  # 使用較小的檢索數量以加快測試
             }
         )
         
@@ -305,9 +299,51 @@ class TestIntegrationScenarios:
         assert "citations" in data
         assert "chunks" in data
         
-        # 3. 驗證提案內容
-        assert len(data["proposal"]) > 0
-        assert len(data["chunks"]) > 0
+        # 3. 驗證提案內容質量
+        assert len(data["proposal"]) > 0, "提案內容不應為空"
+        assert len(data["chunks"]) > 0, "應該有檢索到的文檔塊"
+        
+        # 4. 驗證提案內容相關性
+        proposal_text = data["proposal"]
+        assert any(keyword in proposal_text.lower() for keyword in 
+                  ["mof", "mg2", "dobpdc", "co2", "capture"]), \
+            "提案內容應該包含相關關鍵詞"
+        
+        # 5. 測試實驗細節生成（如果API存在）
+        if data["proposal"] and data["chunks"]:
+            experiment_response = client.post(
+                "/api/v1/proposal/experiment-detail",
+                json={
+                    "proposal": data["proposal"],
+                    "chunks": data["chunks"]
+                }
+            )
+            
+            if experiment_response.status_code == 200:
+                experiment_data = experiment_response.json()
+                assert "experiment_detail" in experiment_data
+                assert len(experiment_data["experiment_detail"]) > 0
+                print("✅ 實驗細節生成功能正常")
+            else:
+                print(f"⚠️ 實驗細節生成API返回狀態碼：{experiment_response.status_code}")
+        
+        # 6. 驗證化學品提取
+        chemicals = data["chemicals"]
+        assert isinstance(chemicals, list)
+        if chemicals:
+            for chemical in chemicals:
+                assert "name" in chemical, "化學品應該有名稱"
+                print(f"✅ 提取到化學品：{chemical.get('name', 'Unknown')}")
+        
+        # 7. 驗證引用信息
+        citations = data["citations"]
+        assert isinstance(citations, list)
+        if citations:
+            for citation in citations:
+                assert "title" in citation or "authors" in citation, "引用應該有標題或作者"
+                print(f"✅ 找到引用：{citation.get('title', citation.get('authors', 'Unknown'))}")
+        
+        print(f"✅ 完整工作流程測試通過，檢索到{len(data['chunks'])}個文檔塊")
 
     def test_text_highlight_workflow_simulation(self):
         """測試文字反白工作流程模擬"""

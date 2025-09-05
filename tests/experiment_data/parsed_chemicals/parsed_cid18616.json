@@ -1,0 +1,25 @@
+{
+  "cid": 18616,
+  "name": "copper;dinitrate",
+  "iupac_name": "copper;dinitrate",
+  "formula": "CuN2O6",
+  "weight": "187.56",
+  "smiles": "[N+](=O)([O-])[O-].[N+](=O)([O-])[O-].[Cu+2]",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=18616&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/18616",
+  "boiling_point": "Sublimes",
+  "melting_point": "238.1 \u00b0F (USCG, 1999)",
+  "boiling_point_c": "",
+  "melting_point_c": "114.5 \u00b0C",
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS03.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS05.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS06.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS07.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS09.svg"
+    ],
+    "nfpa_image": null
+  },
+  "cas": "3251-23-8"
+}

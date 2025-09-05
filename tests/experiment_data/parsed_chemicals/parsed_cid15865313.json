@@ -1,0 +1,24 @@
+{
+  "cid": 15865313,
+  "name": "zinc;dinitrate;hexahydrate",
+  "iupac_name": "zinc;dinitrate;hexahydrate",
+  "formula": "H12N2O12Zn",
+  "weight": "297.5",
+  "smiles": "[N+](=O)([O-])[O-].[N+](=O)([O-])[O-].O.O.O.O.O.O.[Zn+2]",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=15865313&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/15865313",
+  "boiling_point": "",
+  "melting_point": "",
+  "boiling_point_c": "",
+  "melting_point_c": "",
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS03.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS07.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS08.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS09.svg"
+    ],
+    "nfpa_image": null
+  },
+  "cas": "10196-18-6"
+}

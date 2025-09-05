@@ -10,7 +10,8 @@ import json
 import logging
 from typing import Dict, Any, Optional, List
 from langchain_openai import ChatOpenAI
-import openai
+# 移除模組級別的openai導入，改為延遲導入
+# import openai
 
 from .config import settings
 
@@ -27,11 +28,11 @@ from ..utils.exceptions import LLMError, APIKeyError
 # 配置日誌
 logger = logging.getLogger(__name__)
 
-# 設定OpenAI API Key
-if OPENAI_API_KEY:
-    openai.api_key = OPENAI_API_KEY
-else:
-    logger.warning("未設置 OPENAI_API_KEY")
+# 設定OpenAI API Key - 延遲設置
+# if OPENAI_API_KEY:
+#     openai.api_key = OPENAI_API_KEY
+# else:
+#     logger.warning("未設置 OPENAI_API_KEY")
 
 class LLMManager:
     """LLM 管理器類別"""

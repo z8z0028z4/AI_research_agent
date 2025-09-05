@@ -9,7 +9,8 @@ import os
 import re
 import json
 import logging
-import openai
+# 移除模組級別的openai導入，改為延遲導入
+# import openai
 from PyPDF2 import PdfReader
 from docx import Document
 
@@ -43,6 +44,9 @@ def extract_text_from_docx(docx_path):
 def gpt_detect_type_and_title(text, filename):
     """使用GPT判斷文件類型和提取標題"""
     try:
+        # 延遲導入openai，避免模組級別導入問題
+        import openai
+        
         # 從環境變量獲取API密鑰
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:

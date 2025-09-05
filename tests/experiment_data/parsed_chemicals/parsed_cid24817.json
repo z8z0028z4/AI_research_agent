@@ -1,0 +1,23 @@
+{
+  "cid": 24817,
+  "name": "tetrachlorozirconium",
+  "iupac_name": "tetrachlorozirconium",
+  "formula": "Cl4Zr",
+  "weight": "233.0",
+  "smiles": "Cl[Zr](Cl)(Cl)Cl",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=24817&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/24817",
+  "boiling_point": "Sublimes 627.8 \u00b0F (USCG, 1999)",
+  "melting_point": "None, except under pressure, since it sublimes. (USCG, 1999)",
+  "boiling_point_c": "331.0 \u00b0C",
+  "melting_point_c": "",
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS05.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS07.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS08.svg"
+    ],
+    "nfpa_image": "https://pubchem.ncbi.nlm.nih.gov/image/nfpa.cgi?code=302W"
+  },
+  "cas": "10026-11-6"
+}

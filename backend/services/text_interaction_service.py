@@ -49,6 +49,13 @@ def process_text_interaction(
     request_id = str(uuid.uuid4())[:8]
     start_time = time.time()
     
+    # 驗證輸入參數
+    if not highlighted_text or not highlighted_text.strip():
+        raise ValueError("反白文字不能為空")
+    
+    if not user_input or not user_input.strip():
+        raise ValueError("用戶輸入不能為空")
+    
     # 獲取調用堆疊信息
     stack_info = traceback.extract_stack()
     caller_info = stack_info[-2] if len(stack_info) > 1 else stack_info[-1]
@@ -133,7 +140,8 @@ def _process_explanation(
         "interaction_type": "explain",
         "highlighted_text": highlighted_text,
         "user_input": user_input,
-        "timestamp": time.time()
+        "timestamp": time.time(),
+        "request_id": request_id  # 添加request_id
     }
 
 
@@ -286,6 +294,7 @@ def _process_proposal_revision(
         "highlighted_text": highlighted_text,
         "user_input": user_input,
         "timestamp": time.time(),
+        "request_id": request_id,  # 添加request_id
         "structured_proposal": structured_data,
         "chemicals": chemicals
     }
@@ -396,6 +405,7 @@ def _process_experiment_revision(
         "highlighted_text": highlighted_text,
         "user_input": user_input,
         "timestamp": time.time(),
+        "request_id": request_id,  # 添加request_id
         "structured_experiment": structured_data,  # 注意：這裡返回 structured_experiment
         "chemicals": []  # 實驗細節修改不涉及化學品
     }
@@ -426,9 +436,6 @@ def extract_context_paragraph(text: str, highlighted_text: str, context_size: in
         context_start = max(0, start_pos - context_size // 2)
         context_end = min(len(text), start_pos + len(highlighted_text) + context_size // 2)
         
-        # 提取上下文段落
-        context = text[context_start:context_end]
-        
         # 嘗試找到段落邊界
         if context_start > 0:
             # 向前找到段落開始
@@ -442,7 +449,17 @@ def extract_context_paragraph(text: str, highlighted_text: str, context_size: in
             if paragraph_end != -1:
                 context_end = paragraph_end
         
-        return text[context_start:context_end].strip()
+        # 提取上下文段落（修正：重新提取文本）
+        context = text[context_start:context_end].strip()
+        
+        # 如果上下文太短，擴展範圍
+        if len(context) < len(highlighted_text) + 50:
+            # 擴展到包含更多上下文
+            expanded_start = max(0, context_start - context_size // 4)
+            expanded_end = min(len(text), context_end + context_size // 4)
+            context = text[expanded_start:expanded_end].strip()
+        
+        return context
         
     except Exception as e:
         logger.error(f"提取上下文段落失敗: {e}")

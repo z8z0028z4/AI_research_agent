@@ -11,7 +11,6 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 from backend.utils.logger import get_logger
 from backend.utils.exceptions import VectorStoreError
-from backend.services.embedding_service import get_chroma_instance
 
 logger = get_logger(__name__)
 
@@ -33,6 +32,8 @@ def load_paper_vectorstore():
     - 集合名稱為"paper"
     """
     try:
+        # 延遲導入避免循環依賴
+        from backend.services.embedding_service import get_chroma_instance
         return get_chroma_instance("paper")
     except Exception as e:
         logger.error(f"載入文獻向量數據庫失敗: {e}")
@@ -56,6 +57,8 @@ def load_experiment_vectorstore():
     - 集合名稱為"experiment"
     """
     try:
+        # 延遲導入避免循環依賴
+        from backend.services.embedding_service import get_chroma_instance
         return get_chroma_instance("experiment")
     except Exception as e:
         logger.error(f"載入實驗向量數據庫失敗: {e}")
@@ -239,6 +242,8 @@ def get_vectorstore_stats(vectorstore_type: str = "paper") -> Dict[str, Any]:
         Dict[str, Any]: 統計信息
     """
     try:
+        # 延遲導入避免循環依賴
+        from backend.services.embedding_service import get_chroma_instance
         vectorstore = get_chroma_instance(vectorstore_type)
         collection = vectorstore._collection
         
