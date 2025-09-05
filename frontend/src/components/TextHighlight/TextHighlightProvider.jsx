@@ -86,18 +86,19 @@ export const TextHighlightProvider = ({ children }) => {
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect();
       
+      // 計算到選中文字最後一個字符的位置
+      const endPosition = calculateEndPosition(range);
+      
       // 提取上下文段落
       const contextText = extractContextParagraph(selectedText, event.target);
       
       console.log('🔍 [TEXT-HIGHLIGHT] 設置彈窗狀態');
-      console.log('🔍 [TEXT-HIGHLIGHT] 彈窗位置:', { x: rect.right, y: rect.bottom });
+      console.log('🔍 [TEXT-HIGHLIGHT] 原始彈窗位置:', { x: rect.right, y: rect.bottom });
+      console.log('🔍 [TEXT-HIGHLIGHT] 修正後彈窗位置:', endPosition);
       
       setHighlightedText(selectedText);
       setContextParagraph(contextText);
-      setPopupPosition({
-        x: rect.right,
-        y: rect.bottom
-      });
+      setPopupPosition(endPosition);
       setShowPopup(true);
       
       // 🔍 [NEW] 設置反白區域信息
@@ -134,6 +135,44 @@ export const TextHighlightProvider = ({ children }) => {
     
     // 默認返回 proposal（向後兼容）
     return 'proposal';
+  };
+
+  // 計算選中文字最後一個字符的位置
+  const calculateEndPosition = (range) => {
+    try {
+      // 創建一個新的範圍，只包含選中文字的最後一個字符
+      const endRange = range.cloneRange();
+      
+      // 將範圍的開始位置移動到結束位置的前一個字符
+      endRange.setStart(range.endContainer, Math.max(0, range.endOffset - 1));
+      endRange.setEnd(range.endContainer, range.endOffset);
+      
+      // 獲取最後一個字符的位置
+      const endRect = endRange.getBoundingClientRect();
+      
+      // 如果最後一個字符的位置有效，使用它；否則回退到原始範圍的右下角
+      if (endRect.width > 0 && endRect.height > 0) {
+        return {
+          x: endRect.right,
+          y: endRect.bottom
+        };
+      } else {
+        // 回退方案：使用原始範圍的右下角
+        const originalRect = range.getBoundingClientRect();
+        return {
+          x: originalRect.right,
+          y: originalRect.bottom
+        };
+      }
+    } catch (error) {
+      console.error('計算結束位置失敗:', error);
+      // 錯誤處理：回退到原始範圍的右下角
+      const originalRect = range.getBoundingClientRect();
+      return {
+        x: originalRect.right,
+        y: originalRect.bottom
+      };
+    }
   };
 
   // 提取上下文段落

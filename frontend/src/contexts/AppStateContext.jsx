@@ -16,7 +16,7 @@ import { message } from 'antd';
 const initialState = {
   // Proposal頁面狀態
   proposal: {
-    formData: { goal: '' },
+    formData: { goal: '', retrievalCount: 10 },
     proposal: '',
     chemicals: [],
     notFound: [],
@@ -168,7 +168,7 @@ const appStateReducer = (state, action) => {
         ...state,
         knowledgeQuery: {
           ...state.knowledgeQuery,
-          formData: { ...state.knowledgeQuery.formData, ...action.payload }
+          ...action.payload  // 直接更新根級別屬性
         }
       };
       

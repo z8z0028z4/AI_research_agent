@@ -136,10 +136,11 @@ const Proposal = () => {
 
   const onGenerate = async () => {
     const goal = form.getFieldValue('goal');
+    const formRetrievalCount = form.getFieldValue('retrievalCount') || retrievalCount;
     if (!goal) return message.warning('請輸入研究目標');
 
     // 保存表單數據到全局狀態
-    setProposalFormData({ goal });
+    setProposalFormData({ goal, retrievalCount: formRetrievalCount });
 
     // 生成唯一的請求 ID
     const requestId = Math.random().toString(36).substr(2, 8);
@@ -148,7 +149,7 @@ const Proposal = () => {
     console.log(`🚀 [FRONTEND-${requestId}] ========== 開始生成提案 ==========`);
     console.log(`🚀 [FRONTEND-${requestId}] 時間戳: ${new Date().toLocaleString()}`);
     console.log(`🚀 [FRONTEND-${requestId}] 研究目標: ${goal}`);
-    console.log(`🚀 [FRONTEND-${requestId}] 檢索數量: ${retrievalCount}`);
+    console.log(`🚀 [FRONTEND-${requestId}] 檢索數量: ${formRetrievalCount}`);
     console.log(`🚀 [FRONTEND-${requestId}] loading 狀態: ${loading}`);
 
     setLoading(true);
@@ -157,7 +158,7 @@ const Proposal = () => {
       const data = await callApi('/proposal/generate', {
         body: JSON.stringify({
           research_goal: goal,
-          retrieval_count: retrievalCount
+          retrieval_count: formRetrievalCount
         }),
       });
 
@@ -181,7 +182,7 @@ const Proposal = () => {
         experimentDetail: '',
         structuredProposal: data.structured_proposal || null,
         structuredExperiment: null,
-        retrievalCount: retrievalCount
+        retrievalCount: formRetrievalCount
       });
 
       // 設置文字反白功能的數據
@@ -383,11 +384,14 @@ const Proposal = () => {
             />
           </Form.Item>
 
-          <Form.Item label="Document Retrieval Count">
+          <Form.Item 
+            name="retrievalCount" 
+            label="Document Retrieval Count"
+            initialValue={10}
+          >
             <Select
-              value={retrievalCount}
-              onChange={(value) => setProposalFormData({ retrievalCount: value })}
               style={{ width: 200 }}
+              onChange={(value) => setProposalFormData({ retrievalCount: value })}
             >
               <Option value={1}>1 document (Dev Test)</Option>
               <Option value={5}>5 documents (Fast)</Option>
