@@ -7,7 +7,7 @@
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from typing import List, Optional, Dict, Any
 import asyncio
 import sys
@@ -74,6 +74,27 @@ class ProposalRequest(BaseModel):
     user_feedback: Optional[str] = None
     previous_proposal: Optional[str] = None
     retrieval_count: Optional[int] = 10  # 預設檢索 10 個文檔
+    
+    @validator('research_goal')
+    def validate_research_goal(cls, v):
+        """驗證研究目標"""
+        if not v or not v.strip():
+            raise ValueError('研究目標不能為空')
+        if len(v.strip()) < 3:
+            raise ValueError('研究目標至少需要3個字符')
+        if len(v.strip()) > 10000:
+            raise ValueError('研究目標不能超過10000個字符')
+        return v.strip()
+    
+    @validator('retrieval_count')
+    def validate_retrieval_count(cls, v):
+        """驗證檢索數量"""
+        if v is not None:
+            if v < 0:
+                raise ValueError('檢索數量不能小於0')
+            if v > 100:
+                raise ValueError('檢索數量不能超過100')
+        return v
 
 class ProposalResponse(BaseModel):
     """提案生成響應模型"""
@@ -248,7 +269,27 @@ async def generate_proposal(request: ProposalRequest):
         print(f"❌ [DEBUG-{request_id}] 錯誤: {str(e)}")
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"提案生成失敗: {str(e)}")
+        
+        # 根據錯誤類型返回適當的HTTP狀態碼
+        error_message = str(e)
+        if "Connection error" in error_message or "API" in error_message:
+            # API連接錯誤，返回503服務不可用
+            raise HTTPException(
+                status_code=503, 
+                detail="AI服務暫時不可用，請稍後再試"
+            )
+        elif "validation" in error_message.lower() or "invalid" in error_message.lower():
+            # 驗證錯誤，返回400錯誤請求
+            raise HTTPException(
+                status_code=400, 
+                detail=f"請求參數錯誤: {error_message}"
+            )
+        else:
+            # 其他錯誤，返回500內部服務器錯誤
+            raise HTTPException(
+                status_code=500, 
+                detail=f"提案生成失敗: {error_message}"
+            )
 
 @router.post("/proposal/revise", response_model=ProposalResponse)
 async def revise_proposal(request: ProposalRevisionRequest):
