@@ -37,6 +37,14 @@ if errorlevel 1 (
 
 echo Frontend dependencies installed successfully!
 
+REM Check and fix security vulnerabilities
+echo Checking and fixing security vulnerabilities...
+npm audit fix
+if errorlevel 1 (
+    echo WARNING: Some vulnerabilities could not be automatically fixed
+    echo You may need to manually update packages or check for breaking changes
+)
+
 REM Return to project root
 cd ..
 echo Returned to project root: %CD%

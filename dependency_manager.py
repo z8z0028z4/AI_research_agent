@@ -359,6 +359,7 @@ def install_frontend_dependencies() -> bool:
         return False
     
     try:
+        # 安裝依賴
         result = subprocess.run(
             ["npm", "install"],
             cwd=frontend_dir,
@@ -368,6 +369,24 @@ def install_frontend_dependencies() -> bool:
             shell=True
         )
         print("[OK] 前端依賴安裝成功")
+        
+        # 修復安全漏洞
+        print("檢查並修復安全漏洞...")
+        try:
+            audit_result = subprocess.run(
+                ["npm", "audit", "fix"],
+                cwd=frontend_dir,
+                capture_output=True,
+                text=True,
+                shell=True
+            )
+            if audit_result.returncode == 0:
+                print("[OK] 安全漏洞修復成功")
+            else:
+                print("[WARN] 部分安全漏洞無法自動修復")
+        except Exception as e:
+            print(f"[WARN] 安全漏洞檢查失敗: {e}")
+        
         return True
     except subprocess.CalledProcessError as e:
         print(f"[ERROR] 前端依賴安裝失敗: {e.stderr}")
