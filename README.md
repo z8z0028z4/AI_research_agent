@@ -1,8 +1,38 @@
-# 🧪 AI Research Assistant v4.5 - State Management & UI Persistence Release
+# 🧪 AI Research Assistant v4.6 - Security & Installation Enhancement Release
 
-A comprehensive AI-powered research assistant system designed for materials science and chemistry research workflows. **Enhanced Production Release: Complete system with API key management, graceful startup, and improved user experience.**
+A comprehensive AI-powered research assistant system designed for materials science and chemistry research workflows. **Enhanced Production Release: Complete system with API key management, graceful startup, improved user experience, and comprehensive security updates.**
 
 This production-ready tool combines document ingestion, vector embedding, GPT-based QA with source tracking, experimental data analysis, intelligent content management, and robust configuration management.
+
+---
+
+## 🎉 v4.6 Security & Installation Enhancement Release Highlights
+
+This release focuses on **comprehensive security improvements** and **enhanced installation experience**, ensuring a secure and reliable setup process for all users.
+
+### 🔒 **v4.6 Security & Installation Enhancements**
+- **🛡️ Frontend Security Fixes**: Comprehensive security vulnerability remediation
+  - Fixed high-risk axios DoS attack vulnerability
+  - Resolved vite file serving security issues
+  - Updated all frontend dependencies to secure versions
+  - Implemented automatic security audit in installation scripts
+- **⚙️ Enhanced Installation Scripts**: Improved setup process with security checks
+  - Updated `simple_setup.bat` with comprehensive security vulnerability fixes
+  - Enhanced `install_frontend.bat` with automatic security audit
+  - Improved `dependency_manager.py` with security validation
+  - Added error handling and user-friendly security status reporting
+- **🔧 PowerShell Compatibility**: Fixed Windows PowerShell execution issues
+  - Resolved batch file execution in PowerShell environments
+  - Added proper path handling for Windows systems
+  - Improved cross-platform compatibility
+- **📦 Dependency Management**: Streamlined and secured package management
+  - Automatic npm audit fix integration
+  - Real-time security vulnerability detection
+  - Enhanced dependency update workflow
+- **🧹 Project Structure Cleanup**: Optimized codebase organization
+  - Removed unused test files and directories
+  - Cleaned up outdated documentation
+  - Simplified project structure for better maintainability
 
 ---
 
@@ -512,4 +542,4 @@ This version is stable, tested, and ready for production research workflows.
 
 ---
 
-*Last updated: August 2025 - Embedding Model Improvement & System Fixes Release v4.4*
+*Last updated: September 2025 - Security & Installation Enhancement Release v4.6*
