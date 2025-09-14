@@ -273,4 +273,110 @@ class TestRAGService:
     
     def test_real_structured_llm_call(self):
         """測試真實結構化 LLM 調用 - 已移除，功能不存在"""
-        pass 
+        pass
+    
+    def test_real_generate_structured_revision_experimental_detail(self):
+        """測試真實實驗細節修改生成"""
+        from backend.services.rag_service import generate_structured_revision_experimental_detail
+        
+        # 測試實驗細節修改生成
+        question = "Please revise this experiment detail"
+        new_chunks = []  # 實驗細節修改不使用新的chunks
+        old_chunks = []  # 模擬舊的chunks
+        proposal = "This is the original proposal content"
+        original_experimental_detail = "This is the original experimental detail"
+        
+        result = generate_structured_revision_experimental_detail(
+            question, new_chunks, old_chunks, proposal, original_experimental_detail
+        )
+        
+        assert isinstance(result, dict)
+        # 檢查必需字段
+        expected_fields = [
+            "revision_explanation",
+            "synthesis_process",
+            "materials_and_conditions", 
+            "analytical_methods",
+            "precautions"
+        ]
+        for field in expected_fields:
+            assert field in result
+            assert isinstance(result[field], str)
+            assert len(result[field]) > 0
+    
+    def test_real_generate_structured_revision_proposal(self):
+        """測試真實提案修改生成"""
+        from backend.services.rag_service import generate_structured_revision_proposal
+        
+        # 測試提案修改生成
+        question = "Please revise this proposal"
+        new_chunks = []
+        old_chunks = []
+        proposal = "This is the original proposal content"
+        
+        result = generate_structured_revision_proposal(
+            question, new_chunks, old_chunks, proposal
+        )
+        
+        assert isinstance(result, dict)
+        # 檢查必需字段
+        expected_fields = [
+            "revision_explanation",
+            "proposal_title",
+            "need",
+            "solution",
+            "differentiation",
+            "benefit"
+        ]
+        for field in expected_fields:
+            assert field in result
+            assert isinstance(result[field], str)
+            assert len(result[field]) > 0
+    
+    def test_real_structured_revision_experimental_detail_to_text_compat(self):
+        """測試實驗細節修改轉文本兼容函數"""
+        from backend.services.rag_service import structured_revision_experimental_detail_to_text_compat
+        
+        # 測試轉換
+        structured_data = {
+            "revision_explanation": "Revision explanation",
+            "synthesis_process": "Updated synthesis process",
+            "materials_and_conditions": "Updated materials and conditions",
+            "analytical_methods": "Updated analytical methods",
+            "precautions": "Updated precautions"
+        }
+        
+        text = structured_revision_experimental_detail_to_text_compat(structured_data)
+        
+        assert isinstance(text, str)
+        assert len(text) > 0
+        assert "Revision explanation" in text
+        assert "Updated synthesis process" in text
+        assert "Updated materials and conditions" in text
+        assert "Updated analytical methods" in text
+        assert "Updated precautions" in text
+    
+    def test_real_structured_revision_proposal_to_text_compat(self):
+        """測試提案修改轉文本兼容函數"""
+        from backend.services.rag_service import structured_revision_proposal_to_text_compat
+        
+        # 測試轉換
+        structured_data = {
+            "revision_explanation": "Revision explanation",
+            "proposal_title": "Updated proposal title",
+            "need": "Updated need",
+            "solution": "Updated solution",
+            "differentiation": "Updated differentiation",
+            "benefit": "Updated benefit"
+        }
+        
+        text = structured_revision_proposal_to_text_compat(structured_data)
+        
+        assert isinstance(text, str)
+        assert len(text) > 0
+        assert "Revision explanation" in text
+        assert "Updated proposal title" in text
+        assert "Updated need" in text
+        assert "Updated solution" in text
+        assert "Updated differentiation" in text
+        assert "Updated benefit" in text 

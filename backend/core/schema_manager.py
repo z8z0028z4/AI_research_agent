@@ -13,6 +13,15 @@ from typing import Dict, Any, Optional
 # 配置日誌
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    'get_dynamic_schema_params',
+    'create_research_proposal_schema',
+    'create_experimental_detail_schema',
+    'create_revision_proposal_schema',
+    'create_revision_experimental_detail_schema',
+    'get_schema_by_type'
+]
+
 def get_dynamic_schema_params() -> Dict[str, int]:
     """
     從設定管理器獲取動態的 JSON Schema 參數
@@ -245,6 +254,60 @@ def create_revision_proposal_schema() -> Dict[str, Any]:
         }
     }
 
+def create_revision_experimental_detail_schema() -> Dict[str, Any]:
+    """
+    創建修訂實驗細節的 JSON Schema
+    
+    Returns:
+        Dict[str, Any]: 修訂實驗細節的 schema
+    """
+    schema_params = get_dynamic_schema_params()
+    
+    return {
+        "type": "object",
+        "title": "RevisionExperimentalDetail",
+        "additionalProperties": False,
+        "required": [
+            "revision_explanation",
+            "synthesis_process",
+            "materials_and_conditions",
+            "analytical_methods",
+            "precautions"
+        ],
+        "properties": {
+            "revision_explanation": {
+                "type": "string",
+                "description": "修訂邏輯和關鍵改進的簡要說明，基於用戶反饋",
+                "minLength": schema_params["min_length"],
+                "maxLength": schema_params["max_length"]
+            },
+            "synthesis_process": {
+                "type": "string",
+                "description": "詳細的合成步驟、條件、時間等，包含修改後的內容",
+                "minLength": schema_params["min_length"],
+                "maxLength": schema_params["max_length"]
+            },
+            "materials_and_conditions": {
+                "type": "string",
+                "description": "使用的材料、濃度、溫度、壓力和其他反應條件，包含修改後的內容",
+                "minLength": schema_params["min_length"],
+                "maxLength": schema_params["max_length"]
+            },
+            "analytical_methods": {
+                "type": "string",
+                "description": "表徵技術，如 XRD、SEM、NMR 等，包含修改後的內容",
+                "minLength": schema_params["min_length"],
+                "maxLength": schema_params["max_length"]
+            },
+            "precautions": {
+                "type": "string",
+                "description": "實驗注意事項和安全預防措施，包含修改後的內容",
+                "minLength": schema_params["min_length"],
+                "maxLength": schema_params["max_length"]
+            }
+        }
+    }
+
 def get_schema_by_type(schema_type: str) -> Optional[Dict[str, Any]]:
     """
     根據類型獲取對應的 schema
@@ -258,8 +321,8 @@ def get_schema_by_type(schema_type: str) -> Optional[Dict[str, Any]]:
     schema_functions = {
         "research_proposal": create_research_proposal_schema,
         "experimental_detail": create_experimental_detail_schema,
-    
-        "revision_proposal": create_revision_proposal_schema
+        "revision_proposal": create_revision_proposal_schema,
+        "revision_experimental_detail": create_revision_experimental_detail_schema
     }
     
     if schema_type not in schema_functions:

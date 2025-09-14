@@ -1,4 +1,4 @@
-# 🧪 AI Research Assistant v4.4 - Embedding Model Improvement & System Fixes Release
+# 🧪 AI Research Assistant v4.5 - State Management & UI Persistence Release
 
 A comprehensive AI-powered research assistant system designed for materials science and chemistry research workflows. **Enhanced Production Release: Complete system with API key management, graceful startup, and improved user experience.**
 
@@ -6,11 +6,25 @@ This production-ready tool combines document ingestion, vector embedding, GPT-ba
 
 ---
 
-## 🎉 v4.4 Embedding Model Improvement & System Fixes Release Highlights
+## 🎉 v4.5 State Management & UI Persistence Release Highlights
 
-This release focuses on **embedding model optimization**, **system installation fixes**, and **performance improvements** with better CPU efficiency and enhanced semantic understanding.
+This release introduces **comprehensive state management** and **UI persistence** features, ensuring that all generated content is preserved when switching between tabs or refreshing the page.
 
-### 🆕 **v4.4 New Features**
+### 🆕 **v4.5 New Features**
+- **💾 Global State Management**: Implemented React Context-based state management system
+  - Cross-tab data persistence for all pages (Proposal, Search, KnowledgeQuery)
+  - Automatic localStorage backup and restoration
+  - Seamless state synchronization across components
+- **🔄 UI Persistence**: Enhanced user experience with persistent data
+  - Generated proposals remain intact when switching tabs
+  - Search results and knowledge queries are preserved
+  - Form data and user inputs are automatically saved
+  - Page refresh recovery for all generated content
+- **📊 State Management Tools**: Comprehensive data management interface
+  - Real-time data statistics and monitoring
+  - Export/import functionality for data backup
+  - Selective data clearing (by page or all data)
+  - Visual data status indicators
 - **🔧 Embedding Model Upgrade**: Upgraded from `BAAI/bge-small-zh-v1.5` to `BAAI/bge-base-en-v1.5`
   - Enhanced English semantic understanding capabilities
   - Better cross-language retrieval performance
@@ -42,12 +56,14 @@ This release focuses on **embedding model optimization**, **system installation 
 - **Smart Document Management**: Upload, classify, and deduplicate research files (PDF, DOCX) with automatic metadata enrichment
 - **Knowledge Base & Embedding**: Build searchable knowledge base using advanced embeddings (CPU-optimized)
 - **Chemical Structure Support**: Visualize and insert chemical structures (SMILES) into Word documents
+- **State Persistence**: Automatic saving and restoration of all generated content across tab switches and page refreshes
 
 ### 🔧 **System Features**
 - **Flexible Model Selection**: Switch between GPT-5 series models with real-time parameter adjustment
 - **Modern User Interface**: Responsive web app with real-time updates and easy navigation
 - **Performance & Dev Tools**: Development mode for fast testing and built-in performance monitoring
 - **Comprehensive Testing**: Complete test suite with unit, integration, API, and E2E tests
+- **State Management Tools**: Built-in data export/import, selective clearing, and real-time statistics
 
 *Experimental Reasoning Mode and advanced Excel integration coming soon!*
 

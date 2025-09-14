@@ -159,9 +159,19 @@ class ChemicalService:
             添加了結構圖的化學品數據
         """
         try:
+            logger.info(f"🔍 [DEBUG] 開始為化學品添加 SMILES 繪製: {chemical_data.get('name', 'Unknown')}")
+            logger.info(f"🔍 [DEBUG] 化學品數據鍵: {list(chemical_data.keys())}")
+            
             smiles = chemical_data.get('smiles', '')
+            logger.info(f"🔍 [DEBUG] SMILES 字符串: {smiles}")
+            
             if not smiles:
                 logger.warning("化學品沒有 SMILES 數據，無法繪製結構圖")
+                return chemical_data
+            
+            # 檢查 RDKit 是否可用
+            if not hasattr(smiles_drawer, 'validate_smiles'):
+                logger.error("❌ SMILES drawer 未正確初始化")
                 return chemical_data
             
             # 驗證 SMILES
@@ -169,22 +179,32 @@ class ChemicalService:
                 logger.warning(f"無效的 SMILES: {smiles}")
                 return chemical_data
             
+            logger.info(f"✅ SMILES 驗證通過: {smiles}")
+            
             # 生成 SVG 結構圖
+            logger.info(f"🔍 [DEBUG] 開始生成 SVG 結構圖...")
             svg_structure = smiles_drawer.smiles_to_svg(smiles, width=300, height=300)
             if svg_structure:
                 chemical_data['svg_structure'] = svg_structure
-                logger.info(f"成功為化學品 {chemical_data.get('name', 'Unknown')} 生成 SVG 結構圖")
+                logger.info(f"✅ 成功為化學品 {chemical_data.get('name', 'Unknown')} 生成 SVG 結構圖")
+            else:
+                logger.warning(f"❌ SVG 結構圖生成失敗: {chemical_data.get('name', 'Unknown')}")
             
             # 生成 PNG 結構圖（Base64）
+            logger.info(f"🔍 [DEBUG] 開始生成 PNG 結構圖...")
             png_structure = smiles_drawer.smiles_to_png_base64(smiles, width=300, height=300)
             if png_structure:
                 chemical_data['png_structure'] = png_structure
-                logger.info(f"成功為化學品 {chemical_data.get('name', 'Unknown')} 生成 PNG 結構圖")
+                logger.info(f"✅ 成功為化學品 {chemical_data.get('name', 'Unknown')} 生成 PNG 結構圖")
+            else:
+                logger.warning(f"❌ PNG 結構圖生成失敗: {chemical_data.get('name', 'Unknown')}")
             
+            logger.info(f"🔍 [DEBUG] 最終化學品數據鍵: {list(chemical_data.keys())}")
             return chemical_data
             
         except Exception as e:
-            logger.error(f"SMILES 繪製失敗: {e}")
+            logger.error(f"❌ SMILES 繪製失敗: {e}")
+            logger.error(f"❌ 化學品名稱: {chemical_data.get('name', 'Unknown')}")
             return chemical_data
     
     def extract_chemicals_with_drawings(self, text: str) -> Tuple[List[Dict[str, Any]], List[str], str]:

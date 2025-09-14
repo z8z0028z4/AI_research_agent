@@ -16,7 +16,8 @@ Backend Core Module
 
 from .llm_manager import *
 from .retrieval import *
-from .generation import *
+# 移除直接導入generation模組，避免循環依賴
+# from .generation import *
 from .schema_manager import *
 from .vector_store import *
 from .query_expander import *
@@ -29,8 +30,9 @@ __all__ = [
     # LLM 管理
     "get_current_model",
     "get_model_params",
-    "call_llm",
-    "call_structured_llm",
+    # 這些函數將通過延遲導入提供
+    # "call_llm",
+    # "call_structured_llm",
     
     # 檢索系統
     "load_paper_vectorstore",
@@ -38,10 +40,10 @@ __all__ = [
     "search_documents",
     "search_experiments",
     
-    # 生成系統
-    "generate_research_proposal",
-    "generate_experimental_detail",
-    "generate_revision_proposal",
+    # 生成系統 - 通過延遲導入提供
+    # "generate_research_proposal",
+    # "generate_experimental_detail",
+    # "generate_revision_proposal",
     
     # Schema 管理
     "create_research_proposal_schema",
@@ -69,3 +71,29 @@ __all__ = [
     # 提示詞構建
     "build_prompt",
 ]
+
+# 提供延遲導入的函數
+def call_llm(*args, **kwargs):
+    """延遲導入call_llm函數"""
+    from .generation import call_llm as _call_llm
+    return _call_llm(*args, **kwargs)
+
+def call_structured_llm(*args, **kwargs):
+    """延遲導入call_structured_llm函數"""
+    from .generation import call_structured_llm as _call_structured_llm
+    return _call_structured_llm(*args, **kwargs)
+
+def generate_research_proposal(*args, **kwargs):
+    """延遲導入generate_research_proposal函數"""
+    from .generation import generate_research_proposal as _generate_research_proposal
+    return _generate_research_proposal(*args, **kwargs)
+
+def generate_experimental_detail(*args, **kwargs):
+    """延遲導入generate_experimental_detail函數"""
+    from .generation import generate_experimental_detail as _generate_experimental_detail
+    return _generate_experimental_detail(*args, **kwargs)
+
+def generate_revision_proposal(*args, **kwargs):
+    """延遲導入generate_revision_proposal函數"""
+    from .generation import generate_revision_proposal as _generate_revision_proposal
+    return _generate_revision_proposal(*args, **kwargs)

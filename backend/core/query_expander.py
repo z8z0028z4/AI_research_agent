@@ -9,7 +9,8 @@ from typing import List
 import json
 
 from backend.utils.logger import get_logger
-from backend.services.model_service import get_current_model, get_model_params
+# 移除模組級別的導入，避免循環依賴
+# from backend.services.model_service import get_current_model, get_model_params
 
 logger = get_logger(__name__)
 
@@ -25,6 +26,9 @@ def expand_query(user_prompt: str) -> List[str]:
     Returns:
         List[str]: 擴展後的查詢列表
     """
+    # 延遲導入避免循環依賴
+    from backend.services.model_service import get_current_model, get_model_params
+    
     # 獲取動態模型參數
     try:
         current_model = get_current_model()

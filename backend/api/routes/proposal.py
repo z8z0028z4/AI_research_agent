@@ -7,7 +7,7 @@
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from typing import List, Optional, Dict, Any
 import asyncio
 import sys
@@ -74,6 +74,27 @@ class ProposalRequest(BaseModel):
     user_feedback: Optional[str] = None
     previous_proposal: Optional[str] = None
     retrieval_count: Optional[int] = 10  # 預設檢索 10 個文檔
+    
+    @validator('research_goal')
+    def validate_research_goal(cls, v):
+        """驗證研究目標"""
+        if not v or not v.strip():
+            raise ValueError('研究目標不能為空')
+        if len(v.strip()) < 3:
+            raise ValueError('研究目標至少需要3個字符')
+        if len(v.strip()) > 10000:
+            raise ValueError('研究目標不能超過10000個字符')
+        return v.strip()
+    
+    @validator('retrieval_count')
+    def validate_retrieval_count(cls, v):
+        """驗證檢索數量"""
+        if v is not None:
+            if v < 0:
+                raise ValueError('檢索數量不能小於0')
+            if v > 100:
+                raise ValueError('檢索數量不能超過100')
+        return v
 
 class ProposalResponse(BaseModel):
     """提案生成響應模型"""
@@ -162,9 +183,48 @@ async def generate_proposal(request: ProposalRequest):
 
         # 從回答中抽取化學品資訊與提案正文（包含 SMILES 繪製的結構圖）
         print(f"🔍 [DEBUG-{request_id}] 準備調用化學服務提取化學品並添加結構圖")
-        chemical_metadata_list, not_found_list, proposal_answer = chemical_service.extract_chemicals_with_drawings(
-            result.get("answer", "")
-        )
+        
+        # 檢查是否有結構化數據中的材料列表
+        structured_proposal = result.get("structured_proposal")
+        if structured_proposal and structured_proposal.get('materials_list'):
+            print(f"🔍 [DEBUG-{request_id}] 使用結構化數據中的材料列表: {structured_proposal['materials_list']}")
+            # 直接使用結構化數據中的材料列表
+            from backend.services.pubchem_service import extract_and_fetch_chemicals, remove_json_chemical_block
+            chemical_metadata_list, not_found_list = extract_and_fetch_chemicals(structured_proposal['materials_list'])
+            # 清理文本中的 JSON 化學品塊
+            proposal_answer = remove_json_chemical_block(result.get("answer", ""))
+            
+            # ✅ 修復：為化學品添加SMILES繪製的結構圖
+            print(f"🔍 [DEBUG-{request_id}] 為結構化數據的化學品添加SMILES繪製")
+            print(f"🔍 [DEBUG-{request_id}] 化學品數量: {len(chemical_metadata_list)}")
+            
+            # 測試 SMILES-Drawer 是否正常工作
+            try:
+                from backend.services.smiles_drawer import smiles_drawer
+                test_smiles = "CCO"  # 乙醇
+                print(f"🔍 [DEBUG-{request_id}] 測試 SMILES-Drawer 功能...")
+                test_svg = smiles_drawer.smiles_to_svg(test_smiles)
+                test_png = smiles_drawer.smiles_to_png_base64(test_smiles)
+                print(f"🔍 [DEBUG-{request_id}] 測試結果 - SVG: {test_svg is not None}, PNG: {test_png is not None}")
+            except Exception as e:
+                print(f"❌ [DEBUG-{request_id}] SMILES-Drawer 測試失敗: {e}")
+            
+            enhanced_chemicals = []
+            for i, chemical in enumerate(chemical_metadata_list):
+                print(f"🔍 [DEBUG-{request_id}] 處理化學品 {i+1}/{len(chemical_metadata_list)}: {chemical.get('name', 'Unknown')}")
+                print(f"🔍 [DEBUG-{request_id}] 化學品數據鍵: {list(chemical.keys())}")
+                print(f"🔍 [DEBUG-{request_id}] SMILES: {chemical.get('smiles', 'N/A')}")
+                enhanced_chemical = chemical_service.add_smiles_drawing(chemical)
+                enhanced_chemicals.append(enhanced_chemical)
+                print(f"🔍 [DEBUG-{request_id}] 處理完成，最終數據鍵: {list(enhanced_chemical.keys())}")
+            chemical_metadata_list = enhanced_chemicals
+        else:
+            # 回退到從文本中提取
+            print(f"🔍 [DEBUG-{request_id}] 回退到從文本中提取材料列表")
+            chemical_metadata_list, not_found_list, proposal_answer = chemical_service.extract_chemicals_with_drawings(
+                result.get("answer", "")
+            )
+        
         print(f"🔍 [DEBUG-{request_id}] 化學品提取和結構圖生成完成")
         print(f"🔍 [DEBUG-{request_id}] proposal_answer 長度: {len(proposal_answer)}")
         print(f"🔍 [DEBUG-{request_id}] chemical_metadata_list 數量: {len(chemical_metadata_list)}")
@@ -209,7 +269,27 @@ async def generate_proposal(request: ProposalRequest):
         print(f"❌ [DEBUG-{request_id}] 錯誤: {str(e)}")
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"提案生成失敗: {str(e)}")
+        
+        # 根據錯誤類型返回適當的HTTP狀態碼
+        error_message = str(e)
+        if "Connection error" in error_message or "API" in error_message:
+            # API連接錯誤，返回503服務不可用
+            raise HTTPException(
+                status_code=503, 
+                detail="AI服務暫時不可用，請稍後再試"
+            )
+        elif "validation" in error_message.lower() or "invalid" in error_message.lower():
+            # 驗證錯誤，返回400錯誤請求
+            raise HTTPException(
+                status_code=400, 
+                detail=f"請求參數錯誤: {error_message}"
+            )
+        else:
+            # 其他錯誤，返回500內部服務器錯誤
+            raise HTTPException(
+                status_code=500, 
+                detail=f"提案生成失敗: {error_message}"
+            )
 
 @router.post("/proposal/revise", response_model=ProposalResponse)
 async def revise_proposal(request: ProposalRevisionRequest):

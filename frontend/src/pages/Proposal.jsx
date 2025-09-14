@@ -1,6 +1,8 @@
 import { Button, Card, Collapse, Divider, Form, Input, List, message, Select, Space, Typography } from 'antd';
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import SmilesDrawer from '../components/SmilesDrawer';
+import { useTextHighlight } from '../components/TextHighlight/TextHighlightProvider';
+import { useAppState } from '../contexts/AppStateContext';
 
 const { Title, Paragraph, Text } = Typography;
 const { TextArea } = Input;
@@ -11,28 +13,105 @@ const API_BASE = '/api/v1';
 const Proposal = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [proposal, setProposal] = useState('');
-  const [chemicals, setChemicals] = useState([]);
-  const [notFound, setNotFound] = useState([]);
-  const [citations, setCitations] = useState([]);
-  const [chunks, setChunks] = useState([]);
-  const [experimentDetail, setExperimentDetail] = useState('');
-  const [structuredExperiment, setStructuredExperiment] = useState(null); // 結構化實驗細節數據
-  const [retrievalCount, setRetrievalCount] = useState(10); // 預設檢索 10 個文檔
-  const [showReviseInput, setShowReviseInput] = useState(false); // 控制修訂輸入框顯示
-  const [reviseFeedback, setReviseFeedback] = useState(''); // 修訂意見
-  const [hasGeneratedContent, setHasGeneratedContent] = useState(false); // 追蹤是否已生成內容
   const [isTextareaFocused, setIsTextareaFocused] = useState(false); // 追蹤輸入框是否被聚焦
   const [isReviseInputFocused, setIsReviseInputFocused] = useState(false); // 追蹤修訂輸入框是否被聚焦
   const reviseInputRef = useRef(null); // 修訂輸入框的 ref
 
-  // 結構化數據狀態
-  const [structuredProposal, setStructuredProposal] = useState(null); // 結構化提案數據
+  // 使用全局狀態管理
+  const { 
+    state, 
+    setProposalFormData, 
+    setProposalResult, 
+    setProposalExperiment 
+  } = useAppState();
+  
+  const {
+    formData,
+    proposal,
+    chemicals,
+    notFound,
+    citations,
+    chunks,
+    experimentDetail,
+    structuredExperiment,
+    structuredProposal,
+    retrievalCount,
+    hasGeneratedContent,
+    showReviseInput,
+    reviseFeedback
+  } = state.proposal;
+
+  // 文字反白功能
+  const { setMode, setProposal: setTextHighlightProposal, setText, handleTextSelection, setReviseCallback } = useTextHighlight();
 
   const hasResult = useMemo(
     () => Boolean(proposal) || chemicals.length > 0 || citations.length > 0,
     [proposal, chemicals, citations]
   );
+
+  // 設置文字反白模式
+  useEffect(() => {
+    setMode('make proposal');
+  }, [setMode]);
+
+  // 同步表單數據
+  useEffect(() => {
+    if (formData.goal !== form.getFieldValue('goal')) {
+      form.setFieldsValue(formData);
+    }
+  }, [formData, form]);
+
+  // 設置文字反白功能的修改回調
+  useEffect(() => {
+    setReviseCallback((result) => {
+      console.log('🔍 [PROPOSAL] 文字反白修改回調被調用');
+      console.log('🔍 [PROPOSAL] result:', result);
+      console.log('🔍 [PROPOSAL] result.answer:', result.answer);
+      console.log('🔍 [PROPOSAL] result.structured_proposal:', result.structured_proposal);
+      console.log('🔍 [PROPOSAL] result.structured_experiment:', result.structured_experiment);
+      
+      // 根據互動類型處理不同的修改
+      if (result.interaction_type === 'revise') {
+        if (result.structured_proposal) {
+          // 修改提案
+          setProposalResult({
+            proposal: result.answer || '',
+            structuredProposal: result.structured_proposal,
+            chemicals: result.chemicals || [],
+            notFound: result.not_found || [],
+            citations: result.citations || [],
+            chunks: result.chunks || [],
+            experimentDetail: '', // 清空實驗細節
+            structuredExperiment: null // 清空結構化實驗細節
+          });
+        } else if (result.structured_experiment) {
+          // 修改實驗細節
+          setProposalExperiment({
+            experimentDetail: result.answer || '',
+            structuredExperiment: result.structured_experiment,
+            citations: result.citations || []
+          });
+        }
+        
+        // 更新文字反白功能的數據
+        setTextHighlightProposal(result.answer || '', result.chunks || []);
+        setText(result.answer || '');
+        
+        console.log('✅ [PROPOSAL] 文字反白修改已應用');
+        console.log('✅ [PROPOSAL] 修改類型:', result.structured_proposal ? 'proposal' : 'experiment');
+      }
+    });
+  }, [setReviseCallback, setTextHighlightProposal, setText, setProposalResult, setProposalExperiment]);
+
+  // 監控 chemicals 狀態變化
+  useEffect(() => {
+    console.log('🔍 [PROPOSAL] chemicals 狀態變化:', chemicals);
+    console.log('🔍 [PROPOSAL] chemicals 長度:', chemicals.length);
+    if (chemicals.length > 0) {
+      console.log('🔍 [PROPOSAL] 第一個化學品:', chemicals[0]);
+      console.log('🔍 [PROPOSAL] 第一個化學品的鍵:', Object.keys(chemicals[0]));
+    }
+  }, [chemicals]);
 
   const callApi = async (path, options = {}) => {
     const res = await fetch(`${API_BASE}${path}`, {
@@ -57,7 +136,11 @@ const Proposal = () => {
 
   const onGenerate = async () => {
     const goal = form.getFieldValue('goal');
+    const formRetrievalCount = form.getFieldValue('retrievalCount') || retrievalCount;
     if (!goal) return message.warning('請輸入研究目標');
+
+    // 保存表單數據到全局狀態
+    setProposalFormData({ goal, retrievalCount: formRetrievalCount });
 
     // 生成唯一的請求 ID
     const requestId = Math.random().toString(36).substr(2, 8);
@@ -66,7 +149,7 @@ const Proposal = () => {
     console.log(`🚀 [FRONTEND-${requestId}] ========== 開始生成提案 ==========`);
     console.log(`🚀 [FRONTEND-${requestId}] 時間戳: ${new Date().toLocaleString()}`);
     console.log(`🚀 [FRONTEND-${requestId}] 研究目標: ${goal}`);
-    console.log(`🚀 [FRONTEND-${requestId}] 檢索數量: ${retrievalCount}`);
+    console.log(`🚀 [FRONTEND-${requestId}] 檢索數量: ${formRetrievalCount}`);
     console.log(`🚀 [FRONTEND-${requestId}] loading 狀態: ${loading}`);
 
     setLoading(true);
@@ -75,7 +158,7 @@ const Proposal = () => {
       const data = await callApi('/proposal/generate', {
         body: JSON.stringify({
           research_goal: goal,
-          retrieval_count: retrievalCount
+          retrieval_count: formRetrievalCount
         }),
       });
 
@@ -89,22 +172,22 @@ const Proposal = () => {
       console.log(`✅ [FRONTEND-${requestId}] 引用數量: ${data.citations?.length || 0}`);
       console.log(`✅ [FRONTEND-${requestId}] 文檔塊數量: ${data.chunks?.length || 0}`);
 
-      setProposal(data.proposal || '');
-      setChemicals(data.chemicals || []);
-      setNotFound(data.not_found || []);
-      setCitations(data.citations || []);
-      setChunks(data.chunks || []);
-      setExperimentDetail('');
-      setHasGeneratedContent(true); // 設置為已生成內容
+      // 使用全局狀態管理更新結果
+      setProposalResult({
+        proposal: data.proposal || '',
+        chemicals: data.chemicals || [],
+        notFound: data.not_found || [],
+        citations: data.citations || [],
+        chunks: data.chunks || [],
+        experimentDetail: '',
+        structuredProposal: data.structured_proposal || null,
+        structuredExperiment: null,
+        retrievalCount: formRetrievalCount
+      });
 
-      // 新增：處理結構化提案數據
-      if (data.structured_proposal) {
-        setStructuredProposal(data.structured_proposal);
-      } else {
-        setStructuredProposal(null);
-      }
-
-
+      // 設置文字反白功能的數據
+      setTextHighlightProposal(data.proposal || '', data.chunks || []);
+      setText(data.proposal || '');
 
       console.log(`✅ [FRONTEND-${requestId}] 狀態更新完成`);
 
@@ -143,24 +226,23 @@ const Proposal = () => {
       });
       console.log('🔍 FRONTEND DEBUG: Revise response received:', data);
 
-      setProposal(data.proposal || '');
-      setChemicals(data.chemicals || []);
-      setNotFound(data.not_found || []);
-      setCitations(data.citations || []);
-      setChunks(data.chunks || []);
-      setExperimentDetail('');
-      setShowReviseInput(false); // 隱藏修訂輸入框
-      setReviseFeedback(''); // 清空修訂意見
-      setHasGeneratedContent(true); // 設置為已生成內容
+      // 使用全局狀態管理更新結果
+      setProposalResult({
+        proposal: data.proposal || '',
+        chemicals: data.chemicals || [],
+        notFound: data.not_found || [],
+        citations: data.citations || [],
+        chunks: data.chunks || [],
+        experimentDetail: '',
+        structuredProposal: data.structured_proposal || null,
+        structuredExperiment: null,
+        showReviseInput: false, // 隱藏修訂輸入框
+        reviseFeedback: '' // 清空修訂意見
+      });
 
-      // 新增：處理結構化提案數據
-      if (data.structured_proposal) {
-        setStructuredProposal(data.structured_proposal);
-      } else {
-        setStructuredProposal(null);
-      }
-
-
+      // 更新文字反白功能的數據
+      setTextHighlightProposal(data.proposal || '', data.chunks || []);
+      setText(data.proposal || '');
 
       message.success('提案修訂成功！');
     } catch (e) {
@@ -174,12 +256,11 @@ const Proposal = () => {
   const onShowReviseInput = () => {
     if (showReviseInput) {
       // 如果已經顯示，則直接隱藏
-      setShowReviseInput(false);
-      setReviseFeedback('');
+      setProposalFormData({ showReviseInput: false, reviseFeedback: '' });
       setIsReviseInputFocused(false);
     } else {
       // 如果未顯示，則顯示並聚焦
-      setShowReviseInput(true);
+      setProposalFormData({ showReviseInput: true });
       // 使用 setTimeout 確保 DOM 更新後再聚焦
       setTimeout(() => {
         reviseInputRef.current?.focus();
@@ -194,25 +275,13 @@ const Proposal = () => {
       const data = await callApi('/proposal/experiment-detail', {
         body: JSON.stringify({ proposal, chunks }),
       });
-      setExperimentDetail(data.experiment_detail || '');
 
-      // 處理結構化實驗細節數據
-      if (data.structured_experiment) {
-        console.log('🔍 收到結構化實驗細節:', data.structured_experiment);
-        setStructuredExperiment(data.structured_experiment);
-      } else {
-        setStructuredExperiment(null);
-      }
-
-      // ✅ 修復：正確處理citations狀態
-      if (data.citations && data.citations.length > 0) {
-        // 如果有新的citations，則更新
-        setCitations(data.citations);
-        console.log('🔍 更新citations數量:', data.citations.length);
-      } else {
-        // 如果沒有新的citations，則保留原有的
-        console.log('🔍 保留原有citations數量:', citations.length);
-      }
+      // 使用全局狀態管理更新實驗細節
+      setProposalExperiment({
+        experimentDetail: data.experiment_detail || '',
+        structuredExperiment: data.structured_experiment || null,
+        citations: data.citations || citations // 如果有新的citations則更新，否則保留原有的
+      });
 
       // 顯示重試信息
       if (data.retry_info) {
@@ -304,21 +373,25 @@ const Proposal = () => {
       <Paragraph>Generate your comprehensive research proposals with minimal input.</Paragraph>
 
       <Card title="New Proposal" style={{ marginBottom: 24, position: 'relative' }}>
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" initialValues={formData}>
           <Form.Item name="goal" label="Research Goal" rules={[{ required: true, message: 'Please enter your research goal' }]}>
             <TextArea
               rows={hasGeneratedContent && !isTextareaFocused ? 1 : 12}
               placeholder="Please enter your research goal"
               onFocus={() => setIsTextareaFocused(true)}
               onBlur={() => setIsTextareaFocused(false)}
+              onChange={(e) => setProposalFormData({ goal: e.target.value })}
             />
           </Form.Item>
 
-          <Form.Item label="Document Retrieval Count">
+          <Form.Item 
+            name="retrievalCount" 
+            label="Document Retrieval Count"
+            initialValue={10}
+          >
             <Select
-              value={retrievalCount}
-              onChange={setRetrievalCount}
               style={{ width: 200 }}
+              onChange={(value) => setProposalFormData({ retrievalCount: value })}
             >
               <Option value={1}>1 document (Dev Test)</Option>
               <Option value={5}>5 documents (Fast)</Option>
@@ -396,16 +469,22 @@ const Proposal = () => {
                 key: 'proposal',
                 label: <span style={{ fontWeight: 700, fontSize: 27 }}>🤖 Generated proposal</span>,
                 children: (
-                  <div style={{
-                    whiteSpace: 'pre-wrap',
-                    fontSize: '16px',
-                    lineHeight: '1.6',
-                    wordBreak: 'break-word',
-                    overflowWrap: 'break-word',
-                    maxWidth: '100%',
-                    width: '100%',
-                    fontWeight: 'normal'
-                  }}>
+                  <div 
+                    data-area="proposal"
+                    data-testid="proposal-content"
+                    onMouseUp={handleTextSelection}
+                    style={{
+                      whiteSpace: 'pre-wrap',
+                      fontSize: '16px',
+                      lineHeight: '1.6',
+                      wordBreak: 'break-word',
+                      overflowWrap: 'break-word',
+                      maxWidth: '100%',
+                      width: '100%',
+                      fontWeight: 'normal',
+                      cursor: 'text'
+                    }}
+                  >
                     {structuredProposal ? (
                       // 渲染結構化提案數據
                       <>
@@ -554,157 +633,194 @@ const Proposal = () => {
           />
 
           {(experimentDetail || structuredExperiment) && (
-            <Collapse
-              defaultActiveKey={['experiment']}
-              style={{ marginBottom: 16 }}
-              items={[
-                {
-                  key: 'experiment',
-                  label: <span style={{ fontWeight: 700, fontSize: 27 }}>🔬 Suggested experiment details</span>,
-                  children: (
-                    <div style={{
-                      whiteSpace: 'pre-wrap',
-                      fontSize: '16px',
-                      lineHeight: '1.6',
-                      wordBreak: 'break-word',
-                      overflowWrap: 'break-word',
-                      maxWidth: '100%',
-                      width: '100%',
-                      fontWeight: 'normal'
-                    }}>
-                      {structuredExperiment ? (
-                        // 渲染結構化實驗細節數據
-                        <>
-                          {/* 合成過程 */}
-                          {structuredExperiment.synthesis_process && (
-                            <>
-                              <div style={{
-                                fontSize: '24px',
-                                fontWeight: 'bold',
-                                color: '#1890ff',
-                                marginTop: '12px',
-                                marginBottom: '6px'
-                              }}>
-                                Synthesis Process
-                              </div>
-                              <div style={{ marginBottom: '16px' }}>
-                                {structuredExperiment.synthesis_process
-                                  .replace(/^(SYNTHESIS PROCESS|Synthesis Process|合成過程)[:\s]*/i, '')
-                                  .trim()}
-                              </div>
-                            </>
-                          )}
+            <>
+              {/* 修訂說明卡片 - 僅在修訂實驗細節時顯示 */}
+              {structuredExperiment?.revision_explanation && (
+                <Collapse
+                  defaultActiveKey={['revision']}
+                  style={{ marginBottom: 16 }}
+                  items={[
+                    {
+                      key: 'revision',
+                      label: <span style={{ fontWeight: 700, fontSize: 27 }}>📝 Revision Explanation</span>,
+                      children: (
+                        <div style={{
+                          whiteSpace: 'pre-wrap',
+                          fontSize: '16px',
+                          lineHeight: '1.6',
+                          wordBreak: 'break-word',
+                          overflowWrap: 'break-word',
+                          maxWidth: '100%',
+                          width: '100%',
+                          fontWeight: 'normal'
+                        }}>
+                          {structuredExperiment.revision_explanation}
+                        </div>
+                      ),
+                    },
+                  ]}
+                />
+              )}
 
-                          {/* 材料和條件 */}
-                          {structuredExperiment.materials_and_conditions && (
-                            <>
-                              <div style={{
-                                fontSize: '24px',
-                                fontWeight: 'bold',
-                                color: '#1890ff',
-                                marginTop: '12px',
-                                marginBottom: '6px'
-                              }}>
-                                Materials and Conditions
-                              </div>
-                              <div style={{ marginBottom: '16px' }}>
-                                {structuredExperiment.materials_and_conditions
-                                  .replace(/^(MATERIALS AND CONDITIONS|Materials and Conditions|材料和條件)[:\s]*/i, '')
-                                  .trim()}
-                              </div>
-                            </>
-                          )}
-
-                          {/* 分析方法 */}
-                          {structuredExperiment.analytical_methods && (
-                            <>
-                              <div style={{
-                                fontSize: '24px',
-                                fontWeight: 'bold',
-                                color: '#1890ff',
-                                marginTop: '12px',
-                                marginBottom: '6px'
-                              }}>
-                                Analytical Methods
-                              </div>
-                              <div style={{ marginBottom: '16px' }}>
-                                {structuredExperiment.analytical_methods
-                                  .replace(/^(ANALYTICAL METHODS|Analytical Methods|分析方法)[:\s]*/i, '')
-                                  .trim()}
-                              </div>
-                            </>
-                          )}
-
-                          {/* 注意事項 */}
-                          {structuredExperiment.precautions && (
-                            <>
-                              <div style={{
-                                fontSize: '24px',
-                                fontWeight: 'bold',
-                                color: '#1890ff',
-                                marginTop: '12px',
-                                marginBottom: '6px'
-                              }}>
-                                Precautions
-                              </div>
-                              <div style={{ marginBottom: '16px' }}>
-                                {structuredExperiment.precautions
-                                  .replace(/^(PRECAUTIONS|Precautions|注意事項)[:\s]*/i, '')
-                                  .trim()}
-                              </div>
-                            </>
-                          )}
-                        </>
-                      ) : (
-                        // 渲染傳統文本格式（作為 fallback）
-                        experimentDetail
-                          .replace(/\*\*(.*?)\*\*/g, '$1') // 移除粗體標記
-                          .replace(/\*(.*?)\*/g, '$1') // 移除斜體標記
-                          .replace(/`(.*?)`/g, '$1') // 移除代碼標記
-                          .replace(/^#{3,}\s*(.*)$/gm, '$1') // 只移除 ### 及以上的標題標記，保留 ##
-                          .replace(/^\s*[-*+]\s+/gm, '- ') // 統一項目符號
-                          .replace(/^\s*\d+\.\s+/gm, (match) => match.replace(/^\s*\d+\.\s+/, '')) // 移除編號
-                          .replace(/\n\s*\n\s*\n/g, '\n\n') // 移除多餘空行
-                          .replace(/\n\s*\*\*/g, '\n') // 移除粗體前的換行
-                          .replace(/\*\*\s*\n/g, '\n') // 移除粗體後的換行
-                          .split('\n')
-                          .map((line, index) => {
-                            // 檢查是否為實驗細節的主要標題行（與提案區域相同的樣式）
-                            if (line.match(/^(##\s*)?(合成過程|材料和條件|分析方法|注意事項|Synthesis Process|Materials and Conditions|Analytical Methods|Precautions|實驗細節|Experimental Details)/)) {
-                              return (
-                                <div key={index} style={{
+              {/* 實驗細節卡片 */}
+              <Collapse
+                defaultActiveKey={['experiment']}
+                style={{ marginBottom: 16 }}
+                items={[
+                  {
+                    key: 'experiment',
+                    label: <span style={{ fontWeight: 700, fontSize: 27 }}>🔬 Suggested experiment details</span>,
+                    children: (
+                      <div 
+                        data-area="experiment"
+                        data-testid="experiment-content"
+                        onMouseUp={handleTextSelection}
+                        style={{
+                          whiteSpace: 'pre-wrap',
+                          fontSize: '16px',
+                          lineHeight: '1.6',
+                          wordBreak: 'break-word',
+                          overflowWrap: 'break-word',
+                          maxWidth: '100%',
+                          width: '100%',
+                          fontWeight: 'normal',
+                          cursor: 'text'
+                        }}
+                      >
+                        {structuredExperiment ? (
+                          // 渲染結構化實驗細節數據
+                          <>
+                            {/* 合成過程 */}
+                            {structuredExperiment.synthesis_process && (
+                              <>
+                                <div style={{
                                   fontSize: '24px',
                                   fontWeight: 'bold',
                                   color: '#1890ff',
-                                  marginTop: '16px',
-                                  marginBottom: '8px'
-                                }}>
-                                  {line.replace(/^##\s*/, '')}
-                                </div>
-                              );
-                            }
-                            // 檢查是否為子標題行（保持原有的樣式）
-                            if (line.match(/^(\d+\)\s*)?(前處理與配方計算|微波輔助骨架合成|活化|微波促進的後合成接枝|Pre-treatment and Formulation Calculation|Microwave-assisted Framework Synthesis|Activation|Microwave-promoted Post-synthesis Grafting|材料\(IUPAC 名稱以便辨識\)|Materials \(IUPAC names for identification\))/)) {
-                              return (
-                                <div key={index} style={{
-                                  fontSize: '20px',
-                                  fontWeight: 'bold',
-                                  color: '#262626',
                                   marginTop: '12px',
                                   marginBottom: '6px'
                                 }}>
-                                  {line}
+                                  Synthesis Process
                                 </div>
-                              );
-                            }
-                            return <div key={index} style={{ fontWeight: 'normal' }}>{line}</div>;
-                          })
-                      )}
-                    </div>
-                  ),
-                },
-              ]}
-            />
+                                <div style={{ marginBottom: '16px' }}>
+                                  {structuredExperiment.synthesis_process
+                                    .replace(/^(SYNTHESIS PROCESS|Synthesis Process|合成過程)[:\s]*/i, '')
+                                    .trim()}
+                                </div>
+                              </>
+                            )}
+
+                            {/* 材料和條件 */}
+                            {structuredExperiment.materials_and_conditions && (
+                              <>
+                                <div style={{
+                                  fontSize: '24px',
+                                  fontWeight: 'bold',
+                                  color: '#1890ff',
+                                  marginTop: '12px',
+                                  marginBottom: '6px'
+                                }}>
+                                  Materials and Conditions
+                                </div>
+                                <div style={{ marginBottom: '16px' }}>
+                                  {structuredExperiment.materials_and_conditions
+                                    .replace(/^(MATERIALS AND CONDITIONS|Materials and Conditions|材料和條件)[:\s]*/i, '')
+                                    .trim()}
+                                </div>
+                              </>
+                            )}
+
+                            {/* 分析方法 */}
+                            {structuredExperiment.analytical_methods && (
+                              <>
+                                <div style={{
+                                  fontSize: '24px',
+                                  fontWeight: 'bold',
+                                  color: '#1890ff',
+                                  marginTop: '12px',
+                                  marginBottom: '6px'
+                                }}>
+                                  Analytical Methods
+                                </div>
+                                <div style={{ marginBottom: '16px' }}>
+                                  {structuredExperiment.analytical_methods
+                                    .replace(/^(ANALYTICAL METHODS|Analytical Methods|分析方法)[:\s]*/i, '')
+                                    .trim()}
+                                </div>
+                              </>
+                            )}
+
+                            {/* 注意事項 */}
+                            {structuredExperiment.precautions && (
+                              <>
+                                <div style={{
+                                  fontSize: '24px',
+                                  fontWeight: 'bold',
+                                  color: '#1890ff',
+                                  marginTop: '12px',
+                                  marginBottom: '6px'
+                                }}>
+                                  Precautions
+                                </div>
+                                <div style={{ marginBottom: '16px' }}>
+                                  {structuredExperiment.precautions
+                                    .replace(/^(PRECAUTIONS|Precautions|注意事項)[:\s]*/i, '')
+                                    .trim()}
+                                </div>
+                              </>
+                            )}
+                          </>
+                        ) : (
+                          // 渲染傳統文本格式（作為 fallback）
+                          experimentDetail
+                            .replace(/\*\*(.*?)\*\*/g, '$1') // 移除粗體標記
+                            .replace(/\*(.*?)\*/g, '$1') // 移除斜體標記
+                            .replace(/`(.*?)`/g, '$1') // 移除代碼標記
+                            .replace(/^#{3,}\s*(.*)$/gm, '$1') // 只移除 ### 及以上的標題標記，保留 ##
+                            .replace(/^\s*[-*+]\s+/gm, '- ') // 統一項目符號
+                            .replace(/^\s*\d+\.\s+/gm, (match) => match.replace(/^\s*\d+\.\s+/, '')) // 移除編號
+                            .replace(/\n\s*\n\s*\n/g, '\n\n') // 移除多餘空行
+                            .replace(/\n\s*\*\*/g, '\n') // 移除粗體前的換行
+                            .replace(/\*\*\s*\n/g, '\n') // 移除粗體後的換行
+                            .split('\n')
+                            .map((line, index) => {
+                              // 檢查是否為實驗細節的主要標題行（與提案區域相同的樣式）
+                              if (line.match(/^(##\s*)?(合成過程|材料和條件|分析方法|注意事項|Synthesis Process|Materials and Conditions|Analytical Methods|Precautions|實驗細節|Experimental Details)/)) {
+                                return (
+                                  <div key={index} style={{
+                                    fontSize: '24px',
+                                    fontWeight: 'bold',
+                                    color: '#1890ff',
+                                    marginTop: '16px',
+                                    marginBottom: '8px'
+                                  }}>
+                                    {line.replace(/^##\s*/, '')}
+                                  </div>
+                                );
+                              }
+                              // 檢查是否為子標題行（保持原有的樣式）
+                              if (line.match(/^(\d+\)\s*)?(前處理與配方計算|微波輔助骨架合成|活化|微波促進的後合成接枝|Pre-treatment and Formulation Calculation|Microwave-assisted Framework Synthesis|Activation|Microwave-promoted Post-synthesis Grafting|材料\(IUPAC 名稱以便辨識\)|Materials \(IUPAC names for identification\))/)) {
+                                return (
+                                  <div key={index} style={{
+                                    fontSize: '20px',
+                                    fontWeight: 'bold',
+                                    color: '#262626',
+                                    marginTop: '12px',
+                                    marginBottom: '6px'
+                                  }}>
+                                    {line}
+                                  </div>
+                                );
+                              }
+                              return <div key={index} style={{ fontWeight: 'normal' }}>{line}</div>;
+                            })
+                        )}
+                      </div>
+                    ),
+                  },
+                ]}
+              />
+            </>
           )}
 
           <Collapse
@@ -716,87 +832,98 @@ const Proposal = () => {
                 label: <span style={{ fontWeight: 700, fontSize: 27 }}>🧪 Chemical Summary</span>,
                 children: (
                   <>
-                    <List
-                      dataSource={chemicals}
-                      renderItem={(c, index) => (
-                        <List.Item style={{ padding: '16px 0', borderBottom: '1px solid #f0f0f0' }}>
-                          <div style={{ width: '100%' }}>
-                            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                              {/* Structure Image - 優先使用 SMILES 繪製的結構圖 */}
-                              <div style={{ flex: '0 0 150px' }}>
-                                <SmilesDrawer
-                                  svgStructure={c.svg_structure}
-                                  pngStructure={c.png_structure}
-                                  smiles={c.smiles}
-                                  name={c.name}
-                                  width={120}
-                                  height={120}
-                                  showSmiles={false}
-                                  loading={false}
-                                  error={null}
-                                />
-                              </div>
-
-                              {/* Chemical Name and Properties */}
-                              <div style={{ flex: '1', display: 'flex', gap: '24px' }}>
-                                {/* Properties */}
-                                <div style={{ flex: '1' }}>
-                                  <Text strong style={{ fontSize: '24px', marginBottom: '8px', display: 'block' }}>
-                                    {c.pubchem_url ? (
-                                      <a href={c.pubchem_url} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff', fontSize: '24px', fontWeight: 'bold' }}>
-                                        {c.name}
-                                      </a>
-                                    ) : (
-                                      <span style={{ color: '#1890ff', fontSize: '24px', fontWeight: 'bold' }}>{c.name}</span>
-                                    )}
-                                  </Text>
-                                  <div style={{
-                                    fontSize: '14px',
-                                    lineHeight: '1.5',
-                                    wordBreak: 'break-word',
-                                    overflowWrap: 'break-word'
-                                  }}>
-                                    <div><strong>Formula:</strong> <code>{c.formula || '-'}</code></div>
-                                    <div><strong>MW:</strong> <code>{c.weight || '-'}</code></div>
-                                    <div><strong>Boiling Point:</strong> <code>{c.boiling_point_c || '-'}</code></div>
-                                    <div><strong>Melting Point:</strong> <code>{c.melting_point_c || '-'}</code></div>
-                                    <div><strong>CAS No.:</strong> <code>{c.cas || '-'}</code></div>
-                                    <div><strong>SMILES:</strong> <code>{c.smiles || '-'}</code></div>
-                                  </div>
+                                         <List
+                       dataSource={chemicals}
+                       renderItem={(c, index) => {
+                         console.log(`🔍 [CHEMICAL-SUMMARY] 渲染化學品 ${index}:`, c);
+                         console.log(`🔍 [CHEMICAL-SUMMARY] 化學品 ${index} 的鍵:`, Object.keys(c));
+                         console.log(`🔍 [CHEMICAL-SUMMARY] 化學品 ${index} 是否有 svg_structure:`, 'svg_structure' in c);
+                         console.log(`🔍 [CHEMICAL-SUMMARY] 化學品 ${index} 是否有 png_structure:`, 'png_structure' in c);
+                         
+                                                  return (
+                          <List.Item style={{ padding: '16px 0', borderBottom: '1px solid #f0f0f0' }}>
+                            <div style={{ width: '100%' }}>
+                              <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                                {/* Structure Image - 優先使用 SMILES 繪製的結構圖 */}
+                                <div style={{ flex: '0 0 150px' }}>
+                                  <SmilesDrawer
+                                    svgStructure={c.svg_structure}
+                                    pngStructure={c.png_structure}
+                                    smiles={c.smiles}
+                                    name={c.name}
+                                    width={120}
+                                    height={120}
+                                    showSmiles={false}
+                                    loading={false}
+                                    error={null}
+                                  />
                                 </div>
 
-                                {/* Safety Icons */}
-                                <div style={{ flex: '0 0 150px' }}>
-                                  <Text strong style={{ fontSize: '14px', marginBottom: '8px', display: 'block' }}>
-                                    Handling Safety
-                                  </Text>
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {/* NFPA Diamond */}
-                                    {c.safety_icons?.nfpa_image && (
-                                      <img
-                                        src={c.safety_icons.nfpa_image}
-                                        alt="NFPA"
-                                        style={{ width: '50px', height: '50px' }}
-                                      />
-                                    )}
-                                    {/* GHS Icons */}
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '120px' }}>
-                                      {c.safety_icons?.ghs_icons?.map((icon, index) => (
+                                {/* Chemical Name and Properties */}
+                                <div style={{ flex: '1', display: 'flex', gap: '24px' }}>
+                                  {/* Properties */}
+                                  <div style={{ flex: '1' }}>
+                                    <Text strong style={{ fontSize: '24px', marginBottom: '8px', display: 'block' }}>
+                                      {c.pubchem_url ? (
+                                        <a href={c.pubchem_url} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff', fontSize: '24px', fontWeight: 'bold' }}>
+                                          {c.name}
+                                        </a>
+                                      ) : (
+                                        <span style={{ color: '#1890ff', fontSize: '24px', fontWeight: 'bold' }}>{c.name}</span>
+                                      )}
+                                    </Text>
+                                    <div 
+                                      onMouseUp={handleTextSelection}
+                                      style={{
+                                        fontSize: '14px',
+                                        lineHeight: '1.5',
+                                        wordBreak: 'break-word',
+                                        overflowWrap: 'break-word',
+                                        cursor: 'text'
+                                      }}
+                                    >
+                                      <div><strong>Formula:</strong> <code>{c.formula || '-'}</code></div>
+                                      <div><strong>MW:</strong> <code>{c.weight || '-'}</code></div>
+                                      <div><strong>Boiling Point:</strong> <code>{c.boiling_point_c || '-'}</code></div>
+                                      <div><strong>Melting Point:</strong> <code>{c.melting_point_c || '-'}</code></div>
+                                      <div><strong>CAS No.:</strong> <code>{c.cas || '-'}</code></div>
+                                      <div><strong>SMILES:</strong> <code>{c.smiles || '-'}</code></div>
+                                    </div>
+                                  </div>
+
+                                  {/* Safety Icons */}
+                                  <div style={{ flex: '0 0 150px' }}>
+                                    <Text strong style={{ fontSize: '14px', marginBottom: '8px', display: 'block' }}>
+                                      Handling Safety
+                                    </Text>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                      {/* NFPA Diamond */}
+                                      {c.safety_icons?.nfpa_image && (
                                         <img
-                                          key={index}
-                                          src={icon}
-                                          alt="GHS"
-                                          style={{ width: '40px', height: '40px' }}
+                                          src={c.safety_icons.nfpa_image}
+                                          alt="NFPA"
+                                          style={{ width: '50px', height: '50px' }}
                                         />
-                                      ))}
+                                      )}
+                                      {/* GHS Icons */}
+                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '120px' }}>
+                                        {c.safety_icons?.ghs_icons?.map((icon, index) => (
+                                          <img
+                                            key={index}
+                                            src={icon}
+                                            alt="GHS"
+                                            style={{ width: '40px', height: '40px' }}
+                                          />
+                                        ))}
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        </List.Item>
-                      )}
+                          </List.Item>
+                         );
+                       }}
                       grid={{ gutter: 16, column: 2 }}
                     />
                     {!!notFound.length && (
@@ -838,8 +965,7 @@ const Proposal = () => {
                     type="text"
                     size="small"
                     onClick={() => {
-                      setShowReviseInput(false);
-                      setReviseFeedback('');
+                      setProposalFormData({ showReviseInput: false, reviseFeedback: '' });
                     }}
                   >
                     ✕ Close
@@ -849,7 +975,7 @@ const Proposal = () => {
                   <TextArea
                     placeholder="Your revision idea"
                     value={reviseFeedback}
-                    onChange={(e) => setReviseFeedback(e.target.value)}
+                    onChange={(e) => setProposalFormData({ reviseFeedback: e.target.value })}
                     rows={isReviseInputFocused ? 6 : 2}
                     style={{ width: 800 }}
                     onFocus={() => setIsReviseInputFocused(true)}

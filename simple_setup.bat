@@ -172,7 +172,11 @@ if errorlevel 1 (
 )
 
 echo Checking and fixing security vulnerabilities...
-npm audit fix --audit-level=moderate
+npm audit fix
+if errorlevel 1 (
+    echo WARNING: Some vulnerabilities could not be automatically fixed
+    echo You may need to manually update packages or check for breaking changes
+)
 
 echo ✅ Frontend dependencies installed!
 cd ..

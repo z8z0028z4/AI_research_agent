@@ -8,7 +8,8 @@ API Key 驗證模組
 import asyncio
 import logging
 from typing import Tuple
-import openai
+# 移除模組級別的openai導入，改為延遲導入
+# import openai
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,9 @@ class APIKeyValidator:
             return False, "API Key 不能為空"
         
         try:
+            # 延遲導入openai，避免模組級別導入問題
+            import openai
+            
             # 設置 API Key
             client = openai.AsyncOpenAI(api_key=api_key.strip())
             

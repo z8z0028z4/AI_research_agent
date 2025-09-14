@@ -11,7 +11,8 @@ from typing import List, Dict, Any, Optional
 from langchain.schema import Document
 from langchain_chroma import Chroma
 
-from ..services.embedding_service import get_chroma_instance
+# 移除模組級別的導入，避免循環依賴
+# from ..services.embedding_service import get_chroma_instance
 from ..utils import extract_text_snippet
 
 # 配置日誌
@@ -25,6 +26,8 @@ def load_paper_vectorstore() -> Chroma:
         Chroma: 論文向量數據庫實例
     """
     try:
+        # 延遲導入避免循環依賴
+        from ..services.embedding_service import get_chroma_instance
         vectorstore = get_chroma_instance("paper")
         logger.info("論文向量數據庫載入成功")
         return vectorstore
@@ -40,6 +43,8 @@ def load_experiment_vectorstore() -> Chroma:
         Chroma: 實驗向量數據庫實例
     """
     try:
+        # 延遲導入避免循環依賴
+        from ..services.embedding_service import get_chroma_instance
         vectorstore = get_chroma_instance("experiment")
         logger.info("實驗向量數據庫載入成功")
         return vectorstore
@@ -96,6 +101,7 @@ def get_vectorstore_stats(vectorstore_type: str = "paper") -> Dict[str, Any]:
         Dict[str, Any]: 統計信息
     """
     try:
+        # 延遲導入避免循環依賴
         from ..services.embedding_service import get_vectorstore_stats as get_stats
         return get_stats(vectorstore_type)
     except Exception as e:
