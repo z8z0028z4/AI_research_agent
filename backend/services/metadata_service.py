@@ -75,10 +75,27 @@ def gpt_detect_type_and_title(text, filename):
         """
         
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-5-nano",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=200,
-            temperature=0.1
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "file_classification",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "enum": ["paper", "SI", "unknown"]
+                            },
+                            "title": {
+                                "type": "string"
+                            }
+                        },
+                        "required": ["type", "title"]
+                    }
+                }
+            }
         )
         
         result = (response.choices[0].message.content or "").strip()

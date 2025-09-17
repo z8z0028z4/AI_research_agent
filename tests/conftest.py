@@ -152,7 +152,7 @@ def mock_settings():
     """Mock 設置"""
     with patch('backend.core.config.settings') as mock_settings:
         mock_settings.openai_api_key = "test_key"
-        mock_settings.openai_model = "gpt-4o-mini"
+        mock_settings.openai_model = "gpt-5-nano"
         mock_settings.openai_max_tokens = 2000
         mock_settings.app_name = "AI Research Agent Test"
         mock_settings.debug = True
