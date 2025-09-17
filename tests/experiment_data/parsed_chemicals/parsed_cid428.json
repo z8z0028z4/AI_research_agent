@@ -1,0 +1,25 @@
+{
+  "cid": 428,
+  "name": "propane-1,3-diamine",
+  "iupac_name": "propane-1,3-diamine",
+  "formula": "C3H10N2",
+  "weight": "74.13",
+  "smiles": "C(CN)CN",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=428&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/428",
+  "boiling_point": "275.9 \u00b0F at 738 mmHg (NTP, 1992)",
+  "melting_point": "10 \u00b0F (NTP, 1992)",
+  "boiling_point_c": "135.5 \u00b0C",
+  "melting_point_c": "-12.2 \u00b0C",
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS02.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS05.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS06.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS07.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS08.svg"
+    ],
+    "nfpa_image": null
+  },
+  "cas": "109-76-2"
+}

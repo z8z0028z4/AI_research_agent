@@ -1,0 +1,22 @@
+{
+  "cid": 24261,
+  "name": "dioxosilane",
+  "iupac_name": "dioxosilane",
+  "formula": "O2Si",
+  "weight": "60.084",
+  "smiles": "O=[Si]=O",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=24261&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/24261",
+  "boiling_point": "4046 \u00b0F at 760 mmHg (NIOSH, 2024)",
+  "melting_point": "3110 \u00b0F (NIOSH, 2024)",
+  "boiling_point_c": "2230.0 \u00b0C",
+  "melting_point_c": "1710.0 \u00b0C",
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS07.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS08.svg"
+    ],
+    "nfpa_image": null
+  },
+  "cas": "14464-46-1"
+}

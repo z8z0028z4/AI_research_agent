@@ -1,0 +1,19 @@
+{
+  "cid": 962,
+  "name": "oxidane",
+  "iupac_name": "oxidane",
+  "formula": "H2O",
+  "weight": "18.015",
+  "smiles": "O",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=962&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/962",
+  "boiling_point": "212 \u00b0F at 760 mmHg",
+  "melting_point": "32 \u00b0F",
+  "boiling_point_c": "100.0 \u00b0C",
+  "melting_point_c": "0.0 \u00b0C",
+  "safety_icons": {
+    "ghs_icons": [],
+    "nfpa_image": null
+  },
+  "cas": "7732-18-5"
+}

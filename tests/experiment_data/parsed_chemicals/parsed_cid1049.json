@@ -1,0 +1,26 @@
+{
+  "cid": 1049,
+  "name": "pyridine",
+  "iupac_name": "pyridine",
+  "formula": "C5H5N",
+  "weight": "79.10",
+  "smiles": "C1=CC=NC=C1",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=1049&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/1049",
+  "boiling_point": "239 \u00b0F at 760 mmHg (NTP, 1992)",
+  "melting_point": "-44 \u00b0F (NTP, 1992)",
+  "boiling_point_c": "115.0 \u00b0C",
+  "melting_point_c": "-42.2 \u00b0C",
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS02.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS05.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS06.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS07.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS08.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS09.svg"
+    ],
+    "nfpa_image": "https://pubchem.ncbi.nlm.nih.gov/image/nfpa.cgi?code=330"
+  },
+  "cas": "110-86-1"
+}

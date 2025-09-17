@@ -1,0 +1,25 @@
+{
+  "cid": 11107,
+  "name": "4-pyridin-4-ylpyridine",
+  "iupac_name": "4-pyridin-4-ylpyridine",
+  "formula": "C10H8N2",
+  "weight": "156.18",
+  "smiles": "C1=CN=CC=C1C2=CC=NC=C2",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=11107&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/11107",
+  "boiling_point": "",
+  "melting_point": "",
+  "boiling_point_c": "",
+  "melting_point_c": "",
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS05.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS06.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS07.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS08.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS09.svg"
+    ],
+    "nfpa_image": null
+  },
+  "cas": "553-26-4"
+}

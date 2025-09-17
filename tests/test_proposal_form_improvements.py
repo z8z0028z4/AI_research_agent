@@ -23,7 +23,6 @@ from backend.api.routes.proposal import ProposalRequest, ProposalResponse
 from backend.core.config import Settings
 
 
-@pytest.mark.fast
 @pytest.mark.backend
 class TestProposalFormImprovements:
     """測試提案表單改進功能"""

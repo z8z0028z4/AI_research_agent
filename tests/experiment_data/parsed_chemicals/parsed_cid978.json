@@ -1,0 +1,21 @@
+{
+  "cid": 978,
+  "name": "4-aminobenzoic acid",
+  "iupac_name": "4-aminobenzoic acid",
+  "formula": "C7H7NO2",
+  "weight": "137.14",
+  "smiles": "C1=CC(=CC=C1C(=O)O)N",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=978&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/978",
+  "boiling_point": "",
+  "melting_point": "370 to 372 \u00b0F (NTP, 1992)",
+  "boiling_point_c": "",
+  "melting_point_c": "188.9 \u00b0C",
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS07.svg"
+    ],
+    "nfpa_image": null
+  },
+  "cas": "150-13-0"
+}

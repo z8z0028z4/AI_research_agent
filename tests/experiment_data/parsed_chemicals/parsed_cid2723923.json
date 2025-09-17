@@ -1,0 +1,21 @@
+{
+  "cid": 2723923,
+  "name": "azanium;formate",
+  "iupac_name": "azanium;formate",
+  "formula": "CH5NO2",
+  "weight": "63.056",
+  "smiles": "C(=O)[O-].[NH4+]",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=2723923&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/2723923",
+  "boiling_point": "180 \u00b0C DECOMP",
+  "melting_point": "241 \u00b0F (USCG, 1999)",
+  "boiling_point_c": "180 \u00b0C",
+  "melting_point_c": "116.1 \u00b0C",
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS07.svg"
+    ],
+    "nfpa_image": null
+  },
+  "cas": "540-69-2"
+}

@@ -1,0 +1,26 @@
+{
+  "cid": 313,
+  "name": "chlorane",
+  "iupac_name": "chlorane",
+  "formula": "ClH",
+  "weight": "36.46",
+  "smiles": "Cl",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=313&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/313",
+  "boiling_point": "123 \u00b0F at 760 mmHg (USCG, 1999)",
+  "melting_point": "-174.6 \u00b0F (Melting point is -13.7 \u00b0F for a 39.17% weight/weight solution.) (EPA, 1998)",
+  "boiling_point_c": "50.6 \u00b0C",
+  "melting_point_c": "-114.8 \u00b0C",
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS04.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS05.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS06.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS07.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS08.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS09.svg"
+    ],
+    "nfpa_image": "https://pubchem.ncbi.nlm.nih.gov/image/nfpa.cgi?code=301"
+  },
+  "cas": "7647-01-0"
+}

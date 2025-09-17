@@ -10,6 +10,7 @@ import Chemical from './pages/Chemical'
 import Upload from './pages/Upload'
 import Settings from './pages/Settings'
 import KnowledgeQuery from './pages/KnowledgeQuery'
+import DataAnalyzer from './pages/DataAnalyzer'
 import { TextHighlightProvider } from './components/TextHighlight/TextHighlightProvider'
 import { AppStateProvider } from './contexts/AppStateContext'
 import HighlightPopup from './components/TextHighlight/HighlightPopup'
@@ -43,6 +44,7 @@ function App() {
                   <Route path="/chemical" element={<Chemical />} />
                   <Route path="/upload" element={<Upload />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/data-analyzer" element={<DataAnalyzer />} />
                   <Route path="/knowledge" element={<KnowledgeQuery />} />
                 </Routes>
               </Content>
