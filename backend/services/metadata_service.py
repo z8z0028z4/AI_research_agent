@@ -2,7 +2,12 @@
 元數據提取模塊
 ============
 
-從PDF和DOCX文件中提取元數據信息
+從PDF和DOCX文件中提取元數據信息。
+
+實作說明：
+- 使用 GPT-5-nano 的 Chat Completions API，並透過 response_format=json_schema 輸出結構化結果。
+- 明確設定 max_tokens=256 以避免在長標題或較長 JSON 結果時因預設輸出預算過小而發生截斷，確保 JSON 可被完整解析。
+- 不使用 temperature（GPT-5-nano 不支援），提升結果穩定性與可重現性。
 """
 
 import os
@@ -77,6 +82,7 @@ def gpt_detect_type_and_title(text, filename):
         response = client.chat.completions.create(
             model="gpt-5-nano",
             messages=[{"role": "user", "content": prompt}],
+            max_tokens=256,
             response_format={
                 "type": "json_schema",
                 "json_schema": {
