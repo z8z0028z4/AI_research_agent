@@ -1,0 +1,23 @@
+{
+  "cid": 12749,
+  "name": "2-methyl-1H-imidazole",
+  "iupac_name": "2-methyl-1H-imidazole",
+  "formula": "C4H6N2",
+  "weight": "82.10",
+  "smiles": "CC1=NC=CN1",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=12749&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/12749",
+  "boiling_point": "267 \u00b0C",
+  "melting_point": "144 \u00b0C",
+  "boiling_point_c": "267 \u00b0C",
+  "melting_point_c": "144 \u00b0C",
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS05.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS07.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS08.svg"
+    ],
+    "nfpa_image": null
+  },
+  "cas": "693-98-1"
+}

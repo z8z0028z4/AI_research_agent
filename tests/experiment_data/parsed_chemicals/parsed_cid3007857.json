@@ -1,0 +1,22 @@
+{
+  "cid": 3007857,
+  "name": "zinc;oxygen(2-)",
+  "iupac_name": "zinc;oxygen(2-)",
+  "formula": "OZn",
+  "weight": "81.4",
+  "smiles": "[O-2].[Zn+2]",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=3007857&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/3007857",
+  "boiling_point": "",
+  "melting_point": "3587 \u00b0F (NIOSH, 2024)",
+  "boiling_point_c": "",
+  "melting_point_c": "1975.0 \u00b0C",
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS08.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS09.svg"
+    ],
+    "nfpa_image": null
+  },
+  "cas": "1314-13-2"
+}

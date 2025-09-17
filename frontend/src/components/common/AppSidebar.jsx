@@ -5,6 +5,7 @@ import {
   DashboardOutlined,
   FileTextOutlined,
   SearchOutlined,
+  BarChartOutlined,
   ExperimentOutlined,
   UploadOutlined,
   SettingOutlined,
@@ -28,6 +29,11 @@ const menuItems = [
     key: '/search',
     icon: <SearchOutlined />,
     label: '文獻搜尋',
+  },
+  {
+    key: '/data-analyzer',
+    icon: <BarChartOutlined />,
+    label: 'Data Analyzer',
   },
   {
     key: '/knowledge',

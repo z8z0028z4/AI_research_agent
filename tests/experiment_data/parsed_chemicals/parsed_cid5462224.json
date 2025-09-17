@@ -1,0 +1,22 @@
+{
+  "cid": 5462224,
+  "name": "magnesium",
+  "iupac_name": "magnesium",
+  "formula": "Mg",
+  "weight": "24.305",
+  "smiles": "[Mg]",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=5462224&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/5462224",
+  "boiling_point": "2012 \u00b0F at 760 mmHg (USCG, 1999)",
+  "melting_point": "1202 \u00b0F (USCG, 1999)",
+  "boiling_point_c": "1100.0 \u00b0C",
+  "melting_point_c": "650.0 \u00b0C",
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS02.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS07.svg"
+    ],
+    "nfpa_image": "https://pubchem.ncbi.nlm.nih.gov/image/nfpa.cgi?code=001"
+  },
+  "cas": "7439-95-4"
+}

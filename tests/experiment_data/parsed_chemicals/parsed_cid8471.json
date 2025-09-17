@@ -1,0 +1,26 @@
+{
+  "cid": 8471,
+  "name": "N,N-diethylethanamine",
+  "iupac_name": "N,N-diethylethanamine",
+  "formula": "C6H15N",
+  "weight": "101.19",
+  "smiles": "CCN(CC)CC",
+  "image_url": "https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=8471&t=l",
+  "pubchem_url": "https://pubchem.ncbi.nlm.nih.gov/compound/8471",
+  "boiling_point": "192.7 \u00b0F at 760 mmHg (NTP, 1992)",
+  "melting_point": "-174.5 \u00b0F (NTP, 1992)",
+  "boiling_point_c": "89.3 \u00b0C",
+  "melting_point_c": "-114.7 \u00b0C",
+  "safety_icons": {
+    "ghs_icons": [
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS02.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS05.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS06.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS07.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS08.svg",
+      "https://pubchem.ncbi.nlm.nih.gov/images/ghs/GHS09.svg"
+    ],
+    "nfpa_image": "https://pubchem.ncbi.nlm.nih.gov/image/nfpa.cgi?code=330"
+  },
+  "cas": "121-44-8"
+}
