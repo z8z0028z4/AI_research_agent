@@ -1,7 +1,7 @@
 import requests
 import os
 import json
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Any
 import re
 # 直接定義配置變量，避免循環導入
 PARSED_CHEMICAL_DIR = "experiment_data/parsed_chemicals"
@@ -404,6 +404,56 @@ def extract_and_fetch_chemicals(name_list: List[str], save_dir=PARSED_CHEMICAL_D
 
 def remove_json_chemical_block(text: str) -> str:
     return re.sub(r"```json\s*\[[^\]]+\]\s*```", "", text, flags=re.DOTALL)
+
+
+def get_single_chemical(chemical_name: str) -> Dict[str, Any]:
+    """
+    獲取單個化學品信息
+    
+    Args:
+        chemical_name: 化學品名稱
+        
+    Returns:
+        化學品信息字典
+    """
+    try:
+        # 搜索化學品
+        results = search_source([chemical_name], limit=1)
+        if not results:
+            return {"name": chemical_name, "error": "未找到化學品信息"}
+        
+        cid = results[0].get("cid")
+        if not cid:
+            return {"name": chemical_name, "error": "無 CID"}
+        
+        # 獲取詳細信息
+        url_main = f"{BASE_URL}/compound/cid/{cid}/JSON"
+        r_main = requests.get(url_main, timeout=15, verify=False)
+        if not r_main.ok:
+            return {"name": chemical_name, "error": f"主查詢失敗 CID {cid}: {r_main.status_code}"}
+        
+        json_data = r_main.json()
+        parsed = parse_pubchem_json(json_data)
+        
+        # 加入pubchem超連結
+        parsed["pubchem_url"] = f"https://pubchem.ncbi.nlm.nih.gov/compound/{cid}"
+        
+        # 補充熔/沸點資訊
+        bp_info = get_boiling_and_melting_point(cid)
+        parsed.update(bp_info)
+        
+        # 補充 GHS icon URLs
+        safety_info = get_safety_info(cid)
+        parsed["safety_icons"] = {
+            "ghs_icons": safety_info.get("ghs_icons", []),
+            "nfpa_image": safety_info.get("nfpa_image")
+        }
+        parsed["cas"] = safety_info.get("cas")
+        
+        return parsed
+        
+    except Exception as e:
+        return {"name": chemical_name, "error": f"查詢失敗: {str(e)}"}
 
     
 def chemical_metadata_extractor(proposal_text: str):

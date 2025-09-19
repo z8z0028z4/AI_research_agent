@@ -6,7 +6,6 @@
 """
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import sys
 import os
@@ -14,52 +13,23 @@ import os
 # 添加原項目路徑到 sys.path
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../app'))
 
-# 修正導入方式
-try:
-    from backend.services.pubchem_service import chemical_metadata_extractor
-except ImportError:
-    # 如果直接導入失敗，嘗試使用完整路徑 (已重組，不再需要)
-    # sys.path.append(os.path.join(os.path.dirname(__file__), '../../../'))
-    from backend.services.pubchem_service import chemical_metadata_extractor
+# 導入新的模型和服務
+from backend.api.models.chemical_models import (
+    ChemicalRequest, ChemicalResponse, ChemicalBatchRequest, 
+    ChemicalBatchResponse, ChemicalSearchRequest, ChemicalSearchResponse
+)
+from backend.services.chemical_service import chemical_service
+from backend.services.chemical_database_service import chemical_db_service
+from backend.services.pubchem_service import chemical_metadata_extractor
 
 router = APIRouter()
 
-class ChemicalRequest(BaseModel):
-    """化學品查詢請求模型"""
-    chemical_name: str
-    include_safety: bool = True
-    include_properties: bool = True
-
-class ChemicalResponse(BaseModel):
-    """化學品查詢響應模型"""
-    name: str
-    formula: Optional[str] = None
-    molecular_weight: Optional[str] = None
-    cas_number: Optional[str] = None
-    smiles: Optional[str] = None
-    boiling_point: Optional[str] = None
-    melting_point: Optional[str] = None
-    pubchem_url: Optional[str] = None
-    image_url: Optional[str] = None
-    safety_data: Optional[Dict[str, Any]] = None
-    properties: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
-
-class ChemicalBatchRequest(BaseModel):
-    """批量化學品查詢請求模型"""
-    chemical_names: List[str]
-
-class ChemicalBatchResponse(BaseModel):
-    """批量化學品查詢響應模型"""
-    results: List[ChemicalResponse]
-    not_found: List[str]
-    total_count: int
-    success_count: int
+# 模型定義已移至 chemical_models.py
 
 @router.post("/chemical/search", response_model=ChemicalResponse)
 async def search_chemical(request: ChemicalRequest):
     """
-    查詢單個化學品信息
+    查詢單個化學品信息（增強版，支持數據庫存儲和結構繪製）
     
     Args:
         request: 化學品查詢請求
@@ -68,13 +38,17 @@ async def search_chemical(request: ChemicalRequest):
         化學品詳細信息
     """
     try:
-        # 調用原有的化學品查詢功能
-        result = chemical_metadata_extractor(request.chemical_name)
+        # 使用增強的化學品查詢服務
+        result = chemical_service.get_chemical_with_database_lookup(
+            chemical_name=request.chemical_name,
+            include_structure=request.include_structure,
+            save_to_db=request.save_to_database
+        )
         
-        if not result or result.get("error"):
+        if result.get("error"):
             return ChemicalResponse(
                 name=request.chemical_name,
-                error=result.get("error", "未找到化學品信息")
+                error=result.get("error")
             )
         
         # 構建響應數據
@@ -106,8 +80,12 @@ async def search_chemical(request: ChemicalRequest):
             melting_point=result.get("melting_point_c"),
             pubchem_url=result.get("pubchem_url"),
             image_url=result.get("image_url"),
+            svg_structure=result.get("svg_structure"),
+            png_structure=result.get("png_structure"),
             safety_data=safety_data,
-            properties=properties
+            properties=properties,
+            cid=result.get("cid"),
+            saved_to_database=result.get("saved_to_database", False)
         )
         
     except Exception as e:
@@ -116,7 +94,7 @@ async def search_chemical(request: ChemicalRequest):
 @router.post("/chemical/batch-search", response_model=ChemicalBatchResponse)
 async def batch_search_chemicals(request: ChemicalBatchRequest):
     """
-    批量查詢化學品信息
+    批量查詢化學品信息（增強版，支持數據庫存儲和結構繪製）
     
     Args:
         request: 批量化學品查詢請求
@@ -125,55 +103,67 @@ async def batch_search_chemicals(request: ChemicalBatchRequest):
         批量查詢結果
     """
     try:
-        results = []
-        not_found = []
+        # 使用增強的批量查詢服務
+        results, not_found = chemical_service.batch_get_chemicals_with_database(
+            chemical_names=request.chemical_names,
+            include_structure=request.include_structure,
+            save_to_db=request.save_to_database
+        )
         
-        for chemical_name in request.chemical_names:
-            try:
-                result = chemical_metadata_extractor(chemical_name)
+        # 轉換為響應格式
+        chemical_responses = []
+        saved_count = 0
+        
+        for result in results:
+            if result.get("error"):
+                continue
                 
-                if result and not result.get("error"):
-                    # 構建響應數據
-                    safety_data = None
-                    if result.get("safety_icons"):
-                        safety_data = {
-                            "nfpa_image": result["safety_icons"].get("nfpa_image", ""),
-                            "ghs_icons": result["safety_icons"].get("ghs_icons", [])
-                        }
-                    
-                    properties = {
-                        "formula": result.get("formula"),
-                        "molecular_weight": result.get("weight"),
-                        "cas_number": result.get("cas"),
-                        "smiles": result.get("smiles"),
-                        "boiling_point": result.get("boiling_point_c"),
-                        "melting_point": result.get("melting_point_c")
-                    }
-                    
-                    results.append(ChemicalResponse(
-                        name=result.get("name", chemical_name),
-                        formula=result.get("formula"),
-                        molecular_weight=result.get("weight"),
-                        cas_number=result.get("cas"),
-                        smiles=result.get("smiles"),
-                        boiling_point=result.get("boiling_point_c"),
-                        melting_point=result.get("melting_point_c"),
-                        pubchem_url=result.get("pubchem_url"),
-                        image_url=result.get("image_url"),
-                        safety_data=safety_data,
-                        properties=properties
-                    ))
-                else:
-                    not_found.append(chemical_name)
-                    
-            except Exception as e:
-                not_found.append(chemical_name)
+            # 構建響應數據
+            safety_data = None
+            if request.include_safety and result.get("safety_icons"):
+                safety_data = {
+                    "nfpa_image": result["safety_icons"].get("nfpa_image", ""),
+                    "ghs_icons": result["safety_icons"].get("ghs_icons", [])
+                }
+            
+            properties = None
+            if request.include_properties:
+                properties = {
+                    "formula": result.get("formula"),
+                    "molecular_weight": result.get("weight"),
+                    "cas_number": result.get("cas"),
+                    "smiles": result.get("smiles"),
+                    "boiling_point": result.get("boiling_point_c"),
+                    "melting_point": result.get("melting_point_c")
+                }
+            
+            chemical_responses.append(ChemicalResponse(
+                name=result.get("name"),
+                formula=result.get("formula"),
+                molecular_weight=result.get("weight"),
+                cas_number=result.get("cas"),
+                smiles=result.get("smiles"),
+                boiling_point=result.get("boiling_point_c"),
+                melting_point=result.get("melting_point_c"),
+                pubchem_url=result.get("pubchem_url"),
+                image_url=result.get("image_url"),
+                svg_structure=result.get("svg_structure"),
+                png_structure=result.get("png_structure"),
+                safety_data=safety_data,
+                properties=properties,
+                cid=result.get("cid"),
+                saved_to_database=result.get("saved_to_database", False)
+            ))
+            
+            if result.get("saved_to_database"):
+                saved_count += 1
         
         return ChemicalBatchResponse(
-            results=results,
+            results=chemical_responses,
             not_found=not_found,
             total_count=len(request.chemical_names),
-            success_count=len(results)
+            success_count=len(chemical_responses),
+            saved_count=saved_count
         )
         
     except Exception as e:
@@ -245,4 +235,90 @@ async def get_chemical_properties(chemical_name: str):
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"性質信息查詢失敗: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"性質信息查詢失敗: {str(e)}")
+
+
+@router.post("/chemical/database-search", response_model=ChemicalSearchResponse)
+async def search_chemicals_in_database(request: ChemicalSearchRequest):
+    """
+    在數據庫中搜索化學品
+    
+    Args:
+        request: 搜索請求
+        
+    Returns:
+        搜索結果
+    """
+    try:
+        results = chemical_service.search_chemicals_in_database(
+            query=request.query,
+            limit=request.limit
+        )
+        
+        # 轉換為數據庫記錄格式
+        db_records = []
+        for result in results:
+            if not result.get("error"):
+                db_records.append(ChemicalDatabaseRecord(
+                    name=result.get("name"),
+                    formula=result.get("formula"),
+                    molecular_weight=result.get("weight"),
+                    cas_number=result.get("cas"),
+                    smiles=result.get("smiles"),
+                    boiling_point=result.get("boiling_point_c"),
+                    melting_point=result.get("melting_point_c"),
+                    pubchem_url=result.get("pubchem_url"),
+                    image_url=result.get("image_url"),
+                    svg_structure=result.get("svg_structure") if request.include_structure else None,
+                    png_structure=result.get("png_structure") if request.include_structure else None,
+                    safety_data=result.get("safety_icons", {}),
+                    properties=result.get("properties", {}),
+                    cid=result.get("cid")
+                ))
+        
+        return ChemicalSearchResponse(
+            results=db_records,
+            total_count=len(db_records),
+            query=request.query
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"數據庫搜索失敗: {str(e)}")
+
+
+@router.get("/chemical/database-stats")
+async def get_database_stats():
+    """
+    獲取化學品數據庫統計信息
+    
+    Returns:
+        統計信息
+    """
+    try:
+        stats = chemical_service.get_database_stats()
+        return stats
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"獲取統計信息失敗: {str(e)}")
+
+
+@router.get("/chemical/database-list")
+async def get_database_chemicals(limit: int = 1000):
+    """
+    獲取數據庫中的所有化學品
+    
+    Args:
+        limit: 結果數量限制
+        
+    Returns:
+        化學品列表
+    """
+    try:
+        results = chemical_db_service.get_all_chemicals(limit)
+        return {
+            "chemicals": results,
+            "total_count": len(results)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"獲取化學品列表失敗: {str(e)}") 

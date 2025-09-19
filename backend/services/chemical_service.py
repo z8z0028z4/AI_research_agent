@@ -5,15 +5,14 @@
 統一管理化學品查詢和處理邏輯，提供快取機制和錯誤處理
 """
 
-import json
 import time
-from typing import List, Dict, Any, Optional, Tuple
-from functools import lru_cache
+from typing import List, Dict, Any, Tuple
 
 from ..utils.logger import get_logger
 from ..utils.exceptions import APIRequestError
-from .pubchem_service import chemical_metadata_extractor
+from .pubchem_service import chemical_metadata_extractor, get_single_chemical
 from .smiles_drawer import smiles_drawer
+from .chemical_database_service import chemical_db_service
 
 logger = get_logger(__name__)
 
@@ -60,7 +59,7 @@ class ChemicalService:
             
         except Exception as e:
             logger.error(f"化學品提取失敗: {e}")
-            raise ChemicalQueryError(f"化學品提取失敗: {str(e)}")
+            raise APIRequestError(f"化學品提取失敗: {str(e)}")
     
     def get_chemical_info(self, chemical_name: str) -> Dict[str, Any]:
         """
@@ -82,11 +81,10 @@ class ChemicalService:
                     logger.info(f"使用快取的化學品信息: {chemical_name}")
                     return result
             
-            # 調用原始函數
-            chemicals, not_found, _ = chemical_metadata_extractor(chemical_name)
+            # 調用單個化學品查詢函數
+            result = get_single_chemical(chemical_name)
             
-            if chemicals:
-                result = chemicals[0]
+            if result and not result.get("error"):
                 # 儲存到快取
                 self.cache[chemical_name] = (time.time(), result)
                 return result
@@ -256,6 +254,154 @@ class ChemicalService:
         except Exception as e:
             logger.error(f"批量添加結構圖失敗: {e}")
             return chemicals_list  # 返回原始數據，不拋出異常
+    
+    def get_chemical_with_database_lookup(self, chemical_name: str, include_structure: bool = True, save_to_db: bool = True) -> Dict[str, Any]:
+        """
+        查詢化學品信息，優先從數據庫獲取，如果沒有則從API獲取並保存到數據庫
+        
+        Args:
+            chemical_name: 化學品名稱
+            include_structure: 是否包含分子結構圖
+            save_to_db: 是否保存到數據庫
+            
+        Returns:
+            化學品信息字典
+        """
+        try:
+            logger.info(f"查詢化學品信息: {chemical_name}")
+            
+            # 首先嘗試從數據庫獲取
+            db_record = chemical_db_service.get_chemical_by_name(chemical_name)
+            if db_record:
+                logger.info(f"從數據庫獲取化學品信息: {chemical_name}")
+                result = self._db_record_to_dict(db_record)
+                
+                # 如果沒有結構圖且需要生成，則生成結構圖
+                if include_structure and not result.get('svg_structure') and not result.get('png_structure'):
+                    logger.info(f"為數據庫化學品生成結構圖: {chemical_name}")
+                    result = self.add_smiles_drawing(result)
+                
+                return result
+            
+            # 數據庫中沒有，從API獲取
+            logger.info(f"數據庫中未找到，從API查詢: {chemical_name}")
+            result = get_single_chemical(chemical_name)
+            
+            if not result or result.get("error"):
+                logger.warning(f"API查詢失敗: {chemical_name}")
+                return {"name": chemical_name, "error": "未找到化學品信息"}
+            
+            # 添加分子結構圖
+            if include_structure:
+                result = self.add_smiles_drawing(result)
+            
+            # 保存到數據庫
+            if save_to_db:
+                try:
+                    success = chemical_db_service.save_chemical(result)
+                    if success:
+                        logger.info(f"化學品數據已保存到數據庫: {chemical_name}")
+                        result['saved_to_database'] = True
+                    else:
+                        logger.warning(f"保存到數據庫失敗: {chemical_name}")
+                        result['saved_to_database'] = False
+                except Exception as e:
+                    logger.error(f"保存到數據庫時發生錯誤: {e}")
+                    result['saved_to_database'] = False
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"化學品查詢失敗: {e}")
+            raise APIRequestError(f"化學品查詢失敗: {str(e)}")
+    
+    def batch_get_chemicals_with_database(self, chemical_names: List[str], include_structure: bool = True, save_to_db: bool = True) -> Tuple[List[Dict[str, Any]], List[str]]:
+        """
+        批量查詢化學品信息，優先從數據庫獲取
+        
+        Args:
+            chemical_names: 化學品名稱列表
+            include_structure: 是否包含分子結構圖
+            save_to_db: 是否保存到數據庫
+            
+        Returns:
+            Tuple[List[Dict], List[str]]: (化學品列表, 未找到的化學品列表)
+        """
+        try:
+            results = []
+            not_found = []
+            
+            for chemical_name in chemical_names:
+                try:
+                    result = self.get_chemical_with_database_lookup(
+                        chemical_name, include_structure, save_to_db
+                    )
+                    
+                    if result.get("error"):
+                        not_found.append(chemical_name)
+                    else:
+                        results.append(result)
+                        
+                except Exception as e:
+                    logger.error(f"查詢化學品失敗: {chemical_name}, {e}")
+                    not_found.append(chemical_name)
+            
+            logger.info(f"批量查詢完成: 成功 {len(results)} 個, 失敗 {len(not_found)} 個")
+            return results, not_found
+            
+        except Exception as e:
+            logger.error(f"批量查詢化學品失敗: {e}")
+            raise APIRequestError(f"批量查詢化學品失敗: {str(e)}")
+    
+    def search_chemicals_in_database(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        在數據庫中搜索化學品
+        
+        Args:
+            query: 搜索查詢
+            limit: 結果數量限制
+            
+        Returns:
+            化學品信息列表
+        """
+        try:
+            db_records = chemical_db_service.search_chemicals(query, limit)
+            return [self._db_record_to_dict(record) for record in db_records]
+            
+        except Exception as e:
+            logger.error(f"搜索化學品失敗: {e}")
+            return []
+    
+    def get_database_stats(self) -> Dict[str, Any]:
+        """
+        獲取數據庫統計信息
+        
+        Returns:
+            統計信息字典
+        """
+        try:
+            return chemical_db_service.get_database_stats()
+        except Exception as e:
+            logger.error(f"獲取數據庫統計失敗: {e}")
+            return {}
+    
+    def _db_record_to_dict(self, record: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        將數據庫記錄轉換為字典格式
+        
+        Args:
+            record: 數據庫記錄字典
+            
+        Returns:
+            化學品信息字典
+        """
+        try:
+            # 直接返回記錄，因為現在已經是字典格式
+            record["saved_to_database"] = True
+            return record
+        except Exception as e:
+            logger.error(f"轉換數據庫記錄失敗: {e}")
+            return {"name": record.get("name", "Unknown") if record else "Unknown", "error": "數據轉換失敗"}
 
 
 # 全局服務實例
