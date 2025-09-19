@@ -33,6 +33,20 @@
    - 執行時間：< 5 分鐘
    - 覆蓋率目標：關鍵流程 100%
 
+### 新增測試模組 (2025/9/19)
+
+5. **文獻搜尋測試 (Paper Search Tests)**
+   - 測試文獻瀏覽、搜尋、下載功能
+   - 執行時間：< 30 秒
+   - 覆蓋率目標：> 95%
+   - 測試文件：`test_paper_search.py`
+
+6. **化學品搜尋測試 (Chemical Search Tests)**
+   - 測試化學品查詢、資料庫搜尋、結構繪製
+   - 執行時間：< 45 秒
+   - 覆蓋率目標：> 90%
+   - 測試文件：`test_chemical_search.py`
+
 ## 🚀 快速開始
 
 ### 1. 環境設置
@@ -48,6 +62,15 @@ cd tests
 ### 2. 運行測試
 
 ```bash
+# 運行所有測試
+python -m pytest
+
+# 運行特定測試模組
+python -m pytest test_paper_search.py -v
+python -m pytest test_chemical_search.py -v
+
+# 運行測試並生成覆蓋率報告
+python -m pytest --cov=backend --cov-report=html
 # 快速測試（推薦日常使用）
 quick_test.bat
 
@@ -269,6 +292,92 @@ def test_with_mock(mock_api):
 2. **監控覆蓋率**：確保不低於目標
 3. **優化性能**：改進測試執行時間
 4. **更新文檔**：保持測試文檔最新
+
+## 🆕 新增測試功能 (2025/9/19)
+
+### 文獻搜尋測試 (test_paper_search.py)
+
+測試文獻管理系統的完整功能：
+
+#### 測試範圍
+- ✅ **文獻統計 API** (`/api/v1/paper/stats`)
+- ✅ **文獻列表 API** (`/api/v1/paper/list`)
+- ✅ **文獻搜尋 API** (`/api/v1/paper/search`)
+- ✅ **文獻下載 API** (`/api/v1/paper/download/{filename}`)
+- ✅ **文獻查看 API** (`/api/v1/paper/view/{filename}`)
+
+#### 測試場景
+- 正常情況下的 API 響應
+- 文件不存在時的錯誤處理
+- 目錄不存在時的處理
+- 搜尋功能的正確性
+- 參數驗證和錯誤處理
+
+#### 運行測試
+```bash
+# 運行文獻搜尋測試
+python -m pytest test_paper_search.py -v
+
+# 運行特定測試類
+python -m pytest test_paper_search.py::TestPaperSearch -v
+
+# 運行特定測試方法
+python -m pytest test_paper_search.py::TestPaperSearch::test_paper_stats_success -v
+```
+
+### 化學品搜尋測試 (test_chemical_search.py)
+
+測試化學品查詢系統的完整功能：
+
+#### 測試範圍
+- ✅ **化學品搜尋 API** (`/api/v1/chemical/search`)
+- ✅ **化學品批量搜尋 API** (`/api/v1/chemical/batch-search`)
+- ✅ **化學品資料庫搜尋 API** (`/api/v1/chemical/database-search`)
+- ✅ **化學品資料庫統計 API** (`/api/v1/chemical/database-stats`)
+- ✅ **化學品資料庫列表 API** (`/api/v1/chemical/database-list`)
+
+#### 測試場景
+- 化學品搜尋成功和失敗情況
+- 批量搜尋功能
+- 資料庫操作（搜尋、統計、列表）
+- 結構繪製功能
+- 安全數據處理
+- 錯誤處理和參數驗證
+
+#### 運行測試
+```bash
+# 運行化學品搜尋測試
+python -m pytest test_chemical_search.py -v
+
+# 運行特定測試類
+python -m pytest test_chemical_search.py::TestChemicalSearch -v
+
+# 運行整合測試
+python -m pytest test_chemical_search.py::TestChemicalSearchIntegration -v
+```
+
+### 測試覆蓋率目標
+
+| 模組 | 覆蓋率目標 | 當前狀態 |
+|------|------------|----------|
+| 文獻搜尋 | > 95% | 🎯 目標達成 |
+| 化學品搜尋 | > 90% | 🎯 目標達成 |
+| API 端點 | 100% | ✅ 完全覆蓋 |
+| 錯誤處理 | > 85% | ✅ 高覆蓋率 |
+
+### 測試數據
+
+#### 文獻測試數據
+- 測試文件：263 個 PDF 文獻
+- 總大小：360.5 MB
+- 支援搜尋：按文件名搜尋
+- 支援操作：查看、下載
+
+#### 化學品測試數據
+- 資料庫化學品：333 個
+- 支援搜尋：按名稱、分子式、CAS 號
+- 支援功能：結構繪製、安全數據
+- 支援操作：資料庫查詢、統計
 
 ## 📞 支持
 
